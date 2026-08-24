@@ -1,0 +1,208 @@
+.hr-notifications-view {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.hr-notifications-feed-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 20px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.hr-notifications-feed-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hr-notifications-feed-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hr-notifications-feed-title h2 {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0;
+}
+
+.hr-unread-badge {
+  background: #EF4444;
+  color: #FFFFFF;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 12px;
+  border-radius: 999px;
+}
+
+.hr-notifications-feed-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.hr-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #334155;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hr-btn-secondary:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+/* Filter pills */
+.hr-notifications-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.hr-filter-pill {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #334155;
+  border-radius: 999px;
+  padding: 8px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hr-filter-pill:hover {
+  background: #F8FAFC;
+  border-color: #CBD5E1;
+}
+
+.hr-filter-pill-active {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+/* Notification list */
+.hr-notifications-list-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.hr-notifications-empty {
+  text-align: center;
+  color: #94A3B8;
+  font-size: 0.88rem;
+  padding: 50px 20px;
+}
+
+.hr-notification-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 18px 20px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.hr-notification-row:last-child {
+  border-bottom: none;
+}
+
+.hr-notification-row-unread {
+  background: #EFF6FF;
+}
+
+.hr-notification-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.hr-notification-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.hr-notification-content h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+}
+
+.hr-notification-content p {
+  font-size: 0.85rem;
+  color: #64748B;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.hr-notification-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.hr-notification-time {
+  font-size: 0.78rem;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+.hr-notification-check-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  border: 1px solid #E2E8F0;
+  background: #FFFFFF;
+  color: #94A3B8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.hr-notification-check-btn:hover {
+  background: #F1F5F9;
+}
+
+.hr-notification-check-btn-read {
+  background: #DCFCE7;
+  border-color: #DCFCE7;
+  color: #16A34A;
+}
+
+/* Responsive */
+@media (max-width: 720px) {
+  .hr-notification-row {
+    flex-wrap: wrap;
+  }
+  .hr-notification-meta {
+    width: 100%;
+    justify-content: space-between;
+    padding-left: 54px;
+  }
+}

@@ -1,0 +1,300 @@
+/* Marketing Sidebar Styles - Blue Theme */
+.mkt-sidebar {
+  width: 260px;
+  background-color: #0F172A;
+  border-right: 1px solid #1E293B;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  height: 100vh;
+  position: relative;
+  z-index: 20;
+  transition: width 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mkt-sidebar.collapsed {
+  width: 72px;
+}
+
+.mkt-sidebar-header {
+  padding: 24px 20px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mkt-brand-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.mkt-brand-logo {
+  width: 38px;
+  height: 38px;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+  flex-shrink: 0;
+}
+
+.mkt-brand-info {
+  display: flex;
+  flex-direction: column;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.mkt-brand-name {
+  font-weight: 700;
+  font-size: 1.1rem;
+  color: #FFFFFF;
+  letter-spacing: -0.01em;
+}
+
+.mkt-brand-subtitle {
+  font-size: 0.72rem;
+  color: #60A5FA;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.mkt-collapse-btn {
+  background: transparent;
+  border: 1px solid #334155;
+  color: #94A3B8;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.mkt-collapse-btn:hover {
+  background-color: #1E293B;
+  color: #FFFFFF;
+  border-color: #475569;
+}
+
+.mkt-sidebar-menu {
+  flex: 1;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #475569 #1E293B;
+}
+
+.mkt-sidebar-menu::-webkit-scrollbar {
+  width: 6px;
+}
+
+.mkt-sidebar-menu::-webkit-scrollbar-thumb {
+  background-color: #334155;
+  border-radius: 3px;
+}
+
+.mkt-menu-title {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.08em;
+  padding: 0 12px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.mkt-menu-section {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mkt-menu-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-radius: 10px;
+  color: #94A3B8;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.mkt-menu-item:hover {
+  background-color: #1E293B;
+  color: #F8FAFC;
+}
+
+.mkt-menu-item.active {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: #FFFFFF;
+  font-weight: 600;
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.35);
+}
+
+.mkt-menu-item.active svg {
+  color: #FFFFFF;
+}
+
+.mkt-menu-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.mkt-menu-badge {
+  background-color: #334155;
+  color: #F8FAFC;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+}
+
+.mkt-menu-divider {
+  height: 1px;
+  background-color: #1E293B;
+  margin: 4px 12px;
+}
+
+.mkt-sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid #1E293B;
+  position: relative;
+}
+
+.mkt-user-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.mkt-user-card:hover {
+  background-color: #1E293B;
+}
+
+.mkt-user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: #FFFFFF;
+  font-weight: 700;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.mkt-user-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.mkt-user-name {
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: #FFFFFF;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mkt-user-role {
+  font-size: 0.72rem;
+  color: #94A3B8;
+}
+
+.mkt-user-switch-icon {
+  color: #64748B;
+}
+
+.mkt-role-dropdown {
+  position: absolute;
+  bottom: 70px;
+  left: 16px;
+  right: 16px;
+  background-color: #0F172A;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 50;
+  animation: fadeIn 0.15s ease;
+}
+
+.mkt-role-dropdown-header {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.05em;
+  padding: 6px 10px;
+  text-transform: uppercase;
+}
+
+.mkt-role-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 8px;
+  color: #94A3B8;
+  font-size: 0.84rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mkt-role-item:hover {
+  background-color: #1E293B;
+  color: #FFFFFF;
+}
+
+.mkt-role-item.active {
+  background-color: #1E293B;
+  color: #60A5FA;
+  font-weight: 600;
+}
+
+/* Mobile backdrop */
+@media (max-width: 768px) {
+  .mkt-sidebar {
+    position: fixed;
+    top: 0;
+    left: -260px;
+    bottom: 0;
+    z-index: 1000;
+  }
+
+  .mkt-sidebar.mobile-open {
+    left: 0;
+  }
+}

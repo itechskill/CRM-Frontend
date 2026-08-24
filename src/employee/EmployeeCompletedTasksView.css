@@ -1,0 +1,263 @@
+/* Employee Completed Tasks Styles (matches Completed Tasks screenshot: KPI cards + filter pills + table) */
+
+.employee-completed-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 4 KPI Stat Cards */
+.completed-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+.completed-kpi-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.completed-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+}
+
+.completed-kpi-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.completed-kpi-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.completed-kpi-label {
+  font-size: 0.88rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.completed-kpi-value {
+  font-size: 1.7rem;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.1;
+}
+
+/* Filter Pills */
+.completed-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.completed-filter-pill {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #475569;
+  padding: 9px 18px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.completed-filter-pill:hover {
+  background-color: #F8FAFC;
+}
+
+.completed-filter-pill-active {
+  background-color: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+.completed-filter-pill-active:hover {
+  background-color: #1D4ED8;
+}
+
+/* Table */
+.completed-table-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.completed-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.completed-table th {
+  text-align: left;
+  padding: 14px 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid #E2E8F0;
+  background-color: #F8FAFC;
+}
+
+.completed-table td {
+  padding: 18px 20px;
+  font-size: 0.9rem;
+  color: #0F172A;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+
+.completed-table tr:last-child td {
+  border-bottom: none;
+}
+
+.completed-task-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.completed-task-check {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background-color: #DCFCE7;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.completed-task-title {
+  font-weight: 700;
+  color: #0F172A;
+  font-size: 0.92rem;
+}
+
+.completed-task-approver {
+  font-size: 0.8rem;
+  color: #94A3B8;
+  margin-top: 2px;
+}
+
+.completed-project-cell {
+  color: #475569;
+  font-weight: 500;
+}
+
+.completed-date-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #64748B;
+  font-size: 0.85rem;
+}
+
+.completed-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.completed-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.completed-quality-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.completed-quality-track {
+  width: 90px;
+  height: 6px;
+  background-color: #F1F5F9;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.completed-quality-fill {
+  height: 100%;
+  background-color: #16A34A;
+  border-radius: 999px;
+}
+
+.completed-quality-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.completed-quality-pending {
+  font-size: 0.85rem;
+  color: #94A3B8;
+  font-weight: 500;
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .completed-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .completed-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  /* Filter bar wraps */
+  .completed-filter-bar {
+    gap: 8px;
+  }
+
+  .completed-filter-pill {
+    padding: 7px 14px;
+    font-size: 0.8rem;
+  }
+
+  /* Table: make horizontally scrollable */
+  .completed-table-card {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .completed-table {
+    min-width: 600px;
+  }
+}
+
+@media (max-width: 480px) {
+  .completed-stats-grid {
+    grid-template-columns: 1fr;
+  }
+}

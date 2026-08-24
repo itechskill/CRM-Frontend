@@ -1,0 +1,10 @@
+/* Pipeline Donut Chart Section Styles */
+.pipeline-donut-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.widget-card {
+  overflow: hidden;
+}
