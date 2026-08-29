@@ -1,0 +1,6 @@
+/* Leads View Section Styles */
+.leads-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}

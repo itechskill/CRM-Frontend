@@ -1,0 +1,30 @@
+.admin-leave-table {
+  width: 100%;
+}
+
+.admin-leave-table {
+  width: 100%;
+}
+
+.admin-leave-status-cell {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-approve-btn {
+  background-color: #16A34A;
+  border: none;
+  color: #FFFFFF;
+  padding: 5px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: all 0.15s ease;
+}
+
+.admin-approve-btn:hover {
+  background-color: #15803D;
+}

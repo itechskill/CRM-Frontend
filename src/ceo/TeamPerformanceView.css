@@ -1,0 +1,28 @@
+.ceo-team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .ceo-team-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ceo-team-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 900px) {
+  .ceo-team-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ceo-perf-positive {
+  color: #16A34A;
+  font-weight: 700;
+}

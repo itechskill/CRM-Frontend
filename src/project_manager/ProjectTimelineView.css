@@ -1,0 +1,347 @@
+/* Project Timeline View Styles */
+.project-timeline-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.timeline-page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.timeline-page-header h1 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 4px 0;
+}
+
+.timeline-page-header p {
+  font-size: 0.88rem;
+  color: #64748B;
+  margin: 0;
+}
+
+.timeline-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.today-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #EF4444;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #334155;
+  border-radius: 10px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* Gantt container */
+.gantt-container {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.gantt-header-row {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  border-bottom: 1px solid #E2E8F0;
+  background: #F8FAFC;
+  min-width: 900px;
+}
+
+.gantt-project-col-header {
+  padding: 16px 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748B;
+  letter-spacing: 0.05em;
+}
+
+.gantt-months-header {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.gantt-month-label {
+  padding: 16px 0;
+  text-align: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #94A3B8;
+}
+
+.gantt-body {
+  min-width: 900px;
+}
+
+.gantt-row {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.gantt-row:last-child {
+  border-bottom: none;
+}
+
+.gantt-project-col {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.gantt-project-col h4 {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.gantt-client {
+  font-size: 0.8rem;
+  color: #94A3B8;
+}
+
+.gantt-status-badge {
+  align-self: flex-start;
+  margin-top: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+}
+
+.gantt-track {
+  position: relative;
+  padding: 20px 0;
+}
+
+.gantt-gridlines {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+}
+
+.gantt-gridline {
+  border-left: 1px solid #F1F5F9;
+}
+
+.gantt-today-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #FCA5A5;
+  z-index: 2;
+}
+
+.gantt-bar-full {
+  position: absolute;
+  top: 16px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.gantt-bar-progress {
+  position: absolute;
+  top: 16px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  z-index: 1;
+}
+
+.gantt-progress-label {
+  color: #FFFFFF;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.gantt-diamond {
+  position: absolute;
+  top: 50%;
+  width: 12px;
+  height: 12px;
+  background: #FFFFFF;
+  border: 2px solid;
+  transform: translateY(-50%) rotate(45deg);
+  border-radius: 2px;
+  z-index: 3;
+}
+
+.gantt-diamond-start {
+  left: -6px;
+}
+
+.gantt-diamond-end {
+  right: -6px;
+}
+
+.gantt-diamond-completed {
+  background: currentColor;
+}
+
+/* Legend + Milestones bottom grid */
+.timeline-bottom-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+.timeline-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 22px 24px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.timeline-panel h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0F172A;
+  margin: 0 0 16px 0;
+}
+
+/* Legend */
+.legend-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  font-size: 0.88rem;
+  color: #334155;
+  font-weight: 500;
+}
+
+.legend-divider {
+  border-top: 1px solid #F1F5F9;
+  margin: 12px 0;
+}
+
+.legend-diamond {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #64748B;
+  transform: rotate(45deg);
+  border-radius: 2px;
+  flex-shrink: 0;
+  margin: 0 2px;
+}
+
+.legend-diamond-completed {
+  background: #10B981;
+  border-color: #10B981;
+}
+
+.legend-diamond-upcoming {
+  background: #FFFFFF;
+  border-color: #94A3B8;
+}
+
+/* Upcoming Milestones */
+.milestones-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.milestone-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.milestone-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.milestone-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.milestone-title {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #0F172A;
+  white-space: nowrap;
+}
+
+.milestone-project {
+  font-size: 0.76rem;
+  color: #94A3B8;
+  white-space: nowrap;
+}
+
+.milestone-date {
+  font-size: 0.76rem;
+  color: #64748B;
+  font-weight: 500;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .timeline-bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .gantt-header-row,
+  .gantt-row {
+    grid-template-columns: 200px 1fr;
+  }
+}

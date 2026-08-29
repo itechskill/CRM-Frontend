@@ -1,0 +1,165 @@
+/* Accountant Dashboard Styles - Matching HR Blue Theme */
+
+.acc-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+/* Welcome Banner */
+.acc-welcome-banner {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  border-radius: 16px;
+  padding: 28px 32px;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  box-shadow: 0 10px 25px -5px rgba(37, 99, 235, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  flex-wrap: wrap;
+}
+
+.acc-welcome-left h2 {
+  font-size: 1.6rem;
+  font-weight: 800;
+  margin: 0;
+  letter-spacing: -0.02em;
+  color: #FFFFFF;
+}
+
+.acc-welcome-left p {
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.9rem;
+  margin: 6px 0 0 0;
+}
+
+.acc-welcome-stats {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.acc-welcome-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-center;
+  background-color: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 12px 20px;
+  border-radius: 12px;
+  min-width: 140px;
+}
+
+.acc-welcome-stat-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #FFFFFF;
+  letter-spacing: -0.02em;
+}
+
+.acc-welcome-stat-label {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.8);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: 2px;
+  font-weight: 600;
+}
+
+/* Quick Actions Strip */
+.acc-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.acc-action-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.acc-action-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.06);
+  border-color: #2563EB;
+}
+
+.acc-action-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.acc-action-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.acc-action-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.acc-action-desc {
+  font-size: 0.75rem;
+  color: #64748B;
+  margin-top: 2px;
+}
+
+/* Charts Grid */
+.acc-charts-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .acc-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.acc-chart-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+}
+
+.acc-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.acc-chart-title-group h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.acc-chart-title-group p {
+  font-size: 0.78rem;
+  color: #64748B;
+  margin: 2px 0 0 0;
+}

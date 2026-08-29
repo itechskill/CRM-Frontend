@@ -1,0 +1,248 @@
+/* Employee Notifications Styles */
+.employee-notifications-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.notif-control-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 14px 20px;
+}
+
+.notif-title-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notif-title-group h3 {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.unread-counter-badge {
+  background-color: #EF4444;
+  color: #FFFFFF;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.notif-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.notif-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background-color: #F8FAFC;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.notif-action-btn:hover {
+  background-color: #FFFFFF;
+  color: #0F172A;
+  border-color: #94A3B8;
+}
+
+.notif-action-btn.danger:hover {
+  background-color: #FEE2E2;
+  color: #DC2626;
+  border-color: #FCA5A5;
+}
+
+.notif-categories {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.category-pill {
+  padding: 6px 14px;
+  border-radius: 20px;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.category-pill:hover, .category-pill.active {
+  background-color: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
+}
+
+.notif-list-card {
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.notif-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 12px;
+  border-bottom: 1px solid #F1F5F9;
+  transition: background-color 0.15s ease;
+}
+
+.notif-item:last-child {
+  border-bottom: none;
+}
+
+.notif-item.unread {
+  background-color: #EFF6FF;
+}
+
+.notif-item:hover {
+  background-color: #F8FAFC;
+}
+
+.notif-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.notif-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notif-row-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.notif-item-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #0F172A;
+  margin: 0;
+}
+
+.notif-item-time {
+  font-size: 0.74rem;
+  color: #64748B;
+}
+
+.notif-item-msg {
+  font-size: 0.84rem;
+  color: #475569;
+  margin: 0;
+}
+
+.notif-item-right {
+  display: flex;
+  align-items: center;
+}
+
+.read-toggle-btn {
+  background: none;
+  border: 1px solid #CBD5E1;
+  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748B;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.read-toggle-btn:hover {
+  background-color: #FFFFFF;
+  color: #2563EB;
+  border-color: #2563EB;
+}
+
+.empty-notif-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  color: #94A3B8;
+  gap: 12px;
+}
+@media (max-width: 640px) {
+  .notif-control-bar {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+
+  .notif-title-group {
+    width: 100%;
+  }
+
+  .notif-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .notif-action-btn {
+    flex: 1;
+    justify-content: center;
+    white-space: nowrap;
+  }
+
+  .notif-categories {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .category-pill {
+    padding: 5px 12px;
+    font-size: 0.78rem;
+  }
+
+  .notif-item {
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .notif-row-top {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+}
