@@ -1,0 +1,5 @@
+/* New Deal Modal Section Styles */
+.new-deal-modal-container {
+  display: flex;
+  flex-direction: column;
+}
