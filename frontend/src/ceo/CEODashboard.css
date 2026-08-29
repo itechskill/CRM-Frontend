@@ -1,0 +1,250 @@
+.ceo-dashboard-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.ceo-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .ceo-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .ceo-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ceo-kpi-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ceo-kpi-card:hover {
+  border-color: #CBD5E1;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.08);
+}
+
+.ceo-kpi-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ceo-kpi-title {
+  color: #64748B;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.ceo-kpi-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #EFF6FF;
+  color: #2563EB;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.ceo-kpi-card:hover .ceo-kpi-icon {
+  transform: scale(1.08);
+}
+
+/* Optional per-card icon color variants — add these classes alongside ceo-kpi-icon in JSX if you want each KPI to have a distinct accent color */
+.ceo-kpi-icon.icon-blue {
+  background-color: #EFF6FF;
+  color: #2563EB;
+}
+
+.ceo-kpi-icon.icon-green {
+  background-color: #ECFDF5;
+  color: #16A34A;
+}
+
+.ceo-kpi-icon.icon-purple {
+  background-color: #F3E8FF;
+  color: #7C3AED;
+}
+
+.ceo-kpi-icon.icon-amber {
+  background-color: #FFFBEB;
+  color: #D97706;
+}
+
+.ceo-kpi-value {
+  color: #0F172A;
+  font-size: 1.7rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.ceo-kpi-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+  flex-wrap: wrap;
+}
+
+.ceo-badge-pos {
+  color: #15803D;
+  font-weight: 700;
+  background: #DCFCE7;
+  padding: 3px 9px;
+  border-radius: 6px;
+}
+
+.ceo-kpi-subtext {
+  color: #94A3B8;
+}
+
+.ceo-charts-row {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 1024px) {
+  .ceo-charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+.ceo-card-panel {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 16px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  transition: border-color 0.2s ease;
+}
+
+.ceo-card-panel:hover {
+  border-color: #CBD5E1;
+}
+
+.ceo-card-title {
+  color: #0F172A;
+  font-size: 1.05rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ceo-card-title a,
+.ceo-card-title-link {
+  color: #2563EB;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.ceo-card-title a:hover,
+.ceo-card-title-link:hover {
+  text-decoration: underline;
+}
+
+.ceo-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.ceo-table th {
+  color: #94A3B8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 12px 16px;
+  background-color: #F8FAFC;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.ceo-table td {
+  color: #334155;
+  font-size: 0.875rem;
+  padding: 14px 16px;
+  border-bottom: 1px solid #F1F5F9;
+}
+
+.ceo-table tbody tr {
+  transition: background-color 0.15s ease;
+}
+
+.ceo-table tbody tr:hover {
+  background-color: #F8FAFC;
+}
+
+.ceo-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.ceo-status-tag {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.ceo-status-tag.active {
+  background: #DCFCE7;
+  color: #15803D;
+}
+
+.ceo-status-tag.warning {
+  background: #FEF3C7;
+  color: #B45309;
+}
+
+/* Executive summary side-panel highlight item (e.g. "Revenue Milestone Exceeded") */
+.ceo-summary-highlight {
+  background-color: #F8FAFC;
+  border-left: 3px solid #16A34A;
+  border-radius: 10px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ceo-summary-highlight-title {
+  color: #0F172A;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.ceo-summary-highlight-desc {
+  color: #64748B;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}

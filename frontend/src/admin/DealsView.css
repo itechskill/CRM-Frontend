@@ -1,0 +1,6 @@
+/* Deals View Section Styles */
+.deals-view-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
