@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Plus, Phone, Mail, Video, Building2, Clock, ChevronRight } from 'lucide-react';
+import { apiRequest } from '../utils/api';
 import './SalesContactsView.css';
 
 const contactsData = [
   {
-    id: 1,
+    id: '1',
     name: 'Sarah Mitchell',
     role: 'VP of Engineering',
     company: 'TechCorp Solutions',
@@ -22,7 +23,7 @@ const contactsData = [
     ],
   },
   {
-    id: 2,
+    id: '2',
     name: 'David Park',
     role: 'CEO',
     company: 'Nexus Dynamics',
@@ -38,57 +39,6 @@ const contactsData = [
       { type: 'Meeting', date: '2024-12-09' },
     ],
   },
-  {
-    id: 3,
-    name: 'Marcus Johnson',
-    role: 'COO',
-    company: 'Pinnacle Group',
-    initials: 'MJ',
-    avatarBg: '#10B981',
-    lastContact: '2024-12-10',
-    email: 'mjohnson@pinnacle.com',
-    phone: '+1 (415) 456-7890',
-    tags: ['Hot Lead'],
-    nextFollowUp: '2024-12-17',
-    notes: 'Decision maker on the deal.',
-    recentActivity: [
-      { type: 'Email', date: '2024-12-10' },
-    ],
-  },
-  {
-    id: 4,
-    name: 'Emily Chen',
-    role: 'Director of Data',
-    company: 'BlueWave Analytics',
-    initials: 'EC',
-    avatarBg: '#F59E0B',
-    lastContact: '2024-12-07',
-    email: 'emily@bluewave.com',
-    phone: '+1 (415) 567-8901',
-    tags: ['Mid-Market'],
-    nextFollowUp: '2024-12-14',
-    notes: 'Interested in analytics integrations.',
-    recentActivity: [
-      { type: 'Call', date: '2024-12-07' },
-    ],
-  },
-  {
-    id: 5,
-    name: 'Lisa Wong',
-    role: 'CTO',
-    company: 'Meridian Capital',
-    initials: 'LW',
-    avatarBg: '#EF4444',
-    lastContact: '2024-12-06',
-    email: 'lisa@meridiancap.com',
-    phone: '+1 (415) 678-9012',
-    tags: ['Enterprise', 'Hot Lead'],
-    nextFollowUp: '2024-12-13',
-    notes: 'Technical evaluator, wants a security review.',
-    recentActivity: [
-      { type: 'Meeting', date: '2024-12-06' },
-    ],
-  },
 ];
 
 const activityIcons = {
@@ -98,16 +48,95 @@ const activityIcons = {
 };
 
 export default function SalesContactsView() {
+  const [contactsList, setContactsList] = useState(contactsData);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedId, setSelectedId] = useState(contactsData[0].id);
+  const [selectedId, setSelectedId] = useState('1');
   const [activeTab, setActiveTab] = useState('Overview');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const filteredContacts = contactsData.filter((c) =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.company.toLowerCase().includes(searchTerm.toLowerCase())
+  // Form states
+  const [cName, setCName] = useState('');
+  const [cRole, setCRole] = useState('');
+  const [cCompany, setCCompany] = useState('');
+  const [cEmail, setCEmail] = useState('');
+  const [cPhone, setCPhone] = useState('');
+  const [cNotes, setCNotes] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const fetchContacts = async () => {
+    try {
+      const { response, data } = await apiRequest('/api/crm/contacts');
+      if (response.ok && data.success && Array.isArray(data.data) && data.data.length > 0) {
+        const mapped = data.data.map((c) => ({
+          id: c._id,
+          name: c.name,
+          role: c.role || 'Contact',
+          company: c.company || 'Direct',
+          initials: (c.name || 'C').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+          avatarBg: '#2563EB',
+          lastContact: new Date(c.lastContact || c.createdAt).toISOString().split('T')[0],
+          email: c.email || '—',
+          phone: c.phone || '—',
+          tags: c.tags && c.tags.length > 0 ? c.tags : ['Contact'],
+          nextFollowUp: c.nextFollowUp ? new Date(c.nextFollowUp).toISOString().split('T')[0] : 'None scheduled',
+          notes: c.notes || 'No notes provided.',
+          recentActivity: [{ type: 'Email', date: new Date().toISOString().split('T')[0] }]
+        }));
+        setContactsList(mapped);
+        if (!selectedId || !mapped.find(item => item.id === selectedId)) {
+          setSelectedId(mapped[0].id);
+        }
+      }
+    } catch (err) {
+      console.error('Fetch sales contacts error:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchContacts();
+  }, []);
+
+  const handleCreateContact = async (e) => {
+    e.preventDefault();
+    if (!cName.trim()) return;
+
+    setSubmitting(true);
+    try {
+      const { response, data } = await apiRequest('/api/crm/contacts', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: cName.trim(),
+          role: cRole.trim(),
+          company: cCompany.trim(),
+          email: cEmail.trim(),
+          phone: cPhone.trim(),
+          notes: cNotes.trim()
+        })
+      });
+
+      if (response.ok && data.success) {
+        setCName('');
+        setCRole('');
+        setCCompany('');
+        setCEmail('');
+        setCPhone('');
+        setCNotes('');
+        setIsAddModalOpen(false);
+        fetchContacts();
+      }
+    } catch (err) {
+      console.error('Create contact error:', err);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const filteredContacts = contactsList.filter((c) =>
+    (c.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (c.company || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const selectedContact = contactsData.find((c) => c.id === selectedId);
+  const selectedContact = contactsList.find((c) => c.id === selectedId) || filteredContacts[0] || contactsList[0];
 
   return (
     <div className="contacts-view">
@@ -115,7 +144,7 @@ export default function SalesContactsView() {
       <div className="contacts-list-panel">
         <div className="contacts-list-header">
           <h2>Contacts</h2>
-          <button className="contacts-add-btn">
+          <button className="contacts-add-btn" onClick={() => setIsAddModalOpen(true)}>
             <Plus size={18} />
           </button>
         </div>
@@ -297,6 +326,92 @@ export default function SalesContactsView() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {isAddModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#0F172A' }}>Add New Contact</h3>
+              <button onClick={() => setIsAddModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748B' }}>✕</button>
+            </div>
+            <form onSubmit={handleCreateContact} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Contact Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Jane Doe"
+                  value={cName}
+                  onChange={(e) => setCName(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Job Role</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. VP of Sales"
+                    value={cRole}
+                    onChange={(e) => setCRole(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Company</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Acme Inc."
+                    value={cCompany}
+                    onChange={(e) => setCCompany(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Email</label>
+                  <input
+                    type="email"
+                    placeholder="jane@acme.com"
+                    value={cEmail}
+                    onChange={(e) => setCEmail(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Phone</label>
+                  <input
+                    type="text"
+                    placeholder="+1 (555) 012-3456"
+                    value={cPhone}
+                    onChange={(e) => setCPhone(e.target.value)}
+                    style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Notes</label>
+                <textarea
+                  rows={2}
+                  placeholder="Key relationship details or contact preferences..."
+                  value={cNotes}
+                  onChange={(e) => setCNotes(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setIsAddModalOpen(false)} style={{ padding: '8px 16px', background: '#F1F5F9', border: 'none', borderRadius: '8px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={submitting} style={{ padding: '8px 16px', background: '#2563EB', border: 'none', borderRadius: '8px', fontWeight: 600, color: '#FFFFFF', cursor: 'pointer' }}>{submitting ? 'Saving...' : 'Save Contact'}</button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

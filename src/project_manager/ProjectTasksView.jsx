@@ -400,7 +400,7 @@ export default function ProjectTasksView() {
               className={`view-toggle-btn ${viewMode === 'kanban' ? 'view-toggle-active' : ''}`}
               onClick={() => setViewMode('kanban')}
             >
-              Kanban
+              Board
             </button>
             <button
               className={`view-toggle-btn ${viewMode === 'list' ? 'view-toggle-active' : ''}`}
@@ -455,7 +455,14 @@ export default function ProjectTasksView() {
                 {tasksByColumn[column].map((task) => (
                   <div className="kanban-card" key={task.id}>
                     <h4 className="kanban-card-title">{task.title}</h4>
-                    <span className="kanban-card-project">{task.project}</span>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+                      <span className="kanban-card-project">{task.project}</span>
+                      {(task.assignedByName || task.createdBy?.fullName) && (
+                        <span style={{ fontSize: '0.72rem', background: '#EEF2FF', color: '#4F46E5', padding: '2px 8px', borderRadius: '12px', fontWeight: 600 }}>
+                          Assigned by: {task.assignedByName || task.createdBy?.fullName}
+                        </span>
+                      )}
+                    </div>
 
                     <div className="kanban-card-meta">
                       <span

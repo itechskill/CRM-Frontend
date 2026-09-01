@@ -16,6 +16,8 @@ export default function AccountantHeader({ activeTab, onMenuToggle, onOpenPrimar
         return { title: 'Payroll Management', subtitle: 'Employee salary disbursement, tax withholdings, and pay stubs' };
       case 'accounts':
         return { title: 'Chart of Accounts', subtitle: 'General ledger, bank accounts, and monthly reconciliations' };
+      case 'maintenance':
+        return { title: 'Maintenance Charges', subtitle: 'Track building, equipment, office, software, and vehicle maintenance costs' };
       case 'acc_reports':
         return { title: 'Financial Reports', subtitle: 'P&L statement, Balance sheet, Cash flow, and Tax summaries' };
       case 'acc_notifications':
@@ -33,12 +35,13 @@ export default function AccountantHeader({ activeTab, onMenuToggle, onOpenPrimar
       case 'expenses': return 'Log Expense';
       case 'payroll': return 'Process Payroll';
       case 'accounts': return 'Add Account';
+      case 'maintenance': return 'Add Maintenance Charge';
       case 'acc_reports': return 'Export Report';
       default: return 'New Transaction';
     }
   };
 
-  const showPrimaryAction = ['dashboard', 'invoices', 'expenses', 'payroll', 'accounts', 'acc_reports'].includes(activeTab);
+  const showPrimaryAction = ['dashboard', 'invoices', 'expenses', 'payroll', 'accounts', 'maintenance', 'acc_reports'].includes(activeTab);
 
   const { title, subtitle } = getHeaderInfo(activeTab);
 
@@ -54,16 +57,6 @@ export default function AccountantHeader({ activeTab, onMenuToggle, onOpenPrimar
       </div>
 
       <div className="acc-header-right">
-        <div className="acc-search-box">
-          <Search size={16} className="acc-search-icon" />
-          <input
-            type="text"
-            placeholder="Search invoices, ledger, payroll..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-          />
-        </div>
-
         <NotificationDropdown />
 
         {showPrimaryAction && (

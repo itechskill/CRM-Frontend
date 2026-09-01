@@ -147,6 +147,11 @@ export default function EmployeeTasksView({ onOpenNewTaskModal }) {
                       </div>
 
                       <h4 className="kanban-task-title">{task.title}</h4>
+                      {(task.assignedByName || task.createdBy?.fullName) && (
+                        <div style={{ fontSize: '0.72rem', color: '#4F46E5', background: '#EEF2FF', padding: '2px 8px', borderRadius: '10px', width: 'fit-content', fontWeight: 600, margin: '2px 0 6px' }}>
+                          Assigned by: {task.assignedByName || task.createdBy?.fullName}
+                        </div>
+                      )}
 
                       <div className="kanban-task-meta">
                         <div className="meta-item">

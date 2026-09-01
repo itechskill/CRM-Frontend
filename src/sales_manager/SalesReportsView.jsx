@@ -131,6 +131,19 @@ const statCards = [
 ];
 
 export default function SalesReportsView() {
+  const handleExportCSV = () => {
+    const headers = ['Quarter', 'Revenue ($k)', 'Leads'];
+    const rows = quarterlyData.map(q => [q.quarter, q.revenue, q.leads]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', 'Sales_Performance_Report.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="sales-sm-reports-view">
       {/* Header */}
@@ -144,7 +157,7 @@ export default function SalesReportsView() {
             <Calendar size={16} />
             <span>Q4 2024</span>
           </button>
-          <button className="export-btn">
+          <button className="export-btn" onClick={handleExportCSV}>
             <Download size={16} />
             <span>Export Report</span>
           </button>

@@ -49,7 +49,9 @@ export default function EmployeeWorkUpdatesView() {
         },
         body: JSON.stringify({
           hoursSpent: Number(hours),
-          summary: completed.trim()
+          summary: completed.trim(),
+          planned: planned.trim(),
+          blockers: blockers.trim()
         })
       });
 

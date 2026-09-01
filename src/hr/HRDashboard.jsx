@@ -43,12 +43,14 @@ export default function HRDashboard({ currentUser, onNavigateTab }) {
   });
 
   const [pendingLeavesList, setPendingLeavesList] = useState([]);
+  const [assignedTasks, setAssignedTasks] = useState([]);
 
   const fetchHRDashboardData = async () => {
     try {
-      const [sRes, lRes] = await Promise.all([
+      const [sRes, lRes, tRes] = await Promise.all([
         apiRequest('/api/hr/stats'),
-        apiRequest('/api/hr/leaves')
+        apiRequest('/api/hr/leaves'),
+        apiRequest('/api/tasks')
       ]);
 
       if (sRes.response.ok && sRes.data.success && sRes.data.data) {
@@ -66,10 +68,15 @@ export default function HRDashboard({ currentUser, onNavigateTab }) {
         }));
         setPendingLeavesList(pendingOnly);
       }
+
+      if (tRes.response.ok && tRes.data.success && Array.isArray(tRes.data.data)) {
+        setAssignedTasks(tRes.data.data);
+      }
     } catch (err) {
       console.error('Fetch HR dashboard error:', err);
     }
   };
+
 
   useEffect(() => {
     fetchHRDashboardData();
@@ -295,10 +302,50 @@ export default function HRDashboard({ currentUser, onNavigateTab }) {
         </div>
       </div>
 
+      {/* CEO Directives & Department Tasks Section */}
+      <div className="hr-widget-card" style={{ marginBottom: '24px' }}>
+        <div className="hr-widget-header">
+          <div className="hr-widget-title-area">
+            <Briefcase size={18} color="#6366F1" />
+            <h3>CEO Directives & Department Tasks ({assignedTasks.length})</h3>
+          </div>
+        </div>
+        <div style={{ padding: '16px' }}>
+          {assignedTasks.length > 0 ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+              {assignedTasks.map((t) => (
+                <div key={t._id} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <span style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.9rem' }}>{t.title}</span>
+                    <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '999px', background: t.priority === 'Urgent' || t.priority === 'High' ? '#FEE2E2' : '#E0E7FF', color: t.priority === 'Urgent' || t.priority === 'High' ? '#B91C1C' : '#3730A3', fontWeight: 700 }}>
+                      {t.priority}
+                    </span>
+                  </div>
+                  {t.description && (
+                    <p style={{ color: '#475569', fontSize: '0.8rem', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                      {t.description}
+                    </p>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#64748B', paddingTop: '6px', borderTop: '1px dashed #CBD5E1' }}>
+                    <span>By: <strong>{t.assignedByName || 'CEO'}</strong></span>
+                    <span style={{ padding: '2px 6px', borderRadius: '4px', background: '#F1F5F9', color: '#1E293B', fontWeight: 600 }}>{t.status}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div style={{ textAlign: 'center', padding: '20px', color: '#94A3B8', fontSize: '0.85rem' }}>
+              No tasks currently assigned to HR department.
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Bottom Grid */}
       <div className="hr-bottom-grid">
         {/* Pending Leave Requests */}
         <div className="hr-widget-card">
+
           <div className="hr-widget-header">
             <div className="hr-widget-title-area">
               <CalendarX size={18} color="#7C3AED" />

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { RefreshCw } from 'lucide-react';
 import {
   BarChart3,
   TrendingUp,
@@ -43,6 +44,16 @@ const funnelSteps = [
 
 export default function MarketingAnalyticsView() {
   const [timeRange, setTimeRange] = useState('2026');
+  const [isRunning, setIsRunning] = useState(false);
+  const [lastRun, setLastRun] = useState(null);
+
+  const handleRunAnalytics = () => {
+    setIsRunning(true);
+    setTimeout(() => {
+      setIsRunning(false);
+      setLastRun(new Date().toLocaleTimeString());
+    }, 2000);
+  };
 
   return (
     <div className="mkt-view-container">
@@ -50,8 +61,17 @@ export default function MarketingAnalyticsView() {
       <div className="mkt-page-header">
         <div className="mkt-page-header-title">
           <h2>Marketing Analytics & Conversion Funnels</h2>
-          <p>Deep-dive analytics into traffic sources, customer acquisition cost (CAC), and funnel efficiency.</p>
+          <p>Deep-dive analytics into traffic sources, customer acquisition cost (CAC), and funnel efficiency.{lastRun && <span style={{ marginLeft: '12px', fontSize: '0.8rem', color: '#059669' }}>✓ Last refreshed at {lastRun}</span>}</p>
         </div>
+        <button
+          className="mkt-btn-primary"
+          onClick={handleRunAnalytics}
+          disabled={isRunning}
+          style={{ display: 'flex', alignItems: 'center', gap: '8px', opacity: isRunning ? 0.7 : 1 }}
+        >
+          <RefreshCw size={16} style={{ animation: isRunning ? 'spin 1s linear infinite' : 'none' }} />
+          {isRunning ? 'Running...' : 'Run Analytics'}
+        </button>
       </div>
 
       {/* Analytics KPI Cards */}

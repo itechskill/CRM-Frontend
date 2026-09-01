@@ -32,16 +32,6 @@ export default function AdministrationHeader({ activeTab, currentUser, onMenuTog
       </div>
 
       <div className="admin-side-header-right">
-        <div className="admin-side-search-box">
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="Search employees, assets, logs..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-          />
-        </div>
-
         <NotificationDropdown />
 
         <div className="admin-side-profile-pill">

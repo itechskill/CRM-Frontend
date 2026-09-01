@@ -48,17 +48,6 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
       </div>
 
       <div className="employee-header-right">
-        {/* Global Search Bar */}
-        <div className="employee-search-box">
-          <Search size={16} className="employee-search-icon" />
-          <input 
-            type="text"
-            placeholder="Search tasks, projects..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
         <NotificationDropdown />
 
         {/* Primary Action Button */}

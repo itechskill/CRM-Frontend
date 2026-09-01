@@ -36,6 +36,7 @@ const FEATURES_DATA = [
 
 const SOLUTIONS_DATA = [
   { key: 'ceo', icon: ShieldCheck, role: 'CEO / Admin', desc: 'Get a complete overview of your business with real-time analytics and reports.', bg: '#EFF6FF', color: '#2563EB', details: 'Executive dashboards, user permissions, multi-department analytics, audit logs, and complete enterprise governance.' },
+  { key: 'administration', icon: Building2, role: 'Administration', desc: 'Oversee departments, company resources, employees, and administrative operations.', bg: '#ECFDF5', color: '#10B981', details: 'Centralized administration dashboard, employee directory control, company resources asset tracking, department hierarchy, and organizational reporting.' },
   { key: 'sales', icon: TrendingUp, role: 'Sales', desc: 'Manage leads, follow-ups, deals and close more business.', bg: '#F0FDF4', color: '#16A34A', details: 'Lead pipeline management, deal conversion, meeting scheduler, customer proposal generation, and sales team analytics.' },
   { key: 'marketing', icon: Zap, role: 'Marketing', desc: 'Run campaigns, generate leads and measure performance.', bg: '#EFF6FF', color: '#0284C7', details: 'Campaign creation, lead acquisition forms, qualification triggers, content strategy, and channel ROI measurement.' },
   { key: 'hr', icon: Users, role: 'HR', desc: 'Manage employees, leave, attendance and performance.', bg: '#F0FDF4', color: '#22C55E', details: 'Employee directory, digital attendance marking, leave approval workflows, recruitment pipelines, and performance reviews.' },
@@ -45,12 +46,11 @@ const SOLUTIONS_DATA = [
 ];
 
 const WORKFLOW_STEPS = [
-  { step: '01', title: 'Marketing', desc: 'Generate & Qualify Leads', details: 'Marketing campaigns capture prospect details. Qualifying a lead automatically transfers all data to Sales.' },
-  { step: '02', title: 'Sales', desc: 'Follow Up & Close Deals', details: 'Sales representatives view transferred leads, conduct meetings, issue proposals, and convert them to Won Deals.' },
-  { step: '03', title: 'Won Deal', desc: 'Trigger Business Workflow', details: 'Closing a deal automatically notifies Accounting and promotes the lead to an active Client record in MongoDB.' },
-  { step: '04', title: 'Accountant', desc: 'Create Invoice & Accounts', details: 'Accountants generate linked invoices directly from deal data, track payments, and log incoming revenue.' },
-  { step: '05', title: 'Payment', desc: 'Receive & Track Payments', details: 'System tracks paid and pending invoices, updating financial reports and client standing.' },
-  { step: '06', title: 'CEO', desc: 'Business Performance Analytics', details: 'Executive leadership views aggregated KPIs, revenue growth, team performance metrics, and company health.' }
+  { step: '01', title: 'Marketing & Sales Pipeline', desc: 'Generate Leads & Close Deals', details: 'Marketing campaigns capture prospect details. Qualified leads transfer to Sales representatives to convert into Won Deals.' },
+  { step: '02', title: 'Accounting & Invoicing', desc: 'Billing & Financial Tracking', details: 'Closing a deal automatically triggers Accounting workflows to issue invoices, log revenue, and track incoming payments.' },
+  { step: '03', title: 'Project Management & Tasks', desc: 'Project Manager → Assign Task → Employee → Complete Task & Report → PM Review', details: 'Project Managers assign tasks to department employees. Employees complete work, submit completion reports, and PMs review & verify.' },
+  { step: '04', title: 'HR & People Operations', desc: 'HR → Manage Recruitment → Manage Employees → Track Attendance & Leave', details: 'HR posts jobs, reviews resumes, schedules interviews, onboard registered employees, tracks daily attendance logs, and manages leave requests.' },
+  { step: '05', title: 'Executive Governance', desc: 'CEO Directives & Task Assignment', details: 'CEO views overall business analytics, issues high-priority directives directly to department heads (HR, Sales, PM, Finance, Admin), and tracks company-wide progress.' }
 ];
 
 const PRICING_PLANS = [
@@ -225,7 +225,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
   const [jobDeptFilter, setJobDeptFilter] = useState('All');
   const [jobLocFilter, setJobLocFilter] = useState('All');
   const [selectedJob, setSelectedJob] = useState(null);
-  const [applyForm, setApplyForm] = useState({ fullName: '', email: '', phone: '', resumeUrl: '', coverLetter: '' });
+  const [applyForm, setApplyForm] = useState({ fullName: '', email: '', phone: '', resumeData: '', resumeFileName: '', resumeUrl: '', coverLetter: '' });
   const [applySubmitting, setApplySubmitting] = useState(false);
   const [applySuccess, setApplySuccess] = useState(false);
   const [applyError, setApplyError] = useState('');
@@ -290,14 +290,54 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
       fetchJobsFromBackend();
     }
   }, [currentPage]);
+  useEffect(() => {
+    if (currentPage === 'careers' || currentPage === 'home') {
+      fetchJobsFromBackend();
+    }
+  }, [currentPage]);
+
+  // Fetch once on mount too, so the navbar badge count is available immediately —
+  // even if the user lands on a page other than Home/Careers first.
+  useEffect(() => {
+    fetchJobsFromBackend();
+  }, []);
+
+  const validateFormFields = ({ fullName, email, phone }) => {
+    const nameRegex = /^[A-Za-z\s]+$/;
+    if (fullName && !nameRegex.test(fullName.trim())) {
+      return 'Name must contain only alphabetic letters and spaces.';
+    }
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/;
+    if (email && !emailRegex.test(email.trim())) {
+      return 'Please enter a valid email address.';
+    }
+    if (phone && phone.trim() !== '') {
+      const phoneRegex = /^[0-9+\-\s]+$/;
+      if (!phoneRegex.test(phone.trim())) {
+        return 'Phone number can only contain numbers, +, - and spaces.';
+      }
+    }
+    return null;
+  };
 
   // Submit Contact Form to Backend / MongoDB
   const handleContactSubmit = async (e) => {
     e.preventDefault();
-    if (!contactForm.fullName || !contactForm.email || !contactForm.message) return;
-    setContactSubmitting(true);
     setContactError('');
     setContactSuccess(false);
+
+    if (!contactForm.fullName || !contactForm.email || !contactForm.message) {
+      setContactError('Please fill in all required fields.');
+      return;
+    }
+
+    const valErr = validateFormFields({ fullName: contactForm.fullName, email: contactForm.email, phone: contactForm.phone });
+    if (valErr) {
+      setContactError(valErr);
+      return;
+    }
+
+    setContactSubmitting(true);
 
     try {
       const res = await fetch(`${API_BASE}/api/public/contact`, {
@@ -322,10 +362,21 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
   // Submit Request Demo Form to Backend / MongoDB
   const handleDemoSubmit = async (e) => {
     e.preventDefault();
-    if (!demoForm.fullName || !demoForm.email) return;
-    setDemoSubmitting(true);
     setDemoError('');
     setDemoSuccess(false);
+
+    if (!demoForm.fullName || !demoForm.email) {
+      setDemoError('Please fill in all required fields.');
+      return;
+    }
+
+    const valErr = validateFormFields({ fullName: demoForm.fullName, email: demoForm.email, phone: demoForm.phone });
+    if (valErr) {
+      setDemoError(valErr);
+      return;
+    }
+
+    setDemoSubmitting(true);
 
     try {
       const res = await fetch(`${API_BASE}/api/public/demo-request`, {
@@ -337,6 +388,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
       if (res.ok && data.success) {
         setDemoSuccess(true);
         setDemoForm({ fullName: '', email: '', company: '', phone: '', numEmployees: '10-50', message: '' });
+
       } else {
         setDemoError(data.message || 'Error submitting demo request.');
       }
@@ -347,10 +399,37 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
     }
   };
 
+  // Local PC Resume file upload handler
+  const handleResumeFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      setApplyError('Resume file must be under 10MB.');
+      return;
+    }
+    setApplyError('');
+    const reader = new FileReader();
+    reader.onload = () => {
+      setApplyForm(prev => ({
+        ...prev,
+        resumeData: reader.result,
+        resumeFileName: file.name
+      }));
+    };
+    reader.onerror = () => {
+      setApplyError('Failed to read file.');
+    };
+    reader.readAsDataURL(file);
+  };
+
   // Submit Job Application to Backend / MongoDB (HR)
   const handleApplySubmit = async (e) => {
     e.preventDefault();
-    if (!selectedJob || !applyForm.fullName || !applyForm.email || !applyForm.resumeUrl) return;
+    if (!selectedJob || !applyForm.fullName || !applyForm.email) return;
+    if (!applyForm.resumeData && !applyForm.resumeUrl) {
+      setApplyError('Please upload a Resume/CV file or provide a portfolio link.');
+      return;
+    }
     setApplySubmitting(true);
     setApplyError('');
     setApplySuccess(false);
@@ -362,6 +441,8 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
         fullName: applyForm.fullName,
         email: applyForm.email,
         phone: applyForm.phone,
+        resumeData: applyForm.resumeData,
+        resumeFileName: applyForm.resumeFileName,
         resumeUrl: applyForm.resumeUrl,
         coverLetter: applyForm.coverLetter
       };
@@ -378,7 +459,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
         setTimeout(() => {
           setSelectedJob(null);
           setApplySuccess(false);
-          setApplyForm({ fullName: '', email: '', phone: '', resumeUrl: '', coverLetter: '' });
+          setApplyForm({ fullName: '', email: '', phone: '', resumeData: '', resumeFileName: '', resumeUrl: '', coverLetter: '' });
         }, 2200);
       } else {
         setApplyError(data.message || 'Error submitting application.');
@@ -393,7 +474,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
   // Filtered jobs
   const filteredJobs = jobsList.filter(job => {
     const matchesSearch = (job.title || '').toLowerCase().includes(jobSearch.toLowerCase()) ||
-                          (job.skills || []).some(s => s.toLowerCase().includes(jobSearch.toLowerCase()));
+      (job.skills || []).some(s => s.toLowerCase().includes(jobSearch.toLowerCase()));
     const matchesDept = jobDeptFilter === 'All' || job.department === jobDeptFilter;
     const matchesLoc = jobLocFilter === 'All' || job.location === jobLocFilter;
     return matchesSearch && matchesDept && matchesLoc;
@@ -413,18 +494,43 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
             <span className="pw-logo-text">NexusCRM</span>
           </div>
 
-          <ul className="pw-nav-links">
-            {NAV_ITEMS.map(item => (
-              <li key={item.id}>
-                <button
-                  className={currentPage === item.id ? 'active-nav-item' : ''}
-                  onClick={() => setCurrentPage(item.id)}
-                >
-                  {item.label}
-                </button>
-              </li>
-            ))}
-          </ul>
+         <ul className="pw-nav-links">
+  {NAV_ITEMS.map(item => (
+    <li key={item.id}>
+      <button
+        className={currentPage === item.id ? 'active-nav-item' : ''}
+        onClick={() => setCurrentPage(item.id)}
+        style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+      >
+        {item.label}
+        {item.id === 'careers' && jobsList.length > 0 && (
+         <span
+    style={{
+      position: 'absolute',
+      top: '-11px',
+      right: '-6px',
+      display: 'inline-flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '2px 7px',
+      borderRadius: '999px',
+      background: 'linear-gradient(135deg, #EF4444 0%, #F59E0B 100%)',
+      color: '#FFFFFF',
+      fontSize: '0.6rem',
+      fontWeight: 800,
+      lineHeight: 1,
+      letterSpacing: '0.5px',
+      boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+      whiteSpace: 'nowrap'
+    }}
+          >
+            NEW
+          </span>
+        )}
+      </button>
+    </li>
+  ))}
+</ul>
 
           <div className="pw-nav-actions">
             <button className="pw-btn-outline-blue" onClick={onNavigateToLogin}>Login</button>
@@ -443,10 +549,32 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
               key={item.id}
               className={currentPage === item.id ? 'active-nav-item' : ''}
               onClick={() => setCurrentPage(item.id)}
+              style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               {item.label}
+              {item.id === 'careers' && jobsList.length > 0 && (
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    padding: '2px 7px',
+                    borderRadius: '999px',
+                    background: 'linear-gradient(135deg, #EF4444 0%, #F59E0B 100%)',
+                    color: '#FFFFFF',
+                    fontSize: '0.62rem',
+                    fontWeight: 800,
+                    lineHeight: 1,
+                    letterSpacing: '0.5px',
+                    boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+                  }}
+                >
+                  NEW
+                </span>
+              )}
             </button>
           ))}
+
           <div className="pw-mobile-divider" />
           <div className="pw-mobile-btns">
             <button className="pw-btn-outline-blue" onClick={() => { setMobileMenuOpen(false); onNavigateToLogin(); }}>Login</button>
@@ -832,6 +960,11 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                       <div className="pw-job-icon-square"><Briefcase size={22} color="#2563EB" /></div>
                       <h3 className="pw-job-role">{job.title}</h3>
                       <div className="pw-job-meta-line">{job.location || 'Lahore, Pakistan'} • {job.employmentType || job.type || 'Full-time'}</div>
+                      {job.salary && (
+                        <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#059669', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <DollarSign size={14} /> {job.salary}
+                        </div>
+                      )}
                       <div className="pw-job-skills-line">
                         {Array.isArray(job.skills) ? job.skills.join(', ') : job.department}
                       </div>
@@ -966,7 +1099,10 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                         required
                         placeholder="John Smith"
                         value={contactForm.fullName}
-                        onChange={e => setContactForm({ ...contactForm, fullName: e.target.value })}
+                        onChange={(e) => {
+                     const lettersOnly = e.target.value.replace(/[^A-Za-z\s]/g, '');
+                      setContactForm({ ...contactForm, fullName: lettersOnly });
+                         }}
                       />
                     </div>
                     <div className="pw-form-field">
@@ -976,7 +1112,10 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                         required
                         placeholder="john@company.com"
                         value={contactForm.email}
-                        onChange={e => setContactForm({ ...contactForm, email: e.target.value })}
+                       onChange={(e) => {
+                        const emailChars = e.target.value.replace(/[^A-Za-z0-9@._\-+]/g, '');
+                         setContactForm({ ...contactForm, email: emailChars });
+                        }}
                       />
                     </div>
                     <div className="pw-form-field">
@@ -994,8 +1133,11 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                         type="tel"
                         placeholder="+92 300 0000000"
                         value={contactForm.phone}
-                        onChange={e => setContactForm({ ...contactForm, phone: e.target.value })}
-                      />
+                      onChange={(e) => {
+                      const phoneChars = e.target.value.replace(/[^0-9+\-\s]/g, '');
+                           setContactForm({ ...contactForm, phone: phoneChars });
+                          }}                     
+                           />
                     </div>
                     <div className="pw-form-field">
                       <label>Subject</label>
@@ -1062,7 +1204,10 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                     required
                     placeholder="Ali Raza"
                     value={demoForm.fullName}
-                    onChange={e => setDemoForm({ ...demoForm, fullName: e.target.value })}
+                    onChange={(e) => {
+                     const lettersOnly = e.target.value.replace(/[^A-Za-z\s]/g, '');
+                      setContactForm({ ...contactForm, fullName: lettersOnly });
+                         }}
                   />
                 </div>
                 <div className="pw-form-field">
@@ -1090,7 +1235,10 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                     type="tel"
                     placeholder="+92 300 0000000"
                     value={demoForm.phone}
-                    onChange={e => setDemoForm({ ...demoForm, phone: e.target.value })}
+                     onChange={(e) => {
+                      const phoneChars = e.target.value.replace(/[^0-9+\-\s]/g, '');
+                           setContactForm({ ...contactForm, phone: phoneChars });
+                          }}                   
                   />
                 </div>
                 <div className="pw-form-field">
@@ -1229,72 +1377,130 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
       {/* ──── JOB APPLY MODAL (Converts to MongoDB Job Application) ──────────── */}
       {selectedJob && (
         <div className="pw-modal-backdrop" onClick={() => setSelectedJob(null)}>
-          <div className="pw-modal-card" onClick={e => e.stopPropagation()}>
+          <div className="pw-modal-card" style={{ maxWidth: '560px', padding: '24px' }} onClick={e => e.stopPropagation()}>
             <button className="pw-modal-close" onClick={() => setSelectedJob(null)}><X size={18} /></button>
-            <h3>Apply for {selectedJob.title}</h3>
-            <p className="pw-modal-sub">{selectedJob.location || 'Lahore, Pakistan'} • {selectedJob.employmentType || selectedJob.type || 'Full-time'}</p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '16px' }}>
+              <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: '#EFF6FF', color: '#2563EB', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Briefcase size={20} />
+              </div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>Apply for {selectedJob.title}</h3>
+                <p className="pw-modal-sub" style={{ margin: 0, fontSize: '0.8rem', color: '#64748B' }}>{selectedJob.department} • {selectedJob.location || 'Lahore, Pakistan'} • {selectedJob.employmentType || selectedJob.type || 'Full-time'}</p>
+                {selectedJob.salary && (
+                  <div style={{ marginTop: '4px', fontSize: '0.85rem', fontWeight: 700, color: '#059669', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <DollarSign size={14} /> Salary: {selectedJob.salary}
+                  </div>
+                )}
+              </div>
+            </div>
 
             {applySuccess ? (
-              <div className="pw-modal-success">
-                <CheckCircle size={36} color="#16A34A" />
-                <h4>Application Submitted!</h4>
-                <p>Your application has been saved in MongoDB and forwarded to HR.</p>
+              <div className="pw-modal-success" style={{ padding: '24px', textAlign: 'center' }}>
+                <CheckCircle size={40} color="#16A34A" style={{ margin: '0 auto 12px' }} />
+                <h4 style={{ margin: '0 0 6px', fontSize: '1.1rem', color: '#0F172A' }}>Application Submitted Successfully!</h4>
+                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748B' }}>Your application and resume have been securely saved and sent to HR for review.</p>
               </div>
             ) : (
-              <form onSubmit={handleApplySubmit} className="pw-apply-form">
-                <div className="pw-form-field">
-                  <label>Full Name *</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="Ali Raza"
-                    value={applyForm.fullName}
-                    onChange={e => setApplyForm({ ...applyForm, fullName: e.target.value })}
-                  />
+              <form onSubmit={handleApplySubmit} className="pw-apply-form" style={{ display: 'grid', gap: '14px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="pw-form-field">
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>Full Name *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Ali Raza"
+                      value={applyForm.fullName}
+                      onChange={e => setApplyForm({ ...applyForm, fullName: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', border: '1px solid #CBD5E1', borderRadius: '8px' }}
+                    />
+                  </div>
+                  <div className="pw-form-field">
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>Email Address *</label>
+                    <input
+                      type="email"
+                      required
+                      placeholder="ali@example.com"
+                      value={applyForm.email}
+                      onChange={e => setApplyForm({ ...applyForm, email: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', border: '1px solid #CBD5E1', borderRadius: '8px' }}
+                    />
+                  </div>
                 </div>
-                <div className="pw-form-field">
-                  <label>Email Address *</label>
-                  <input
-                    type="email"
-                    required
-                    placeholder="ali@example.com"
-                    value={applyForm.email}
-                    onChange={e => setApplyForm({ ...applyForm, email: e.target.value })}
-                  />
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div className="pw-form-field">
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>Phone Number</label>
+                    <input
+                      type="tel"
+                      placeholder="+92 300 0000000"
+                      value={applyForm.phone}
+                      onChange={e => setApplyForm({ ...applyForm, phone: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', border: '1px solid #CBD5E1', borderRadius: '8px' }}
+                    />
+                  </div>
+                  <div className="pw-form-field">
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>Portfolio / LinkedIn URL</label>
+                    <input
+                      type="url"
+                      placeholder="https://linkedin.com/in/..."
+                      value={applyForm.resumeUrl}
+                      onChange={e => setApplyForm({ ...applyForm, resumeUrl: e.target.value })}
+                      style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', border: '1px solid #CBD5E1', borderRadius: '8px' }}
+                    />
+                  </div>
                 </div>
+
+                {/* Local PC Resume File Upload */}
                 <div className="pw-form-field">
-                  <label>Phone Number</label>
-                  <input
-                    type="tel"
-                    placeholder="+92 300 0000000"
-                    value={applyForm.phone}
-                    onChange={e => setApplyForm({ ...applyForm, phone: e.target.value })}
-                  />
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>
+                    Upload Resume / CV (from Local PC) *
+                  </label>
+                  <div style={{
+                    border: '1.5px dashed #93C5FD',
+                    borderRadius: '8px',
+                    padding: '12px',
+                    textAlign: 'center',
+                    background: '#F0F9FF',
+                    position: 'relative'
+                  }}>
+                    <input
+                      type="file"
+                      accept=".pdf,.doc,.docx"
+                      onChange={handleResumeFileChange}
+                      style={{
+                        position: 'absolute',
+                        top: 0, left: 0, width: '100%', height: '100%',
+                        opacity: 0, cursor: 'pointer'
+                      }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <FileText size={18} color="#2563EB" />
+                      <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E40AF' }}>
+                        {applyForm.resumeFileName ? `Selected: ${applyForm.resumeFileName}` : 'Click to select Resume/CV from your PC (.pdf, .doc, .docx)'}
+                      </span>
+                    </div>
+                  </div>
                 </div>
+
                 <div className="pw-form-field">
-                  <label>Resume / Portfolio Link *</label>
-                  <input
-                    type="url"
-                    required
-                    placeholder="https://linkedin.com/in/username or Google Drive link"
-                    value={applyForm.resumeUrl}
-                    onChange={e => setApplyForm({ ...applyForm, resumeUrl: e.target.value })}
-                  />
-                </div>
-                <div className="pw-form-field">
-                  <label>Cover Note</label>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#475569', marginBottom: '4px', display: 'block' }}>Cover Note / Additional Details</label>
                   <textarea
-                    rows={3}
-                    placeholder="Tell us about your experience..."
+                    rows={2}
+                    placeholder="Briefly describe your experience and availability..."
                     value={applyForm.coverLetter}
                     onChange={e => setApplyForm({ ...applyForm, coverLetter: e.target.value })}
+                    style={{ width: '100%', padding: '8px 12px', fontSize: '0.85rem', border: '1px solid #CBD5E1', borderRadius: '8px', resize: 'vertical' }}
                   />
                 </div>
-                <button type="submit" className="pw-btn-primary-blue" disabled={applySubmitting}>
-                  {applySubmitting ? 'Submitting Application...' : 'Submit Application'}
+
+                <button type="submit" className="pw-btn-primary-blue" disabled={applySubmitting} style={{ padding: '10px', fontSize: '0.9rem', fontWeight: 600, marginTop: '4px' }}>
+                  {applySubmitting ? 'Submitting Application...' : 'Submit Job Application'}
                 </button>
+
                 {applyError && (
-                  <div style={{ marginTop: '8px', color: '#DC2626', fontSize: '0.8rem' }}>{applyError}</div>
+                  <div style={{ padding: '8px 12px', background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '6px', color: '#DC2626', fontSize: '0.8rem' }}>
+                    {applyError}
+                  </div>
                 )}
               </form>
             )}

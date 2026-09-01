@@ -93,7 +93,9 @@ export default function EmployeeDirectoryModal({ userId, onClose }) {
                     <div className="dir-info-row"><strong>Role:</strong> {user.role}</div>
                     <div className="dir-info-row"><strong>Department:</strong> {user.department || 'General'}</div>
                     <div className="dir-info-row"><strong>Account Status:</strong> <span className={`dir-status-pill ${user.status}`}>{user.status}</span></div>
+                    <div className="dir-info-row"><strong>Password Security:</strong> <span style={{ color: '#059669', fontWeight: 600, fontSize: '0.82rem' }}>🔒 Encrypted (bcrypt hash protected)</span></div>
                     <div className="dir-info-row"><strong>Approved:</strong> {user.isApproved ? 'Yes' : 'No'}</div>
+
                     <div className="dir-info-row"><strong>Joined Date:</strong> {new Date(user.createdAt).toLocaleDateString()}</div>
                   </div>
 

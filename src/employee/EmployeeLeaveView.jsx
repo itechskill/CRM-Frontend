@@ -323,14 +323,30 @@ export default function EmployeeLeaveView() {
                 </div>
 
                 <div className="emp-form-group">
-                  <label>Supporting Proof / Document Name (Optional)</label>
+                  <label>Supporting Proof / Attachment (Optional Image)</label>
                   <input
-                    type="text"
-                    placeholder="e.g. medical_certificate.pdf or flight_ticket.png"
-                    value={proofDocument}
-                    onChange={(e) => setProofDocument(e.target.value)}
+                    type="file"
+                    accept="image/*,.pdf"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          setProofDocument(reader.result || file.name);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
                     className="emp-form-input"
                   />
+                  {proofDocument && (
+                    <div style={{ marginTop: '8px', fontSize: '0.8rem', color: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      ✓ File selected!
+                      {proofDocument.startsWith('data:image') && (
+                        <img src={proofDocument} alt="Proof preview" style={{ maxHeight: '40px', borderRadius: '4px', border: '1px solid #E2E8F0' }} />
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -45,6 +45,7 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
   ];
 
   const systemNav = [
+    { id: 'profile', label: 'My Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

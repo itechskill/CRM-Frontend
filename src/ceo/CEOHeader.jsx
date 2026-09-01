@@ -32,20 +32,16 @@ export default function CEOHeader({ activeTab, currentUser, onMenuToggle, search
       </div>
 
       <div className="ceo-header-right">
-        <div className="ceo-search-box">
-          <Search size={16} />
-          <input
-            type="text"
-            placeholder="Search strategy, metrics..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-          />
-        </div>
-
         <NotificationDropdown />
 
         <div className="ceo-profile-pill">
-          <div className="ceo-profile-avatar">{initials}</div>
+          <div className="ceo-profile-avatar" style={{ overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            {currentUser?.profileImage ? (
+              <img src={currentUser.profileImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              initials
+            )}
+          </div>
           <span className="ceo-profile-name">{name}</span>
         </div>
       </div>

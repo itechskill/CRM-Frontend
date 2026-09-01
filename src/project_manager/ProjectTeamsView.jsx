@@ -123,14 +123,38 @@ function shortName(fullName) {
 }
 
 export default function ProjectTeamsView() {
+  const [members, setMembers] = useState(teamMembers);
   const [activeDept, setActiveDept] = useState('All');
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [memberName, setMemberName] = useState('');
+  const [memberRole, setMemberRole] = useState('');
+  const [memberDept, setMemberDept] = useState('Engineering');
+
+  const handleAddMember = (e) => {
+    e.preventDefault();
+    if (!memberName.trim()) return;
+    const newMember = {
+      id: Date.now(),
+      name: memberName.trim(),
+      role: memberRole.trim() || 'Team Member',
+      department: memberDept,
+      utilization: 50,
+      projectsCount: 1,
+      tasksCount: 3,
+      tags: [memberDept]
+    };
+    setMembers([newMember, ...members]);
+    setMemberName('');
+    setMemberRole('');
+    setIsAddModalOpen(false);
+  };
 
   const filteredMembers =
-    activeDept === 'All' ? teamMembers : teamMembers.filter((m) => m.department === activeDept);
+    activeDept === 'All' ? members : members.filter((m) => m.department === activeDept);
 
-  const totalDepartments = new Set(teamMembers.map((m) => m.department)).size;
+  const totalDepartments = new Set(members.map((m) => m.department)).size;
 
-  const taskLoadData = teamMembers.map((m) => ({
+  const taskLoadData = members.map((m) => ({
     name: shortName(m.name),
     tasks: m.tasksCount,
   }));
@@ -140,9 +164,9 @@ export default function ProjectTeamsView() {
       <div className="teams-page-header">
         <div>
           <h1>Team Assignment</h1>
-          <p>{teamMembers.length} team members across {totalDepartments} departments</p>
+          <p>{members.length} team members across {totalDepartments} departments</p>
         </div>
-        <button className="btn-primary">+ Add Member</button>
+        <button className="btn-primary" onClick={() => setIsAddModalOpen(true)}>+ Add Member</button>
       </div>
 
       <div className="teams-filter-row">
@@ -287,6 +311,59 @@ export default function ProjectTeamsView() {
           </div>
         </div>
       </div>
+
+      {isAddModalOpen && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '24px', width: '100%', maxWidth: '440px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#0F172A' }}>Add New Team Member</h3>
+              <button onClick={() => setIsAddModalOpen(false)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748B' }}>✕</button>
+            </div>
+            <form onSubmit={handleAddMember} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. Alex Morgan"
+                  value={memberName}
+                  onChange={(e) => setMemberName(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Role / Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Senior Software Engineer"
+                  value={memberRole}
+                  onChange={(e) => setMemberRole(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Department</label>
+                <select
+                  value={memberDept}
+                  onChange={(e) => setMemberDept(e.target.value)}
+                  style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem' }}
+                >
+                  <option value="Engineering">Engineering</option>
+                  <option value="Design">Design</option>
+                  <option value="Quality">Quality</option>
+                  <option value="Infrastructure">Infrastructure</option>
+                  <option value="Management">Management</option>
+                  <option value="Data Science">Data Science</option>
+                </select>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
+                <button type="button" onClick={() => setIsAddModalOpen(false)} style={{ padding: '8px 16px', background: '#F1F5F9', border: 'none', borderRadius: '8px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" style={{ padding: '8px 16px', background: '#2563EB', border: 'none', borderRadius: '8px', fontWeight: 600, color: '#FFFFFF', cursor: 'pointer' }}>Add Member</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

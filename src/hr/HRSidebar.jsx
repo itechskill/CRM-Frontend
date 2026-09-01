@@ -42,6 +42,7 @@ export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwit
   ];
 
   const bottomNav = [
+    { id: 'profile', label: 'My Profile', icon: User },
     { id: 'hr_notifications', label: 'Notifications', icon: Bell, badge: 5, badgeColor: '#EF4444' },
     { id: 'hr_settings', label: 'Settings', icon: Settings },
   ];

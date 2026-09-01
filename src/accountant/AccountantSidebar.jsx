@@ -20,6 +20,7 @@ import {
   Megaphone,
   Crown,
   Briefcase,
+  Wrench,
 } from 'lucide-react';
 import './AccountantSidebar.css';
 
@@ -38,10 +39,12 @@ export default function AccountantSidebar({ activeTab, setActiveTab, currentRole
     { id: 'expenses', label: 'Expenses', icon: Receipt, badge: '14' },
     { id: 'payroll', label: 'Payroll', icon: DollarSign },
     { id: 'accounts', label: 'Accounts', icon: Landmark },
+    { id: 'maintenance', label: 'Maintenance Charges', icon: Wrench },
     { id: 'acc_reports', label: 'Financial Reports', icon: PieChart },
   ];
 
   const bottomNav = [
+    { id: 'profile', label: 'My Profile', icon: User },
     { id: 'acc_notifications', label: 'Notifications', icon: Bell, badge: 3, badgeColor: '#EF4444' },
     { id: 'acc_settings', label: 'Settings', icon: Settings },
   ];

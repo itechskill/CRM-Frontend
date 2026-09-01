@@ -35,16 +35,6 @@ export default function SalesHeader({ activeTab, onOpenNewDealModal, onMenuToggl
       </div>
 
       <div className="sales-header-actions">
-        <div className="sales-search-box">
-          <Search size={16} className="sales-search-icon" />
-          <input
-            type="text"
-            placeholder="Search deals, prospects, clients..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-          />
-        </div>
-
         <NotificationDropdown />
 
         <button className="btn-new-deal" onClick={onOpenNewDealModal}>

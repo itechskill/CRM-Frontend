@@ -3,8 +3,7 @@ import { Search, Plus, Menu } from 'lucide-react';
 import NotificationDropdown from '../components/NotificationDropdown';
 import './MarketingHeader.css';
 
-export default function MarketingHeader({ activeTab, onMenuToggle, onOpenPrimaryAction }) {
-  const [searchQuery, setSearchQuery] = useState('');
+export default function MarketingHeader({ activeTab, onMenuToggle, onOpenPrimaryAction, searchQuery = '', onSearchChange }) {
 
   const getHeaderInfo = (tab) => {
     switch (tab) {
@@ -56,16 +55,6 @@ export default function MarketingHeader({ activeTab, onMenuToggle, onOpenPrimary
       </div>
 
       <div className="mkt-header-right">
-        <div className="mkt-search-box">
-          <Search size={16} className="mkt-search-icon" />
-          <input
-            type="text"
-            placeholder="Search campaigns, leads, content..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-
         <NotificationDropdown />
 
         {showPrimaryAction && (

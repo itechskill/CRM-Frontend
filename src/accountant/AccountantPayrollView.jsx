@@ -442,6 +442,68 @@ export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
         </div>
       )}
 
+      {/* Batch Process Payroll Modal */}
+      {isModalOpen && (
+        <div className="acc-modal-overlay">
+          <div className="acc-modal-content">
+            <div className="acc-modal-header">
+              <h3>Process & Disburse Monthly Payroll</h3>
+              <button className="acc-modal-close" onClick={onCloseModal}>×</button>
+            </div>
+            <div className="acc-modal-body">
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569' }}>
+                You are about to process monthly salary disbursements for <strong>{payrollList.filter(p => p.status === 'Pending').length} pending employee(s)</strong>.
+              </p>
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '16px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span>Total Headcount:</span>
+                  <strong>{payrollList.length} Staff</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                  <span>Pending Disbursement:</span>
+                  <strong style={{ color: '#D97706' }}>{payrollList.filter(p => p.status === 'Pending').length} Staff</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: 700, borderTop: '1px dashed #CBD5E1', paddingTop: '8px' }}>
+                  <span>Total Net Pay Amount:</span>
+                  <span style={{ color: '#2563EB' }}>
+                    ${payrollList.filter(p => p.status === 'Pending').reduce((sum, p) => sum + (p.netPay || 0), 0).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="acc-modal-footer">
+              <button className="acc-btn-secondary" onClick={onCloseModal} disabled={submitting}>Cancel</button>
+              <button
+                className="acc-btn-primary"
+                disabled={submitting || payrollList.filter(p => p.status === 'Pending').length === 0}
+                onClick={async () => {
+                  setSubmitting(true);
+                  try {
+                    const pendingRecords = payrollList.filter(p => p.status === 'Pending');
+                    await Promise.all(
+                      pendingRecords.map(p =>
+                        apiRequest(`/api/finance/payroll/${p._id}`, {
+                          method: 'PATCH',
+                          body: JSON.stringify({ status: 'Processed' })
+                        })
+                      )
+                    );
+                    await fetchPayroll();
+                    if (onCloseModal) onCloseModal();
+                  } catch (e) {
+                    setErrorMessage('Batch processing error.');
+                  } finally {
+                    setSubmitting(false);
+                  }
+                }}
+              >
+                {submitting ? 'Processing...' : 'Disburse & Mark as Processed'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Confirmation Modal */}
       {deletingRecord && (
         <div className="acc-modal-overlay">

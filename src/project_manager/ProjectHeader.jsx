@@ -3,7 +3,7 @@ import { Search, Plus, ChevronRight, Menu } from 'lucide-react';
 import NotificationDropdown from '../components/NotificationDropdown';
 import './ProjectHeader.css';
 
-export default function ProjectHeader({ activeTab, onOpenNewProjectModal, onMenuToggle }) {
+export default function ProjectHeader({ activeTab, onOpenNewProjectModal, onMenuToggle, searchQuery = '', onSearchChange }) {
   const getTabTitle = () => {
     switch (activeTab) {
       case 'projects': return 'Projects';
@@ -32,11 +32,6 @@ export default function ProjectHeader({ activeTab, onOpenNewProjectModal, onMenu
 
       {/* Header Right Actions */}
       <div className="project-header-actions">
-        <div className="project-search-box">
-          <Search size={16} className="project-search-icon" />
-          <input type="text" placeholder="Search projects, tasks..." />
-        </div>
-
         <NotificationDropdown />
 
         <button className="btn-new-project" onClick={onOpenNewProjectModal}>

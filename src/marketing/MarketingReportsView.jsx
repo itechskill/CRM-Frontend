@@ -23,6 +23,33 @@ const reportData = [
 export default function MarketingReportsView() {
   const [period, setPeriod] = useState('FY2026');
 
+  const handlePrint = () => {
+    window.print();
+  };
+
+  const handleDownloadCSV = (fileName = 'Marketing_Report.csv') => {
+    const headers = ['Acquisition Channel', 'Ad Spend', 'MQLs', 'SQLs', 'New Customers', 'Attributed Revenue', 'Cost/MQL', 'ROAS', 'ROMI'];
+    const rows = reportData.map(r => [
+      `"${r.channel}"`,
+      `"${r.spend}"`,
+      r.mqls,
+      r.sqls,
+      r.customers,
+      `"${r.revenue}"`,
+      `"${r.cpl}"`,
+      `"${r.roas}"`,
+      `"${r.romi}"`
+    ]);
+    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement('a');
+    link.setAttribute('href', encodedUri);
+    link.setAttribute('download', fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="mkt-view-container">
       {/* Page Header */}
@@ -31,12 +58,15 @@ export default function MarketingReportsView() {
           <h2>Marketing Growth Reports & ROI</h2>
           <p>Channel attribution models, campaign performance audits, and return on marketing investment.</p>
         </div>
-        <div className="mkt-header-actions">
-          <button className="mkt-btn-secondary" onClick={() => window.print()}>
+        <div className="mkt-header-actions" style={{ display: 'flex', gap: '8px' }}>
+          <button className="mkt-btn-secondary" onClick={() => handleDownloadCSV('Marketing_Export_Report.csv')}>
+            <FileText size={16} /> Export Report
+          </button>
+          <button className="mkt-btn-secondary" onClick={handlePrint}>
             <Printer size={16} /> Print Report
           </button>
-          <button className="mkt-btn-primary" onClick={() => alert('Exporting Marketing Performance Report as PDF...')}>
-            <Download size={16} /> Download PDF
+          <button className="mkt-btn-primary" onClick={() => handleDownloadCSV('Marketing_Performance_Report.csv')}>
+            <Download size={16} /> Download Report
           </button>
         </div>
       </div>

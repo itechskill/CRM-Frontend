@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Target, TrendingUp, Users, Star, Download, ChevronDown } from 'lucide-react';
+import { apiRequest } from '../utils/api';
 import {
   ResponsiveContainer,
   BarChart,
@@ -95,35 +96,45 @@ const summaryHealthDotColor = {
 /* ---------------- Component ---------------- */
 
 export default function ProjectReportsView() {
+  const [workUpdates, setWorkUpdates] = useState([]);
+
+  useEffect(() => {
+    const fetchUpdates = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/work-updates');
+        if (response.ok && data.success && Array.isArray(data.data)) {
+          setWorkUpdates(data.data);
+        }
+      } catch (err) {
+        console.error('Fetch work updates error in ProjectReportsView:', err);
+      }
+    };
+    fetchUpdates();
+  }, []);
+
   return (
     <div className="project-reports-container">
       {/* Page Header */}
       <div className="reports-page-header">
         <div>
-          <h1 className="reports-page-title">Reports & Analytics</h1>
-          <p className="reports-page-subtitle">Executive summary and project performance metrics</p>
-        </div>
-
-        <div className="reports-page-actions">
-          <div className="reports-quarter-select">
-            <span>Q2 2025</span>
-            <ChevronDown size={16} />
-          </div>
-          <button className="reports-export-btn">
-            <Download size={16} />
-            Export PDF
-          </button>
+          <h1 className="reports-page-title">Project Reports & Performance</h1>
+          <p className="reports-page-sub">Comprehensive portfolio metrics, financial budget tracking, and team productivity logs.</p>
         </div>
       </div>
 
       {/* KPI Cards */}
       <div className="reports-kpi-grid">
         {reportKpis.map((kpi) => {
-          const Icon = kpi.icon;
+          const IconComponent = kpi.icon;
           return (
-            <div key={kpi.id} className="reports-kpi-card">
-              <div className="reports-kpi-icon" style={{ backgroundColor: kpi.iconBg, color: kpi.iconColor }}>
-                <Icon size={22} />
+            <div className="reports-kpi-card" key={kpi.id}>
+              <div className="reports-kpi-top">
+                <div
+                  className="reports-kpi-icon"
+                  style={{ backgroundColor: kpi.iconBg, color: kpi.iconColor }}
+                >
+                  <IconComponent size={20} />
+                </div>
               </div>
               <div className="reports-kpi-value">{kpi.value}</div>
               <div className="reports-kpi-label">{kpi.label}</div>
@@ -133,64 +144,41 @@ export default function ProjectReportsView() {
         })}
       </div>
 
-      {/* Charts Grid */}
-      <div className="reports-charts-grid">
-        {/* Budget vs Actual Spend */}
-        <div className="reports-chart-widget">
-          <div className="reports-chart-header">
-            <h3 className="reports-chart-title">Budget vs Actual Spend</h3>
-            <p className="reports-chart-subtitle">Monthly budget tracking across all projects</p>
-          </div>
-
-          <div style={{ width: '100%', height: '280px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={budgetVsActualData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 12 }} />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#94A3B8', fontSize: 12 }}
-                  ticks={[35, 70, 105, 140]}
-                  tickFormatter={(v) => `$${v}k`}
-                />
-                <Tooltip
-                  formatter={(val) => [`$${val}k`, '']}
-                  contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="budget" fill="#BFDBFE" radius={[3, 3, 0, 0]} barSize={16} name="Budget" />
-                <Bar dataKey="actual" fill="#2563EB" radius={[3, 3, 0, 0]} barSize={16} name="Actual" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+      {/* Employee Work Updates Widget */}
+      <div className="reports-summary-widget" style={{ marginBottom: '24px' }}>
+        <div className="reports-summary-header">
+          <h3 className="reports-summary-title">Employee Work Updates & Standups ({workUpdates.length})</h3>
         </div>
-
-        {/* Team Productivity */}
-        <div className="reports-chart-widget">
-          <div className="reports-chart-header">
-            <h3 className="reports-chart-title">Team Productivity</h3>
-            <p className="reports-chart-subtitle">Tasks assigned vs completed per team member</p>
-          </div>
-
-          <div style={{ width: '100%', height: '280px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={teamProductivityData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }} barGap={4}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 12 }} />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#94A3B8', fontSize: 12 }}
-                  ticks={[4, 8, 12, 16]}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="assigned" fill="#CBD5E1" radius={[3, 3, 0, 0]} barSize={16} name="Assigned" />
-                <Bar dataKey="completed" fill="#10B981" radius={[3, 3, 0, 0]} barSize={16} name="Completed" />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table className="reports-summary-table">
+            <thead>
+              <tr>
+                <th>EMPLOYEE</th>
+                <th>DATE</th>
+                <th>HOURS</th>
+                <th>ACCOMPLISHMENTS</th>
+                <th>PLANNED NEXT</th>
+                <th>BLOCKERS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {workUpdates.map((up) => (
+                <tr key={up._id}>
+                  <td className="reports-summary-project-name">{up.userName || up.user?.fullName || 'Employee'}</td>
+                  <td>{new Date(up.date || up.createdAt).toLocaleDateString()}</td>
+                  <td><strong>{up.hoursSpent || 0} hrs</strong></td>
+                  <td style={{ maxWidth: '260px', fontSize: '0.85rem' }}>{up.summary || '—'}</td>
+                  <td style={{ maxWidth: '200px', fontSize: '0.85rem', color: '#2563EB' }}>{up.planned || '—'}</td>
+                  <td style={{ maxWidth: '180px', fontSize: '0.85rem', color: up.blockers ? '#DC2626' : '#64748B' }}>{up.blockers || 'None'}</td>
+                </tr>
+              ))}
+              {workUpdates.length === 0 && (
+                <tr>
+                  <td colSpan={6} style={{ textAlign: 'center', color: '#94A3B8', padding: '24px' }}>No work updates submitted yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

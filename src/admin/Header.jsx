@@ -74,16 +74,6 @@ export default function Header({ activeTab, currentUser, onOpenPrimaryAction, on
 
       {/* Right side: Global Search, Notification bell, + New Action Button */}
       <div className="header-actions">
-        <div className="global-search">
-          <Search size={16} className="global-search-icon" />
-          <input
-            type="text"
-            placeholder="Search anything..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-          />
-        </div>
-
         <NotificationDropdown />
 
         <button className="btn-primary" onClick={onOpenPrimaryAction}>

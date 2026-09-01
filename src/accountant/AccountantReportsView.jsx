@@ -30,7 +30,7 @@ const pnlData = {
   ]
 };
 
-export default function AccountantReportsView() {
+export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
   const [reportType, setReportType] = useState('pnl');
   const [period, setPeriod] = useState('FY2026');
 
@@ -41,6 +41,25 @@ export default function AccountantReportsView() {
   const netIncomeBeforeTax = grossProfit - totalOpex;
   const estimatedTax = netIncomeBeforeTax * 0.15;
   const netProfit = netIncomeBeforeTax - estimatedTax;
+
+  const handleExportCSV = () => {
+    let csvContent = "data:text/csv;charset=utf-8,Category,Item,Amount ($)\n";
+    pnlData.revenue.forEach(r => csvContent += `Revenue,"${r.item}",${r.amount}\n`);
+    pnlData.cogs.forEach(c => csvContent += `COGS,"${c.item}",${c.amount}\n`);
+    pnlData.operatingExpenses.forEach(o => csvContent += `OPEX,"${o.item}",${o.amount}\n`);
+    csvContent += `SUMMARY,Total Revenue,${totalRevenue}\n`;
+    csvContent += `SUMMARY,Gross Profit,${grossProfit}\n`;
+    csvContent += `SUMMARY,Total OPEX,${totalOpex}\n`;
+    csvContent += `SUMMARY,Net Profit After Tax,${netProfit}\n`;
+
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Financial_Report_${reportType.toUpperCase()}_${period}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="acc-view-container">
@@ -54,11 +73,46 @@ export default function AccountantReportsView() {
           <button className="acc-btn-secondary" onClick={() => window.print()}>
             <Printer size={16} /> Print Report
           </button>
-          <button className="acc-btn-primary" onClick={() => alert(`Exporting ${reportType.toUpperCase()} report as PDF...`)}>
-            <Download size={16} /> Download PDF
+          <button className="acc-btn-primary" onClick={handleExportCSV}>
+            <Download size={16} /> Export Report (CSV)
           </button>
         </div>
       </div>
+
+      {isModalOpen && (
+        <div className="acc-modal-overlay">
+          <div className="acc-modal-content">
+            <div className="acc-modal-header">
+              <h3>Export Financial Report</h3>
+              <button className="acc-modal-close" onClick={onCloseModal}>×</button>
+            </div>
+            <div className="acc-modal-body" style={{ gap: '16px' }}>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#475569' }}>
+                Select report format for <strong>{reportType.toUpperCase()} ({period})</strong>:
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <button
+                  className="acc-btn-primary"
+                  onClick={() => { handleExportCSV(); if (onCloseModal) onCloseModal(); }}
+                  style={{ justifyContent: 'center', padding: '14px' }}
+                >
+                  <Download size={18} /> Export CSV Spreadsheet
+                </button>
+                <button
+                  className="acc-btn-secondary"
+                  onClick={() => { window.print(); if (onCloseModal) onCloseModal(); }}
+                  style={{ justifyContent: 'center', padding: '14px' }}
+                >
+                  <Printer size={18} /> Print / Save as PDF
+                </button>
+              </div>
+            </div>
+            <div className="acc-modal-footer">
+              <button className="acc-btn-secondary" onClick={onCloseModal}>Close</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Report Type Selector Strip */}
       <div className="acc-card" style={{ padding: '16px 24px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '16px' }}>

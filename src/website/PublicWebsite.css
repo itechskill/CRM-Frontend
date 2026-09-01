@@ -1,7 +1,9 @@
 /* NexusCRM Public Website Styles — Multi-Page Routing & Exact Design Language */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
@@ -46,7 +48,8 @@
 }
 
 /* ─── Typography & Colors ─────────────────────────────────────────────────── */
-.pw-text-blue, .pw-blue-accent {
+.pw-text-blue,
+.pw-blue-accent {
   color: #2563EB;
 }
 
@@ -550,9 +553,20 @@
   border-radius: 4px;
 }
 
-.ref-kpi-badge.green { background: #DCFCE7; color: #16A34A; }
-.ref-kpi-badge.purple { background: #F3E8FF; color: #7C3AED; }
-.ref-kpi-badge.orange { background: #FFEDD5; color: #EA580C; }
+.ref-kpi-badge.green {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.ref-kpi-badge.purple {
+  background: #F3E8FF;
+  color: #7C3AED;
+}
+
+.ref-kpi-badge.orange {
+  background: #FFEDD5;
+  color: #EA580C;
+}
 
 .ref-kpi-icon {
   width: 26px;
@@ -564,10 +578,25 @@
   flex-shrink: 0;
 }
 
-.ref-kpi-icon.blue { background: #EFF6FF; color: #2563EB; }
-.ref-kpi-icon.green { background: #F0FDF4; color: #16A34A; }
-.ref-kpi-icon.purple { background: #F5F3FF; color: #7C3AED; }
-.ref-kpi-icon.orange { background: #FFF7ED; color: #EA580C; }
+.ref-kpi-icon.blue {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.ref-kpi-icon.green {
+  background: #F0FDF4;
+  color: #16A34A;
+}
+
+.ref-kpi-icon.purple {
+  background: #F5F3FF;
+  color: #7C3AED;
+}
+
+.ref-kpi-icon.orange {
+  background: #FFF7ED;
+  color: #EA580C;
+}
 
 .ref-bottom-row {
   display: grid;
@@ -575,7 +604,8 @@
   gap: 10px;
 }
 
-.ref-chart-card, .ref-activity-card {
+.ref-chart-card,
+.ref-activity-card {
   background: #FFFFFF;
   border-radius: 8px;
   padding: 10px;
@@ -624,10 +654,25 @@
   flex-shrink: 0;
 }
 
-.ref-act-icon.blue { background: #EFF6FF; color: #2563EB; }
-.ref-act-icon.green { background: #F0FDF4; color: #16A34A; }
-.ref-act-icon.teal { background: #CCFBF1; color: #0D9488; }
-.ref-act-icon.orange { background: #FFF7ED; color: #EA580C; }
+.ref-act-icon.blue {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.ref-act-icon.green {
+  background: #F0FDF4;
+  color: #16A34A;
+}
+
+.ref-act-icon.teal {
+  background: #CCFBF1;
+  color: #0D9488;
+}
+
+.ref-act-icon.orange {
+  background: #FFF7ED;
+  color: #EA580C;
+}
 
 .ref-act-title {
   font-size: 0.58rem;
@@ -646,7 +691,7 @@
   left: -20px;
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
-  box-shadow: 0 12px 30px rgba(0,0,0,0.12);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.12);
   border-radius: 12px;
   padding: 10px 14px;
   display: flex;
@@ -656,8 +701,15 @@
 }
 
 @keyframes floatToast {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-6px); }
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-6px);
+  }
 }
 
 /* ─── SECTIONS COMMONS ──────────────────────────────────────────────────────── */
@@ -665,8 +717,13 @@
   padding: 72px 0;
 }
 
-.pw-bg-white { background: #FFFFFF; }
-.pw-bg-light { background: #F8FAFC; }
+.pw-bg-white {
+  background: #FFFFFF;
+}
+
+.pw-bg-light {
+  background: #F8FAFC;
+}
 
 .pw-section-heading-center {
   text-align: center;
@@ -1040,7 +1097,10 @@
   color: #334155;
 }
 
-.pw-check-blue { color: #2563EB; flex-shrink: 0; }
+.pw-check-blue {
+  color: #2563EB;
+  flex-shrink: 0;
+}
 
 .pw-price-btn {
   width: 100%;
@@ -1053,12 +1113,14 @@
   border: none;
 }
 
-.pw-price-btn.solid, .pw-price-btn.outline {
+.pw-price-btn.solid,
+.pw-price-btn.outline {
   background: #2563EB;
   color: #FFFFFF;
 }
 
-.pw-price-btn.solid:hover, .pw-price-btn.outline:hover {
+.pw-price-btn.solid:hover,
+.pw-price-btn.outline:hover {
   background: #1D4ED8;
 }
 
@@ -1334,7 +1396,8 @@
   color: #475569;
 }
 
-.pw-form-field input, .pw-form-field textarea {
+.pw-form-field input,
+.pw-form-field textarea {
   width: 100%;
   padding: 10px 14px;
   border: 1px solid #E2E8F0;
@@ -1344,7 +1407,8 @@
   font-family: inherit;
 }
 
-.pw-form-field input:focus, .pw-form-field textarea:focus {
+.pw-form-field input:focus,
+.pw-form-field textarea:focus {
   border-color: #2563EB;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
@@ -1420,7 +1484,9 @@
   cursor: pointer;
 }
 
-.pw-social-btn:hover { background: #2563EB; }
+.pw-social-btn:hover {
+  background: #2563EB;
+}
 
 .pw-footer-ul {
   list-style: none;
@@ -1435,7 +1501,9 @@
   transition: color 0.2s;
 }
 
-.pw-footer-ul li:hover { color: #FFFFFF; }
+.pw-footer-ul li:hover {
+  color: #FFFFFF;
+}
 
 .pw-contact-ul li {
   display: flex;
@@ -1494,7 +1562,9 @@
   cursor: pointer;
 }
 
-.pw-footer-legal-links span:hover { color: #FFFFFF; }
+.pw-footer-legal-links span:hover {
+  color: #FFFFFF;
+}
 
 /* ─── MODALS ────────────────────────────────────────────────────────────────── */
 .pw-modal-backdrop {
@@ -1589,26 +1659,422 @@
 
 /* ─── RESPONSIVE MEDIA QUERIES ──────────────────────────────────────────────── */
 @media (max-width: 1024px) {
-  .pw-hero-inner { grid-template-columns: 1fr; }
-  .pw-features-8grid, .pw-full-features-grid { grid-template-columns: repeat(2, 1fr); }
-  .pw-solutions-7grid { grid-template-columns: repeat(2, 1fr); }
-  .pw-pricing-4grid { grid-template-columns: repeat(2, 1fr); }
-  .pw-jobs-4grid { grid-template-columns: repeat(2, 1fr); }
-  .pw-about-stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .pw-about-content-grid { grid-template-columns: 1fr; gap: 32px; }
-  .pw-footer-grid { grid-template-columns: 1fr 1fr; }
-  .pw-wf-container { flex-wrap: wrap; justify-content: center; }
+  .pw-hero-inner {
+    grid-template-columns: 1fr;
+  }
+
+  .pw-features-8grid,
+  .pw-full-features-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pw-solutions-7grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pw-pricing-4grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pw-jobs-4grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pw-about-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .pw-about-content-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .pw-footer-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .pw-wf-container {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
 }
 
 @media (max-width: 768px) {
-  .pw-nav-links, .pw-nav-actions { display: none; }
-  .pw-nav-hamburger { display: flex; }
-  .pw-features-8grid, .pw-full-features-grid, .pw-solutions-7grid, .pw-pricing-4grid, .pw-jobs-4grid, .pw-faq-grid {
+
+  .pw-nav-links,
+  .pw-nav-actions {
+    display: none;
+  }
+
+  .pw-nav-hamburger {
+    display: flex;
+  }
+
+  .pw-features-8grid,
+  .pw-full-features-grid,
+  .pw-solutions-7grid,
+  .pw-pricing-4grid,
+  .pw-jobs-4grid,
+  .pw-faq-grid {
     grid-template-columns: 1fr;
   }
-  .pw-contact-wrapper { grid-template-columns: 1fr; }
-  .pw-footer-grid { grid-template-columns: 1fr; }
-  .pw-footer-bottom { flex-direction: column; gap: 12px; }
-  .pw-careers-filter-bar { flex-direction: column; align-items: stretch; }
-  .pw-filter-select-group { flex-direction: column; }
+
+  .pw-contact-wrapper {
+    grid-template-columns: 1fr;
+  }
+
+  .pw-footer-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pw-footer-bottom {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .pw-careers-filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pw-filter-select-group {
+    flex-direction: column;
+  }
+}
+
+/* ─── ENTRANCE ANIMATIONS ───────────────────────────────────────────────── */
+@keyframes pwFadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pwFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes pwScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ─── HOW IT WORKS PAGE ─────────────────────────────────────────────────── */
+.pw-page-header {
+  animation: pwFadeIn 0.6s ease both;
+}
+
+.pw-detailed-step-card {
+  opacity: 0;
+  animation: pwFadeInUp 0.6s ease forwards;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.pw-detailed-step-card:hover {
+  transform: translateX(6px);
+  box-shadow: 0 12px 28px rgba(37, 99, 235, 0.1);
+  border-color: #93C5FD;
+}
+
+.pw-detailed-step-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.pw-detailed-step-card:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.pw-detailed-step-card:nth-child(3) {
+  animation-delay: 0.25s;
+}
+
+.pw-detailed-step-card:nth-child(4) {
+  animation-delay: 0.35s;
+}
+
+.pw-detailed-step-card:nth-child(5) {
+  animation-delay: 0.45s;
+}
+
+.pw-step-number {
+  transition: transform 0.3s ease, background-color 0.3s ease;
+}
+
+.pw-detailed-step-card:hover .pw-step-number {
+  transform: scale(1.08) rotate(-4deg);
+  background: #2563EB;
+  color: #FFFFFF;
+}
+
+/* Home page workflow teaser items */
+.pw-wf-item {
+  transition: transform 0.25s ease;
+}
+
+.pw-wf-item:hover {
+  transform: translateY(-4px);
+}
+
+.pw-wf-item:hover .pw-wf-badge-icon {
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.25);
+}
+
+.pw-wf-badge-icon {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pw-wf-chevron svg {
+  transition: transform 0.3s ease;
+}
+
+.pw-wf-container:hover .pw-wf-chevron svg {
+  transform: translateX(2px);
+}
+
+/* ─── PRICING PAGE ──────────────────────────────────────────────────────── */
+.pw-price-box {
+  opacity: 0;
+  animation: pwFadeInUp 0.55s ease forwards;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.pw-price-box:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.pw-price-box:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.pw-price-box:nth-child(3) {
+  animation-delay: 0.25s;
+}
+
+.pw-price-box:nth-child(4) {
+  animation-delay: 0.35s;
+}
+
+.pw-price-box:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 44px rgba(15, 23, 42, 0.12);
+}
+
+.pw-price-box.popular:hover {
+  box-shadow: 0 24px 50px rgba(37, 99, 235, 0.22);
+}
+
+.pw-price-val {
+  transition: transform 0.3s ease;
+}
+
+.pw-price-box:hover .pw-price-val {
+  transform: scale(1.05);
+}
+
+.pw-price-list li {
+  opacity: 0;
+  animation: pwFadeIn 0.4s ease forwards;
+}
+
+.pw-price-box:nth-child(1) .pw-price-list li:nth-child(1) {
+  animation-delay: 0.3s;
+}
+
+.pw-price-box:nth-child(1) .pw-price-list li:nth-child(2) {
+  animation-delay: 0.36s;
+}
+
+.pw-price-box:nth-child(1) .pw-price-list li:nth-child(3) {
+  animation-delay: 0.42s;
+}
+
+.pw-price-box:nth-child(1) .pw-price-list li:nth-child(4) {
+  animation-delay: 0.48s;
+}
+
+.pw-price-box:nth-child(2) .pw-price-list li:nth-child(1) {
+  animation-delay: 0.4s;
+}
+
+.pw-price-box:nth-child(2) .pw-price-list li:nth-child(2) {
+  animation-delay: 0.46s;
+}
+
+.pw-price-box:nth-child(2) .pw-price-list li:nth-child(3) {
+  animation-delay: 0.52s;
+}
+
+.pw-price-box:nth-child(2) .pw-price-list li:nth-child(4) {
+  animation-delay: 0.58s;
+}
+
+.pw-price-box:nth-child(3) .pw-price-list li:nth-child(1) {
+  animation-delay: 0.5s;
+}
+
+.pw-price-box:nth-child(3) .pw-price-list li:nth-child(2) {
+  animation-delay: 0.56s;
+}
+
+.pw-price-box:nth-child(3) .pw-price-list li:nth-child(3) {
+  animation-delay: 0.62s;
+}
+
+.pw-price-box:nth-child(3) .pw-price-list li:nth-child(4) {
+  animation-delay: 0.68s;
+}
+
+.pw-price-box:nth-child(4) .pw-price-list li:nth-child(1) {
+  animation-delay: 0.6s;
+}
+
+.pw-price-box:nth-child(4) .pw-price-list li:nth-child(2) {
+  animation-delay: 0.66s;
+}
+
+.pw-price-box:nth-child(4) .pw-price-list li:nth-child(3) {
+  animation-delay: 0.72s;
+}
+
+.pw-price-box:nth-child(4) .pw-price-list li:nth-child(4) {
+  animation-delay: 0.78s;
+}
+
+.pw-billing-toggle button {
+  transition: all 0.25s ease;
+}
+
+.pw-price-btn {
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+}
+
+.pw-price-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 99, 235, 0.3);
+}
+
+.pw-faq-card {
+  opacity: 0;
+  animation: pwFadeInUp 0.5s ease forwards;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.pw-faq-card:nth-child(1) {
+  animation-delay: 0.1s;
+}
+
+.pw-faq-card:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.pw-faq-card:nth-child(3) {
+  animation-delay: 0.26s;
+}
+
+.pw-faq-card:nth-child(4) {
+  animation-delay: 0.34s;
+}
+
+.pw-faq-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
+  border-color: #BFDBFE;
+}
+
+/* ─── ABOUT PAGE ────────────────────────────────────────────────────────── */
+.pw-stat-card {
+  opacity: 0;
+  animation: pwScaleIn 0.5s ease forwards;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.pw-stat-card:nth-child(1) {
+  animation-delay: 0.05s;
+}
+
+.pw-stat-card:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.pw-stat-card:nth-child(3) {
+  animation-delay: 0.25s;
+}
+
+.pw-stat-card:nth-child(4) {
+  animation-delay: 0.35s;
+}
+
+.pw-stat-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 16px 32px rgba(37, 99, 235, 0.12);
+  background-color: #FFFFFF;
+  border-color: #BFDBFE;
+}
+
+.pw-stat-num {
+  transition: transform 0.3s ease;
+}
+
+.pw-stat-card:hover .pw-stat-num {
+  transform: scale(1.1);
+}
+
+.pw-about-content-grid>div:first-child {
+  opacity: 0;
+  animation: pwFadeInUp 0.6s ease 0.15s forwards;
+}
+
+.pw-about-highlight-box {
+  opacity: 0;
+  animation: pwFadeInUp 0.6s ease 0.3s forwards;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.pw-about-highlight-box:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 20px 40px rgba(37, 99, 235, 0.15);
+}
+
+.pw-about-highlight-box li {
+  transition: transform 0.2s ease;
+}
+
+.pw-about-highlight-box li:hover {
+  transform: translateX(4px);
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+
+  .pw-detailed-step-card,
+  .pw-price-box,
+  .pw-price-list li,
+  .pw-faq-card,
+  .pw-stat-card,
+  .pw-about-content-grid>div:first-child,
+  .pw-about-highlight-box,
+  .pw-page-header {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

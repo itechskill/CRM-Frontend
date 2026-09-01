@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import PublicWebsite from './website/PublicWebsite';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleProtectedRoute from './components/RoleProtectedRoute';
@@ -105,6 +106,7 @@ import AccountantInvoicesView from './accountant/AccountantInvoicesView';
 import AccountantExpensesView from './accountant/AccountantExpensesView';
 import AccountantPayrollView from './accountant/AccountantPayrollView';
 import AccountantAccountsView from './accountant/AccountantAccountsView';
+import AccountantMaintenanceView from './accountant/AccountantMaintenanceView';
 import AccountantReportsView from './accountant/AccountantReportsView';
 import AccountantNotificationsView from './accountant/AccountantNotificationsView';
 import AccountantSettingsView from './accountant/AccountantSettingsView';
@@ -140,6 +142,7 @@ import AdministrationDepartmentsView from './administration/AdministrationDepart
 import AdministrationAttendanceLeaveView from './administration/AdministrationAttendanceLeaveView';
 import AdministrationCompanyResourcesView from './administration/AdministrationCompanyResourcesView';
 import AdministrationReportsView from './administration/AdministrationReportsView';
+import ProfileView from './components/ProfileView';
 
 import { Users, ShieldCheck, UserX } from 'lucide-react';
 
@@ -324,6 +327,33 @@ export default function App() {
   const [authLoading, setAuthLoading] = useState(() => !!cachedToken);
   const [isAuthenticated, setIsAuthenticated] = useState(() => !!(cachedToken && cachedUser));
   const [authView, setAuthView] = useState('landing');
+  const [resetToken, setResetToken] = useState('');
+
+  // Detect reset-password token in URL path or query params
+  useEffect(() => {
+    const checkResetPasswordUrl = () => {
+      const path = window.location.pathname;
+      const searchParams = new URLSearchParams(window.location.search);
+      const queryToken = searchParams.get('token');
+
+      if (path.startsWith('/reset-password/')) {
+        const extractedToken = path.replace('/reset-password/', '').trim();
+        if (extractedToken) {
+          setResetToken(extractedToken);
+          setAuthView('reset-password');
+        }
+      } else if (path === '/reset-password' && queryToken) {
+        setResetToken(queryToken);
+        setAuthView('reset-password');
+      } else if (path === '/forgot-password') {
+        setAuthView('forgot-password');
+      }
+    };
+
+    checkResetPasswordUrl();
+    window.addEventListener('popstate', checkResetPasswordUrl);
+    return () => window.removeEventListener('popstate', checkResetPasswordUrl);
+  }, []);
 
   const initialVerifiedRole = cachedUser ? getFrontendRole(cachedUser.role) : 'employee';
   const initialDisplayRole = cachedUser
@@ -539,6 +569,8 @@ export default function App() {
   const handleHrPrimaryAction = (tab) => {
     if (tab === 'employees') setHrHeaderAction({ type: 'add_employee', ts: Date.now() });
     if (tab === 'attendance') setHrHeaderAction({ type: 'mark_attendance', ts: Date.now() });
+    if (tab === 'recruitment') setHrHeaderAction({ type: 'post_job', ts: Date.now() });
+    if (tab === 'performance') setHrHeaderAction({ type: 'new_review', ts: Date.now() });
   };
 
   const knownRoles = [
@@ -555,14 +587,14 @@ export default function App() {
   useEffect(() => {
     const roleValidTabs = {
       employee: ['dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings'],
-      sales_manager: ['dashboard', 'leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'clients', 'notifications'],
-      project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings'],
-      admin: ['dashboard', 'clients', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'projects', 'finance', 'reports', 'settings'],
-      hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings'],
-      accountant: ['dashboard', 'invoices', 'expenses', 'payroll', 'accounts', 'acc_reports', 'acc_notifications', 'acc_settings'],
-      marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings'],
-      ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics'],
-      administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports']
+      sales_manager: ['dashboard', 'leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'clients', 'notifications', 'profile'],
+      project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
+      admin: ['dashboard', 'clients', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'projects', 'finance', 'reports', 'settings', 'profile'],
+      hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
+      accountant: ['dashboard', 'invoices', 'expenses', 'payroll', 'accounts', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
+      marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'],
+      ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile'],
+      administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile']
     };
 
     const validTabs = roleValidTabs[effectiveRole] || [];
@@ -617,7 +649,25 @@ export default function App() {
       return <Register onSwitchToLogin={() => setAuthView('login')} onSwitchToLanding={() => setAuthView('landing')} />;
     }
     if (authView === 'forgot-password') {
-      return <ForgotPassword onSwitchToLogin={() => setAuthView('login')} onSwitchToLanding={() => setAuthView('landing')} />;
+      return (
+        <ForgotPassword
+          onSwitchToLogin={() => setAuthView('login')}
+          onSwitchToLanding={() => setAuthView('landing')}
+        />
+      );
+    }
+
+    if (authView === 'reset-password') {
+      return (
+        <ResetPassword
+          token={resetToken}
+          onSwitchToLogin={() => {
+            setResetToken('');
+            setAuthView('login');
+          }}
+          onSwitchToLanding={() => setAuthView('landing')}
+        />
+      );
     }
     if (authView === 'login') {
       return (
@@ -636,6 +686,7 @@ export default function App() {
       />
     );
   }
+
 
   const handleInviteUser = (newUser) => {
     fetchSharedData();
@@ -734,9 +785,11 @@ export default function App() {
               activeTab={activeTab}
               onOpenNewDealModal={() => setIsNewProjectModalOpen(true)}
               onMenuToggle={() => setIsSidebarOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'clients', 'notifications'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
+              {(activeTab === 'dashboard' || !['leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'clients', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
               {activeTab === 'leads' && <SalesLeadsView />}
               {activeTab === 'contacts' && <SalesContactsView />}
               {activeTab === 'deals' && <SalesDealsView />}
@@ -748,6 +801,7 @@ export default function App() {
               {activeTab === 'proposals' && <SalesProposalsView />}
               {activeTab === 'clients' && <SalesClientsView />}
               {activeTab === 'notifications' && <SalesNotificationsView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -776,9 +830,11 @@ export default function App() {
               activeTab={activeTab}
               onOpenNewProjectModal={() => setIsNewProjectModalOpen(true)}
               onMenuToggle={() => setIsSidebarOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings'].includes(activeTab)) && <ProjectManagerDashboard currentUser={currentUser} />}
+              {(activeTab === 'dashboard' || !['projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'].includes(activeTab)) && <ProjectManagerDashboard currentUser={currentUser} />}
               {activeTab === 'projects' && <ProjectProjectsView projectsList={projectsList} />}
               {activeTab === 'teams' && <ProjectTeamsView />}
               {activeTab === 'tasks' && <ProjectTasksView />}
@@ -786,6 +842,7 @@ export default function App() {
               {activeTab === 'deliveries' && <ProjectDeliveriesView />}
               {activeTab === 'reports' && <ProjectReportsView />}
               {activeTab === 'settings' && <ProjectSettings />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -820,7 +877,7 @@ export default function App() {
             />
 
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['clients', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'projects', 'finance', 'reports', 'settings'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['clients', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'projects', 'finance', 'reports', 'settings', 'profile'].includes(activeTab)) && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
                   <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '0' }}>
                     <KpiCard
@@ -894,6 +951,7 @@ export default function App() {
               {activeTab === 'finance' && <FinanceView />}
               {activeTab === 'reports' && <ReportsView />}
               {activeTab === 'settings' && <SettingsView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -926,14 +984,15 @@ export default function App() {
               onPrimaryAction={handleHrPrimaryAction}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings'].includes(activeTab)) && <HRDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
+              {(activeTab === 'dashboard' || !['employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'].includes(activeTab)) && <HRDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
               {activeTab === 'employees' && <HREmployeesView searchQuery={portalSearch} headerAction={hrHeaderAction} />}
               {activeTab === 'attendance' && <HRAttendanceView searchQuery={portalSearch} headerAction={hrHeaderAction} />}
-              {activeTab === 'recruitment' && <HRRecruitmentView />}
-              {activeTab === 'performance' && <HRPerformanceView />}
+              {activeTab === 'recruitment' && <HRRecruitmentView searchQuery={portalSearch} isModalOpen={hrHeaderAction?.type === 'post_job'} />}
+              {activeTab === 'performance' && <HRPerformanceView searchQuery={portalSearch} isModalOpen={hrHeaderAction?.type === 'new_review'} />}
               {activeTab === 'hr_reports' && <HRReportsView />}
               {activeTab === 'hr_notifications' && <HRNotificationsView />}
               {activeTab === 'hr_settings' && <HRSettingsView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -962,14 +1021,18 @@ export default function App() {
               activeTab={activeTab}
               onMenuToggle={() => setIsSidebarOpen(true)}
               onOpenPrimaryAction={() => setIsAccModalOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['invoices', 'expenses', 'payroll', 'accounts', 'acc_reports', 'acc_notifications', 'acc_settings'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['invoices', 'expenses', 'payroll', 'accounts', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'].includes(activeTab)) && (
                 <AccountantDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
                   onOpenInvoiceModal={() => { setActiveTab('invoices'); setIsAccModalOpen(true); }}
                   onOpenExpenseModal={() => { setActiveTab('expenses'); setIsAccModalOpen(true); }}
+                  isModalOpen={isAccModalOpen}
+                  onCloseModal={() => setIsAccModalOpen(false)}
                 />
               )}
               {activeTab === 'invoices' && (
@@ -996,9 +1059,21 @@ export default function App() {
                   onCloseModal={() => setIsAccModalOpen(false)}
                 />
               )}
-              {activeTab === 'acc_reports' && <AccountantReportsView />}
+              {activeTab === 'maintenance' && (
+                <AccountantMaintenanceView
+                  isModalOpen={isAccModalOpen}
+                  onCloseModal={() => setIsAccModalOpen(false)}
+                />
+              )}
+              {activeTab === 'acc_reports' && (
+                <AccountantReportsView
+                  isModalOpen={isAccModalOpen}
+                  onCloseModal={() => setIsAccModalOpen(false)}
+                />
+              )}
               {activeTab === 'acc_notifications' && <AccountantNotificationsView />}
               {activeTab === 'acc_settings' && <AccountantSettingsView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -1027,9 +1102,11 @@ export default function App() {
               activeTab={activeTab}
               onMenuToggle={() => setIsSidebarOpen(true)}
               onOpenPrimaryAction={() => setIsMktModalOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'].includes(activeTab)) && (
                 <MarketingDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
@@ -1059,6 +1136,7 @@ export default function App() {
               {activeTab === 'mkt_reports' && <MarketingReportsView />}
               {activeTab === 'mkt_notifications' && <MarketingNotificationsView />}
               {activeTab === 'mkt_settings' && <MarketingSettingsView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -1087,14 +1165,17 @@ export default function App() {
               activeTab={activeTab}
               currentUser={currentUser}
               onMenuToggle={() => setIsSidebarOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics'].includes(activeTab)) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
+              {(activeTab === 'dashboard' || !['business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile'].includes(activeTab)) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
               {activeTab === 'business_overview' && <BusinessOverviewView />}
               {activeTab === 'projects_performance' && <ProjectsPerformanceView />}
               {activeTab === 'sales_finance' && <SalesFinanceView />}
               {activeTab === 'team_performance' && <TeamPerformanceView />}
               {activeTab === 'reports_analytics' && <ReportsAnalyticsView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -1121,19 +1202,23 @@ export default function App() {
           <div className="main-wrapper">
             <AdministrationHeader
               activeTab={activeTab}
+              currentUser={currentUser}
               onMenuToggle={() => setIsSidebarOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
             />
             <main className="content-area">
               {(activeTab === 'dashboard' || activeTab === 'administration') && (
                 <AdministrationDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />
               )}
               {activeTab === 'employees' && <AdministrationEmployeesView />}
-              {activeTab === 'departments' && <AdministrationDepartmentsView />}
+              {activeTab === 'departments' && <AdministrationDepartmentsView searchQuery={portalSearch} />}
               {activeTab === 'attendance_leave' && <AdministrationAttendanceLeaveView />}
               {activeTab === 'company_resources' && <AdministrationCompanyResourcesView />}
               {activeTab === 'reports' && <AdministrationReportsView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
               {/* Catch-all: if activeTab doesn't match any known administration tab, show dashboard */}
-              {!['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports'].includes(activeTab) && (
+              {!['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile'].includes(activeTab) && (
                 <AdministrationDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />
               )}
             </main>

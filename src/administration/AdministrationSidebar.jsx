@@ -37,6 +37,7 @@ export default function AdministrationSidebar({ activeTab, setActiveTab, current
     { id: 'attendance_leave', label: 'Attendance', icon: CalendarCheck, badge: '5 Pending' },
     { id: 'company_resources', label: 'Company Resources', icon: Package },
     { id: 'reports', label: 'Reports', icon: FileText },
+    { id: 'profile', label: 'My Profile', icon: User },
   ];
 
   return (

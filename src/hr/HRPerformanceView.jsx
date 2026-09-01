@@ -275,7 +275,7 @@ function DeleteConfirmModal({ review, onClose, onConfirm, deleting }) {
   );
 }
 
-export default function HRPerformanceView({ searchQuery = '' }) {
+export default function HRPerformanceView({ searchQuery = '', isModalOpen, onCloseModal }) {
   const [search, setSearch] = useState('');
   const [periodFilter, setPeriodFilter] = useState('');
   const [reviews, setReviews] = useState([]);
@@ -286,6 +286,13 @@ export default function HRPerformanceView({ searchQuery = '' }) {
   const [errorMessage, setErrorMessage] = useState('');
 
   const [isFormOpen, setIsFormOpen] = useState(false);
+
+  useEffect(() => {
+    if (isModalOpen) {
+      setIsFormOpen(true);
+      setErrorMessage('');
+    }
+  }, [isModalOpen]);
   const [editingReview, setEditingReview] = useState(null);
   const [viewingReview, setViewingReview] = useState(null);
   const [deletingReview, setDeletingReview] = useState(null);
@@ -448,7 +455,11 @@ export default function HRPerformanceView({ searchQuery = '' }) {
           </select>
         </div>
         <div className="hr-toolbar-right">
-          <button className="hr-action-btn" onClick={() => { setIsFormOpen(true); setErrorMessage(''); }}>
+          <button
+            className="hr-action-btn"
+            style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)', boxShadow: '0 2px 8px rgba(37, 99, 235, 0.25)' }}
+            onClick={() => { setIsFormOpen(true); setErrorMessage(''); }}
+          >
             <Plus size={15} /> New Review
           </button>
         </div>

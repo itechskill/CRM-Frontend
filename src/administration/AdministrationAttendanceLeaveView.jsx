@@ -7,17 +7,19 @@ export default function AdministrationAttendanceLeaveView() {
   const [stats, setStats] = useState(null);
   const [attendanceLogs, setAttendanceLogs] = useState([]);
   const [leaveRequests, setLeaveRequests] = useState([]);
+  const [workUpdates, setWorkUpdates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState(null);
-  const [activeTab, setActiveTab] = useState('attendance'); // 'attendance' | 'leaves'
+  const [activeTab, setActiveTab] = useState('attendance'); // 'attendance' | 'leaves' | 'work_updates'
 
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [statsRes, attRes, leaveRes] = await Promise.all([
+      const [statsRes, attRes, leaveRes, workRes] = await Promise.all([
         apiRequest('/api/hr/stats'),
         apiRequest('/api/hr/attendance'),
-        apiRequest('/api/hr/leaves')
+        apiRequest('/api/hr/leaves'),
+        apiRequest('/api/work-updates')
       ]);
 
       if (statsRes.response.ok && statsRes.data.success) {
@@ -31,8 +33,12 @@ export default function AdministrationAttendanceLeaveView() {
       if (leaveRes.response.ok && leaveRes.data.success && Array.isArray(leaveRes.data.data)) {
         setLeaveRequests(leaveRes.data.data);
       }
+
+      if (workRes.response.ok && workRes.data.success && Array.isArray(workRes.data.data)) {
+        setWorkUpdates(workRes.data.data);
+      }
     } catch (err) {
-      console.error('Fetch administration attendance & leave error:', err);
+      console.error('Fetch administration attendance, leave & work updates error:', err);
     } finally {
       setLoading(false);
     }
@@ -139,6 +145,21 @@ export default function AdministrationAttendanceLeaveView() {
             >
               Leave Requests ({leaveRequests.length})
             </button>
+            <button
+              onClick={() => setActiveTab('work_updates')}
+              style={{
+                background: activeTab === 'work_updates' ? '#2563EB' : '#F1F5F9',
+                color: activeTab === 'work_updates' ? '#FFFFFF' : '#475569',
+                border: 'none',
+                padding: '8px 16px',
+                borderRadius: '8px',
+                fontWeight: 700,
+                fontSize: '0.85rem',
+                cursor: 'pointer'
+              }}
+            >
+              Employee Work Updates ({workUpdates.length})
+            </button>
           </div>
 
           <button
@@ -187,7 +208,7 @@ export default function AdministrationAttendanceLeaveView() {
               </tbody>
             </table>
           </div>
-        ) : (
+        ) : activeTab === 'leaves' ? (
           <div className="ceo-table-wrapper" style={{ marginTop: '16px' }}>
             <table className="ceo-table admin-leave-table">
               <thead>
@@ -239,6 +260,42 @@ export default function AdministrationAttendanceLeaveView() {
                 {leaveRequests.length === 0 && (
                   <tr>
                     <td colSpan={5} style={{ textAlign: 'center', color: '#94A3B8', padding: '24px' }}>No leave requests found.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="ceo-table-wrapper" style={{ marginTop: '16px' }}>
+            <table className="ceo-table">
+              <thead>
+                <tr>
+                  <th>Employee</th>
+                  <th>Date</th>
+                  <th>Hours Logged</th>
+                  <th>Accomplished Summary</th>
+                  <th>Planned Next</th>
+                  <th>Blockers</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {workUpdates.map((update) => (
+                  <tr key={update._id}>
+                    <td className="ceo-table-name">{update.userName || update.user?.fullName || 'Employee'}</td>
+                    <td>{new Date(update.date || update.createdAt).toLocaleDateString()}</td>
+                    <td><strong>{update.hoursSpent || 0} hrs</strong></td>
+                    <td style={{ maxWidth: '240px', fontSize: '0.85rem' }}>{update.summary || '—'}</td>
+                    <td style={{ maxWidth: '200px', fontSize: '0.85rem', color: '#2563EB' }}>{update.planned || '—'}</td>
+                    <td style={{ maxWidth: '180px', fontSize: '0.85rem', color: update.blockers ? '#DC2626' : '#64748B' }}>{update.blockers || 'None'}</td>
+                    <td>
+                      <span className="ceo-status-tag active">{update.status || 'Submitted'}</span>
+                    </td>
+                  </tr>
+                ))}
+                {workUpdates.length === 0 && (
+                  <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', color: '#94A3B8', padding: '24px' }}>No work updates submitted yet.</td>
                   </tr>
                 )}
               </tbody>

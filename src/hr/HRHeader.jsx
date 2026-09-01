@@ -53,16 +53,6 @@ export default function HRHeader({ activeTab, onMenuToggle, searchQuery = '', on
       </div>
 
       <div className="hr-header-right">
-        <div className="hr-search-box">
-          <Search size={16} className="hr-search-icon" />
-          <input
-            type="text"
-            placeholder="Search employees, jobs..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange && onSearchChange(e.target.value)}
-          />
-        </div>
-
         <NotificationDropdown />
 
         {showPrimaryAction && (

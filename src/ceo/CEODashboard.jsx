@@ -60,7 +60,30 @@ export default function CEODashboard({ onNavigateTab, currentUser }) {
     setSubmittingTask(true);
     setTaskAlert(null);
 
-    const selectedUser = userList.find(u => u._id === assignedUserId);
+    let assignedTo = null;
+    let assignedToName = '';
+    let assignedToRole = '';
+
+    if (assignedUserId.startsWith('role:')) {
+      assignedToRole = assignedUserId.replace('role:', '');
+      const roleLabels = {
+        hr_manager: 'HR Department',
+        accountant: 'Finance & Accounting Department',
+        sales_manager: 'Sales Department',
+        project_manager: 'Project Management Department',
+        marketing: 'Marketing Department',
+        administration: 'Administration Department',
+        employee: 'All Employees'
+      };
+      assignedToName = roleLabels[assignedToRole] || 'Department';
+    } else {
+      const selectedUser = userList.find(u => u._id === assignedUserId);
+      if (selectedUser) {
+        assignedTo = selectedUser._id;
+        assignedToName = selectedUser.fullName;
+        assignedToRole = selectedUser.role;
+      }
+    }
 
     try {
       const { response, data } = await apiRequest('/api/tasks', {
@@ -68,8 +91,10 @@ export default function CEODashboard({ onNavigateTab, currentUser }) {
         body: JSON.stringify({
           title: taskTitle.trim(),
           project: taskProject || 'Executive Directive',
-          assignedTo: assignedUserId,
-          assignedToName: selectedUser ? selectedUser.fullName : '',
+          assignedTo,
+          assignedToName,
+          assignedToRole,
+          assignedByName: currentUser?.fullName ? `${currentUser.fullName} (CEO)` : 'CEO',
           status: 'Pending',
           priority: taskPriority,
           category: taskCategory,
@@ -79,7 +104,7 @@ export default function CEODashboard({ onNavigateTab, currentUser }) {
       });
 
       if (response.ok && data.success) {
-        setTaskAlert({ type: 'success', text: `Task successfully assigned to ${selectedUser ? selectedUser.fullName : 'Manager'}!` });
+        setTaskAlert({ type: 'success', text: `Task successfully assigned to ${assignedToName}!` });
         setTaskTitle('');
         setTaskDescription('');
         fetchSummary();
@@ -97,6 +122,7 @@ export default function CEODashboard({ onNavigateTab, currentUser }) {
       setSubmittingTask(false);
     }
   };
+
 
   const kpis = [
     { title: 'Collected Revenue', value: summary ? `$${(summary.collectedRevenue || 0).toLocaleString()}` : '$0', change: summary ? `Invoiced: $${(summary.totalInvoiced || 0).toLocaleString()}` : 'Live', icon: DollarSign, iconClass: 'icon-blue' },
@@ -311,20 +337,32 @@ export default function CEODashboard({ onNavigateTab, currentUser }) {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.85rem', color: '#CBD5E1', fontWeight: 600 }}>Assign To Manager / User *</label>
+                <label style={{ fontSize: '0.85rem', color: '#CBD5E1', fontWeight: 600 }}>Assign To Department / Employee *</label>
                 <select
                   required
                   value={assignedUserId}
                   onChange={(e) => setAssignedUserId(e.target.value)}
                   style={{ backgroundColor: '#0F172A', border: '1px solid #334155', borderRadius: '8px', color: '#FFF', padding: '10px', outline: 'none' }}
                 >
-                  {userList.map(u => (
-                    <option key={u._id} value={u._id}>
-                      {u.fullName} ({u.role ? u.role.replace('_', ' ').toUpperCase() : 'Employee'} — {u.department || 'General'})
-                    </option>
-                  ))}
+                  <optgroup label="Entire Departments">
+                    <option value="role:hr_manager">HR Department (HR Manager)</option>
+                    <option value="role:accountant">Finance & Accounting Department (Accountant)</option>
+                    <option value="role:sales_manager">Sales Department (Sales Manager)</option>
+                    <option value="role:project_manager">Project Management Department (Project Manager)</option>
+                    <option value="role:marketing">Marketing Department</option>
+                    <option value="role:administration">Administration Department</option>
+                    <option value="role:employee">All Employees</option>
+                  </optgroup>
+                  <optgroup label="Specific Team Members">
+                    {userList.map(u => (
+                      <option key={u._id} value={u._id}>
+                        {u.fullName} ({u.role ? u.role.replace('_', ' ').toUpperCase() : 'Employee'} — {u.department || 'General'})
+                      </option>
+                    ))}
+                  </optgroup>
                 </select>
               </div>
+
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>

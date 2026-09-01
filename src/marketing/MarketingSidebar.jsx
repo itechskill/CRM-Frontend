@@ -42,6 +42,7 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
   ];
 
   const bottomNav = [
+    { id: 'profile', label: 'My Profile', icon: User },
     { id: 'mkt_notifications', label: 'Notifications', icon: Bell, badge: 4, badgeColor: '#EF4444' },
     { id: 'mkt_settings', label: 'Settings', icon: Settings },
   ];

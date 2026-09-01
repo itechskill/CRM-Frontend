@@ -36,6 +36,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
     { id: 'sales_finance', label: 'Sales & Finance', icon: DollarSign },
     { id: 'team_performance', label: 'Team Performance', icon: Users },
     { id: 'reports_analytics', label: 'Reports & Analytics', icon: PieChart },
+    { id: 'profile', label: 'My Profile', icon: User },
   ];
 
   return (

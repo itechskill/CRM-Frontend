@@ -41,6 +41,7 @@ export default function ProjectSidebar({ activeTab, setActiveTab, currentRole, u
   ];
 
   const systemNav = [
+    { id: 'profile', label: 'My Profile', icon: User },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];

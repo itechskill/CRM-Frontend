@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import {
   DollarSign,
   TrendingUp,
@@ -12,8 +13,10 @@ import {
   Send,
   Download,
   AlertCircle,
-  Receipt
+  Receipt,
+  Briefcase
 } from 'lucide-react';
+
 import {
   AreaChart,
   Area,
@@ -56,8 +59,24 @@ const recentInvoices = [
   { id: 'INV-2026-093', client: 'TechFlow Inc', date: 'Aug 08, 2026', amount: '$11,600.00', status: 'Paid', dueDate: 'Aug 22' },
 ];
 
-export default function AccountantDashboard({ currentUser, onNavigateTab, onOpenInvoiceModal, onOpenExpenseModal }) {
+export default function AccountantDashboard({ currentUser, onNavigateTab, onOpenInvoiceModal, onOpenExpenseModal, isModalOpen, onCloseModal }) {
   const firstName = currentUser?.fullName ? currentUser.fullName.split(' ')[0] : 'there';
+  const [assignedTasks, setAssignedTasks] = useState([]);
+
+  useEffect(() => {
+    const fetchAccountantTasks = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/tasks');
+        if (response.ok && data.success && Array.isArray(data.data)) {
+          setAssignedTasks(data.data);
+        }
+      } catch (err) {
+        console.error('Fetch accountant tasks error:', err);
+      }
+    };
+    fetchAccountantTasks();
+  }, []);
+
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -151,7 +170,45 @@ export default function AccountantDashboard({ currentUser, onNavigateTab, onOpen
         </div>
       </div>
 
+      {/* CEO Directives & Department Tasks Section */}
+      <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '20px', marginBottom: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
+          <Briefcase size={20} color="#2563EB" />
+          <h3 style={{ margin: 0, color: '#0F172A', fontSize: '1.05rem', fontWeight: 700 }}>
+            CEO Directives & Department Tasks ({assignedTasks.length})
+          </h3>
+        </div>
+        {assignedTasks.length > 0 ? (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '12px' }}>
+            {assignedTasks.map((t) => (
+              <div key={t._id} style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <span style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.9rem' }}>{t.title}</span>
+                  <span style={{ fontSize: '0.7rem', padding: '2px 8px', borderRadius: '999px', background: t.priority === 'Urgent' || t.priority === 'High' ? '#FEE2E2' : '#E0E7FF', color: t.priority === 'Urgent' || t.priority === 'High' ? '#B91C1C' : '#3730A3', fontWeight: 700 }}>
+                    {t.priority}
+                  </span>
+                </div>
+                {t.description && (
+                  <p style={{ color: '#475569', fontSize: '0.8rem', margin: 0, display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                    {t.description}
+                  </p>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.75rem', color: '#64748B', paddingTop: '6px', borderTop: '1px dashed #CBD5E1' }}>
+                  <span>By: <strong>{t.assignedByName || 'CEO'}</strong></span>
+                  <span style={{ padding: '2px 6px', borderRadius: '4px', background: '#F1F5F9', color: '#1E293B', fontWeight: 600 }}>{t.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '16px', color: '#94A3B8', fontSize: '0.85rem' }}>
+            No tasks currently assigned to Finance &amp; Accounting department.
+          </div>
+        )}
+      </div>
+
       {/* KPI Cards Grid */}
+
       <div className="acc-kpi-grid">
         <div className="acc-kpi-card">
           <div className="acc-kpi-top">
@@ -307,6 +364,69 @@ export default function AccountantDashboard({ currentUser, onNavigateTab, onOpen
           </table>
         </div>
       </div>
+      {/* Quick New Transaction Modal */}
+      {isModalOpen && (
+        <div className="acc-modal-overlay">
+          <div className="acc-modal-content" style={{ maxWidth: '500px' }}>
+            <div className="acc-modal-header">
+              <h3>Create New Transaction</h3>
+              <button className="acc-modal-close" onClick={onCloseModal}>×</button>
+            </div>
+            <div className="acc-modal-body" style={{ gap: '14px' }}>
+              <p style={{ margin: 0, fontSize: '0.88rem', color: '#64748B' }}>
+                Select the type of transaction you want to log:
+              </p>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button
+                  className="acc-action-card"
+                  style={{ cursor: 'pointer', border: '1px solid #E2E8F0', padding: '14px' }}
+                  onClick={() => { if (onCloseModal) onCloseModal(); if (onOpenInvoiceModal) onOpenInvoiceModal(); }}
+                >
+                  <div className="acc-action-icon" style={{ backgroundColor: '#DBEAFE', color: '#2563EB' }}>
+                    <FileText size={20} />
+                  </div>
+                  <div className="acc-action-info" style={{ textAlign: 'left' }}>
+                    <span className="acc-action-title">Create Client Invoice</span>
+                    <span className="acc-action-desc">Issue bill, payment terms & receivables</span>
+                  </div>
+                </button>
+
+                <button
+                  className="acc-action-card"
+                  style={{ cursor: 'pointer', border: '1px solid #E2E8F0', padding: '14px' }}
+                  onClick={() => { if (onCloseModal) onCloseModal(); if (onOpenExpenseModal) onOpenExpenseModal(); }}
+                >
+                  <div className="acc-action-icon" style={{ backgroundColor: '#FEE2E2', color: '#DC2626' }}>
+                    <Receipt size={20} />
+                  </div>
+                  <div className="acc-action-info" style={{ textAlign: 'left' }}>
+                    <span className="acc-action-title">Log Business Expense</span>
+                    <span className="acc-action-desc">Record vendor costs, receipts & claims</span>
+                  </div>
+                </button>
+
+                <button
+                  className="acc-action-card"
+                  style={{ cursor: 'pointer', border: '1px solid #E2E8F0', padding: '14px' }}
+                  onClick={() => { if (onCloseModal) onCloseModal(); if (onNavigateTab) { onNavigateTab('maintenance'); } }}
+                >
+                  <div className="acc-action-icon" style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
+                    <Briefcase size={20} />
+                  </div>
+                  <div className="acc-action-info" style={{ textAlign: 'left' }}>
+                    <span className="acc-action-title">Add Maintenance Charge</span>
+                    <span className="acc-action-desc">Track building, equipment or software maintenance</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+            <div className="acc-modal-footer">
+              <button className="acc-btn-secondary" onClick={onCloseModal}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

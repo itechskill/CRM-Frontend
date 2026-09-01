@@ -17,7 +17,6 @@ import {
 import './SalesSettingsView.css';
 
 const settingsNavItems = [
-  { key: 'profile', label: 'Profile', icon: User },
   { key: 'team', label: 'Team', icon: Users },
   { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'integrations', label: 'Integrations', icon: Zap },
@@ -54,97 +53,10 @@ const initialIntegrations = [
 ];
 
 export default function SalesSettingsView() {
-  const [activeSection, setActiveSection] = useState('profile');
-
-  // Profile state
-  const [firstName, setFirstName] = useState('Angela');
-  const [lastName, setLastName] = useState('Torres');
-  const [email, setEmail] = useState('a.torres@flowbridge.io');
-  const [phone, setPhone] = useState('+1 (415) 555-0192');
-  const [title, setTitle] = useState('Sales Manager');
-  const [department, setDepartment] = useState('Sales');
+  const [activeSection, setActiveSection] = useState('team');
 
   // Team state
   const [teamMembers, setTeamMembers] = useState(initialTeamMembers);
-  const handleRoleChange = (id, newRole) => {
-    setTeamMembers((prev) => prev.map((m) => (m.id === id ? { ...m, role: newRole } : m)));
-  };
-
-  // Notifications state
-  const [notifications, setNotifications] = useState(initialNotifications);
-  const toggleNotification = (key) => {
-    setNotifications((prev) => prev.map((n) => (n.key === key ? { ...n, enabled: !n.enabled } : n)));
-  };
-
-  // Integrations state
-  const [integrations, setIntegrations] = useState(initialIntegrations);
-  const toggleIntegration = (key) => {
-    setIntegrations((prev) => prev.map((i) => (i.key === key ? { ...i, connected: !i.connected } : i)));
-  };
-
-  // Security state
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [twoFactorEnabled, setTwoFactorEnabled] = useState(true);
-
-  const renderProfile = () => (
-    <>
-      <div className="settings-main-header">
-        <h1>Profile Settings</h1>
-        <p>Manage your personal information and preferences</p>
-      </div>
-
-      <div className="profile-settings-card">
-        <div className="profile-settings-identity">
-          <div className="profile-avatar">AT</div>
-          <div>
-            <h3>{firstName} {lastName}</h3>
-            <p>{title} · FlowBridge CRM</p>
-            <button className="change-photo-btn">Change photo</button>
-          </div>
-        </div>
-
-        <div className="profile-settings-divider"></div>
-
-        <div className="profile-form-grid">
-          <div className="profile-form-group">
-            <label>First Name</label>
-            <input type="text" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
-          </div>
-          <div className="profile-form-group">
-            <label>Last Name</label>
-            <input type="text" value={lastName} onChange={(e) => setLastName(e.target.value)} />
-          </div>
-
-          <div className="profile-form-group">
-            <label>Email</label>
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </div>
-          <div className="profile-form-group">
-            <label>Phone</label>
-            <input type="text" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          </div>
-
-          <div className="profile-form-group">
-            <label>Title</label>
-            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-          <div className="profile-form-group">
-            <label>Department</label>
-            <input type="text" value={department} onChange={(e) => setDepartment(e.target.value)} />
-          </div>
-        </div>
-
-        <div className="profile-settings-footer">
-          <button className="save-changes-btn">
-            <Save size={16} />
-            <span>Save Changes</span>
-          </button>
-        </div>
-      </div>
-    </>
-  );
 
   const renderTeam = () => (
     <>
@@ -334,8 +246,6 @@ export default function SalesSettingsView() {
 
   const renderContent = () => {
     switch (activeSection) {
-      case 'team':
-        return renderTeam();
       case 'notifications':
         return renderNotifications();
       case 'integrations':
@@ -344,9 +254,9 @@ export default function SalesSettingsView() {
         return renderSecurity();
       case 'billing':
         return renderBilling();
-      case 'profile':
+      case 'team':
       default:
-        return renderProfile();
+        return renderTeam();
     }
   };
 
