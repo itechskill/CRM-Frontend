@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, Briefcase, Building, BadgeCheck, Calendar, ShieldCheck, CheckCircle2, AlertCircle, Save, Lock } from 'lucide-react';
 import './UserProfileView.css';
 
-import { authHeaders } from '../utils/api';
+import { authHeaders, API_BASE } from '../utils/api';
 import { setUser } from '../utils/authStorage';
 
 export default function UserProfileView() {
@@ -23,7 +23,7 @@ export default function UserProfileView() {
   const fetchProfile = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/users/me', {
+      const response = await fetch(`${API_BASE}/api/users/me`, {
         headers: authHeaders()
       });
 
@@ -51,7 +51,7 @@ export default function UserProfileView() {
     setSaving(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/users/me', {
+      const response = await fetch(`${API_BASE}/api/users/me`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +181,18 @@ export default function UserProfileView() {
             </div>
 
             <div className="profile-field-group" style={{ gridColumn: 'span 2' }}>
-              <label className="profile-label">Profile Image URL</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label className="profile-label">Profile Image URL</label>
+                {profileImage && (
+                  <button
+                    type="button"
+                    onClick={() => setProfileImage('')}
+                    style={{ background: 'none', border: 'none', color: '#EF4444', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}
+                  >
+                    ✕ Remove Photo
+                  </button>
+                )}
+              </div>
               <input
                 type="url"
                 className="profile-input"

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Users,
   TrendingUp,
@@ -10,6 +10,12 @@ import {
   ArrowUpRight,
   ArrowDownRight,
   ArrowRight,
+  RefreshCw,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Activity,
+  Plus
 } from 'lucide-react';
 import {
   LineChart,
@@ -23,396 +29,378 @@ import {
   Pie,
   Cell
 } from 'recharts';
+import { apiRequest } from '../utils/api';
 import './SalesManagerDashboard.css';
 
-const kpiData = [
-  { icon: Users, bg: '#EFF6FF', color: '#2563EB', value: '142', label: 'Total Leads', change: '+18%', positive: true },
-  { icon: TrendingUp, bg: '#F5F3FF', color: '#7C3AED', value: '67', label: 'Qualified Leads', change: '+12%', positive: true },
-  { icon: Calendar, bg: '#ECFDF5', color: '#10B981', value: '23', label: 'Meetings Scheduled', change: '+8%', positive: true },
-  { icon: FileText, bg: '#FEF3C7', color: '#D97706', value: '41', label: 'Proposals Sent', change: '-3%', positive: false },
-  { icon: Briefcase, bg: '#ECFDF5', color: '#10B981', value: '18', label: 'Won Clients', change: '+22%', positive: true },
-  { icon: Target, bg: '#FEE2E2', color: '#EF4444', value: '12.7%', label: 'Conversion Rate', change: '+1.4%', positive: true },
-  { icon: DollarSign, bg: '#EFF6FF', color: '#2563EB', value: '$267K', label: 'Monthly Revenue', change: '+17%', positive: true },
-  { icon: Target, bg: '#F5F3FF', color: '#7C3AED', value: '87%', label: 'Sales Target', change: '+5%', positive: true },
-];
-
-const revenueData = [
-  { month: 'Mar', actual: 195, target: 210 },
-  { month: 'Apr', actual: 215, target: 210 },
-  { month: 'May', actual: 208, target: 215 },
-  { month: 'Jun', actual: 230, target: 220 },
-  { month: 'Jul', actual: 242, target: 220 },
-  { month: 'Aug', actual: 267, target: 230 },
-];
-
-const leadSourcesData = [
-  { name: 'Website', value: 35, color: '#2563EB' },
-  { name: 'Referral', value: 25, color: '#10B981' },
-  { name: 'Social Media', value: 20, color: '#F59E0B' },
-  { name: 'Email', value: 12, color: '#EC4899' },
-  { name: 'Other', value: 8, color: '#8B5CF6' },
-];
-
-const pipelineStages = [
-  {
-    id: 'new-lead',
-    label: 'NEW LEAD',
-    count: 3,
-    pipelineValue: '$148k',
-    headerBg: '#F8FAFC',
-    headerColor: '#334155',
-    badgeBg: '#0F172A',
-    deals: [
-      { name: 'Sarah Mitchell', priority: 'High', company: 'TechCorp Solutions', value: '$85k', initials: 'JC' },
-      { name: 'Rachel Kim', priority: 'Medium', company: 'FuturePath Inc', value: '$35k', initials: 'PS' },
-      { name: 'Tom Rivera', priority: 'Low', company: 'AlphaTech Systems', value: '$28k', initials: 'JC' },
-    ],
-  },
-  {
-    id: 'contacted',
-    label: 'CONTACTED',
-    count: 2,
-    pipelineValue: '$137k',
-    headerBg: '#EFF6FF',
-    headerColor: '#1D4ED8',
-    badgeBg: '#2563EB',
-    deals: [
-      { name: 'Emily Chen', priority: 'Medium', company: 'BlueWave Analytics', value: '$42k', initials: 'JC' },
-      { name: 'Lisa Wong', priority: 'High', company: 'Meridian Capital', value: '$95k', initials: 'AT' },
-    ],
-  },
-  {
-    id: 'meeting-scheduled',
-    label: 'MEETING SCHEDULED',
-    count: 2,
-    pipelineValue: '$265k',
-    headerBg: '#F5F3FF',
-    headerColor: '#7C3AED',
-    badgeBg: '#8B5CF6',
-    deals: [
-      { name: 'David Park', priority: 'High', company: 'Nexus Dynamics', value: '$120k', initials: 'PS' },
-      { name: 'Jennifer Walsh', priority: 'High', company: 'Summit Enterprises', value: '$145k', initials: 'AT' },
-    ],
-  },
-  {
-    id: 'proposal-sent',
-    label: 'PROPOSAL SENT',
-    count: 2,
-    pipelineValue: '$310k',
-    headerBg: '#FFFBEB',
-    headerColor: '#B45309',
-    badgeBg: '#F59E0B',
-    deals: [
-      { name: 'Marcus Johnson', priority: 'High', company: 'Pinnacle Group', value: '$200k', initials: 'AT' },
-      { name: 'Natasha Brown', priority: 'High', company: 'CloudFirst Solutions', value: '$110k', initials: 'PS' },
-    ],
-  },
-  {
-    id: 'negotiation',
-    label: 'NEGOTIATION',
-    count: 1,
-    pipelineValue: '$48k',
-    headerBg: '#F0FDF4',
-    headerColor: '#68bf88',
-    badgeBg: '#22C55E',
-    deals: [
-      { name: 'Alex Freeman', priority: 'Medium', company: 'Digital Horizon', value: '$48k', initials: 'AT' },
-    ],
-  },
-  {
-    id: 'won',
-    label: 'WON CLIENT',
-    count: 1,
-    pipelineValue: '$135k',
-    headerBg: '#F0FDF4',
-    headerColor: '#15803D',
-    badgeBg: '#18bc54',
-    deals: [
-      { name: 'James Carter', priority: 'High', company: 'BuildCo Group', value: '$135k', initials: 'PS' },
-    ],
-  },
-];
-
-const priorityColors = {
-  High: { bg: '#FEE2E2', color: '#DC2626' },
-  Medium: { bg: '#FEF3C7', color: '#D97706' },
-  Low: { bg: '#DCFCE7', color: '#15803D' },
-};
-
-const upcomingMeetings = [
-  { day: '12', month: 'DEC', title: 'Nexus Dynamics — Platform Demo', time: '10:00 AM · 90 min', tag: 'Demo', tagColor: '#7C3AED', tagBg: '#F5F3FF' },
-  { day: '11', month: 'DEC', title: 'Pinnacle Group — Contract Negotiation', time: '2:00 PM · 60 min', tag: 'Negotiation', tagColor: '#2563EB', tagBg: '#EFF6FF' },
-  { day: '13', month: 'DEC', title: 'Summit Enterprises — Discovery Call', time: '11:00 AM · 45 min', tag: 'Discovery', tagColor: '#7C3AED', tagBg: '#F5F3FF' },
-];
-
-const activityTimeline = [
-  { icon: '🏆', text: 'Priya Sharma closed Orbit Digital deal', amount: '$67,000', time: '2 hours ago' },
-  { icon: '📅', text: 'Angela Torres scheduled demo with Pinnacle Group', amount: null, time: '4 hours ago' },
-  { icon: '📄', text: 'Angela Torres sent proposal to Summit Enterprises', amount: '$145,000', time: '6 hours ago' },
-  { icon: '👤', text: 'James Carter added TechCorp Solutions contact', amount: null, time: 'Yesterday' },
-  { icon: '⭐', text: 'Priya Sharma qualified CloudFirst Solutions lead', amount: '$110,000', time: 'Yesterday' },
-];
-
-const teamPerformance = [
-  { initials: 'AT', name: 'Angela', deals: '8 deals closed', pct: 89, closed: '$620k', quota: '$700k', avatarBg: '#2563EB', barColor: '#F59E0B' },
-  { initials: 'JC', name: 'James', deals: '6 deals closed', pct: 89, closed: '$445k', quota: '$500k', avatarBg: '#8B5CF6', barColor: '#F59E0B' },
-  { initials: 'PS', name: 'Priya', deals: '7 deals closed', pct: 93, closed: '$512k', quota: '$550k', avatarBg: '#10B981', barColor: '#10B981' },
-];
+const PIE_COLORS = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#06B6D4', '#64748B'];
 
 export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
-  const firstName = currentUser?.fullName ? currentUser.fullName.split(' ')[0] : 'there';
-  const todayFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchDashboardStats = async () => {
+    try {
+      const { response, data } = await apiRequest('/api/sales-manager/dashboard-stats');
+      if (response.ok && data.success) {
+        setStats(data.data);
+      }
+    } catch (err) {
+      console.error('Fetch sales manager dashboard stats error:', err);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardStats();
+  }, []);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    fetchDashboardStats();
+  };
+
+  const todayFormatted = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  if (loading) {
+    return (
+      <div className="smd-loading-container">
+        <div className="smd-spinner" />
+        <p>Loading real-time sales & performance data from MongoDB...</p>
+      </div>
+    );
+  }
+
+  const kpis = [
+    {
+      id: 'team',
+      icon: Users,
+      bg: '#EFF6FF',
+      color: '#2563EB',
+      value: String(stats?.totalTeamMembers || 0),
+      label: 'Total Sales Team Members',
+      sub: `${stats?.activeTeamMembers || 0} active members`,
+      clickable: true,
+      onClick: () => onNavigateTab?.('team')
+    },
+    {
+      id: 'leads',
+      icon: TrendingUp,
+      bg: '#F5F3FF',
+      color: '#7C3AED',
+      value: String(stats?.totalLeads || 0),
+      label: 'Total Leads',
+      sub: `${stats?.convertedLeads || 0} converted (${stats?.leadConversionRate || 0}% rate)`,
+      clickable: true,
+      onClick: () => onNavigateTab?.('leads')
+    },
+    {
+      id: 'deals',
+      icon: Briefcase,
+      bg: '#ECFDF5',
+      color: '#10B981',
+      value: String(stats?.wonDealsCount || 0),
+      label: 'Won Deals',
+      sub: `$${Number(stats?.wonDealsValue || 0).toLocaleString()} won volume`,
+      clickable: true,
+      onClick: () => onNavigateTab?.('deals')
+    },
+    {
+      id: 'pipeline',
+      icon: DollarSign,
+      bg: '#EFF6FF',
+      color: '#0284C7',
+      value: `$${Number(stats?.totalPipelineValue || 0).toLocaleString()}`,
+      label: 'Active Pipeline Value',
+      sub: `${stats?.totalDeals || 0} active deals in progress`,
+      clickable: true,
+      onClick: () => onNavigateTab?.('pipeline')
+    },
+    {
+      id: 'revenue',
+      icon: DollarSign,
+      bg: '#ECFDF5',
+      color: '#059669',
+      value: `$${Number(stats?.totalMonthlyRevenue || 0).toLocaleString()}`,
+      label: 'Total Sales Revenue',
+      sub: `$${Number(stats?.totalReceivables || 0).toLocaleString()} receivables`,
+      clickable: false
+    },
+    {
+      id: 'target',
+      icon: Target,
+      bg: '#FFFBEB',
+      color: '#D97706',
+      value: `${stats?.teamTargetAchievementPct || 0}%`,
+      label: 'Team Target Attainment',
+      sub: `$${Number(stats?.totalAchievedTarget || 0).toLocaleString()} of $${Number(stats?.totalTargetAmount || 0).toLocaleString()}`,
+      clickable: true,
+      onClick: () => onNavigateTab?.('team')
+    }
+  ];
+
+  const revenueData = stats?.revenueTrend && stats.revenueTrend.length > 0
+    ? stats.revenueTrend
+    : [
+        { month: 'Mar', actual: 0, target: 100 },
+        { month: 'Apr', actual: 0, target: 100 },
+        { month: 'May', actual: 0, target: 100 },
+        { month: 'Jun', actual: 0, target: 100 },
+        { month: 'Jul', actual: 0, target: 100 },
+        { month: 'Aug', actual: 0, target: 100 }
+      ];
+
+  const leadSources = stats?.leadSources && stats.leadSources.length > 0
+    ? stats.leadSources
+    : [
+        { name: 'Direct', value: stats?.totalLeads || 1 },
+        { name: 'Website', value: 0 }
+      ];
+
+  const pipelineStages = stats?.pipelineStages || [];
+  const recentActivities = stats?.recentActivities || [];
+  const pendingTasks = stats?.pendingTasks || [];
 
   return (
-    <div className="sales-sm-dash">
-      {/* Welcome Banner */}
-      <div style={{
-        backgroundColor: '#FFFFFF',
-        border: '1px solid #E2E8F0',
-        borderRadius: '14px',
-        padding: '20px 24px',
-        marginBottom: '20px',
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.02)'
-      }}>
-        <h2 style={{ color: '#0F172A', fontSize: '1.4rem', fontWeight: 800, margin: 0 }}>
-          Good morning, {firstName} 📈
-        </h2>
-        <p style={{ color: '#64748B', fontSize: '0.875rem', marginTop: '4px', margin: '4px 0 0 0' }}>
-          Here's your sales pipeline and deal performance overview — {todayFormatted}
-        </p>
+    <div className="smd-dashboard-container">
+      {/* ── TOP HEADER / BANNER ── */}
+      <div className="smd-top-banner">
+        <div>
+          <h1 className="smd-title">Sales Manager Executive Portal</h1>
+          <p className="smd-subtitle">Organization sales pipeline, team quotas, performance metrics & live MongoDB analytics — {todayFormatted}</p>
+        </div>
+        <div className="smd-actions-row">
+          <button className="smd-refresh-btn" onClick={handleRefresh} disabled={refreshing}>
+            <RefreshCw size={15} className={refreshing ? 'spinning' : ''} />
+            {refreshing ? 'Syncing...' : 'Sync Data'}
+          </button>
+          <button className="smd-primary-btn" onClick={() => onNavigateTab?.('team')}>
+            <Users size={16} /> Manage Sales Team
+          </button>
+        </div>
       </div>
 
-      {/* 8 KPI Cards */}
-      <div className="sales-sm-kpi-grid">
-        {kpiData.map((k, i) => {
-          const Icon = k.icon;
+      {/* ── SECTION 1: TOP KPI CARDS (Featuring "Total Sales Team Members" as #1) ── */}
+      <div className="smd-kpi-grid">
+        {kpis.map((kpi) => {
+          const Icon = kpi.icon;
           return (
-            <div className="sales-sm-kpi-card" key={i}>
-              <div className="kpi-card-top">
-                <div className="kpi-icon-box" style={{ backgroundColor: k.bg, color: k.color }}>
+            <div
+              key={kpi.id}
+              className={`smd-kpi-card ${kpi.clickable ? 'clickable' : ''}`}
+              onClick={kpi.onClick}
+              title={kpi.clickable ? `Click to open ${kpi.label}` : undefined}
+            >
+              <div className="smd-kpi-header">
+                <div className="smd-kpi-icon" style={{ backgroundColor: kpi.bg, color: kpi.color }}>
                   <Icon size={20} />
                 </div>
-                <span className={`kpi-change-badge ${k.positive ? 'positive' : 'negative'}`}>
-                  {k.positive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
-                  {k.change}
-                </span>
+                {kpi.clickable && (
+                  <span className="smd-kpi-link-arrow">
+                    <ArrowRight size={14} />
+                  </span>
+                )}
               </div>
-              <div className="kpi-card-value">{k.value}</div>
-              <div className="kpi-card-label">{k.label}</div>
+              <div className="smd-kpi-body">
+                <span className="smd-kpi-val">{kpi.value}</span>
+                <span className="smd-kpi-lbl">{kpi.label}</span>
+                <span className="smd-kpi-sub">{kpi.sub}</span>
+              </div>
             </div>
           );
         })}
       </div>
 
-      {/* Revenue Chart & Lead Sources */}
-      <div className="sales-sm-grid-main">
-        <div className="sales-sm-card chart-card">
-          <div className="sales-sm-card-header">
+      {/* ── SECTION 2: SALES & TEAM PERFORMANCE CHARTS ── */}
+      <div className="smd-charts-grid">
+        {/* Revenue Performance Trend */}
+        <div className="smd-chart-card">
+          <div className="smd-chart-header">
             <div>
-              <h3 className="sales-sm-card-title">Revenue vs Target</h3>
-              <p className="sales-sm-card-sub">Last 6 months performance</p>
+              <h3 className="smd-chart-title">Revenue & Quota Trend</h3>
+              <p className="smd-chart-subtitle">Monthly sales revenue calculated from invoices & delivered orders (in $K)</p>
             </div>
-            <span className="chart-trend-badge">↑ 17% vs last period</span>
+            <div className="smd-chart-legend">
+              <span className="legend-item"><span className="dot blue" /> Actual Revenue</span>
+              <span className="legend-item"><span className="dot dashed" /> Sales Target</span>
+            </div>
           </div>
-
-          <div style={{ width: '100%', height: 260 }}>
+          <div className="smd-chart-body" style={{ height: 260 }}>
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 12 }} />
-                <YAxis axisLine={false} tickLine={false} tick={{ fill: '#94A3B8', fontSize: 11 }} tickFormatter={(v) => `$${v}k`} />
+              <LineChart data={revenueData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
+                <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} tickLine={false} />
+                <YAxis stroke="#94A3B8" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}k`} />
                 <Tooltip
+                  contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px', color: '#FFF' }}
                   formatter={(val) => [`$${val}k`, '']}
-                  contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 />
-                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={2.5} dot={false} name="Actual Revenue" />
-                <Line type="monotone" dataKey="target" stroke="#10B981" strokeWidth={2} strokeDasharray="5 5" dot={false} name="Target" />
+                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={3} dot={{ r: 4, fill: '#2563EB' }} activeDot={{ r: 6 }} />
+                <Line type="monotone" dataKey="target" stroke="#94A3B8" strokeWidth={2} strokeDasharray="4 4" dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </div>
-
-          <div className="chart-legend-row">
-            <span className="legend-item"><span className="legend-dot" style={{ background: '#2563EB' }}></span>Actual Revenue</span>
-            <span className="legend-item"><span className="legend-dot" style={{ background: '#10B981' }}></span>Target</span>
-          </div>
         </div>
 
-        <div className="sales-sm-card funnel-card">
-          <div className="sales-sm-card-header">
+        {/* Lead Sources Distribution */}
+        <div className="smd-chart-card">
+          <div className="smd-chart-header">
             <div>
-              <h3 className="sales-sm-card-title">Lead Sources</h3>
-              <p className="sales-sm-card-sub">Distribution by channel</p>
+              <h3 className="smd-chart-title">Lead Acquisition Sources</h3>
+              <p className="smd-chart-subtitle">Distribution of leads across marketing & direct channels</p>
             </div>
           </div>
-
-          <div style={{ width: '100%', height: 200 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={leadSourcesData} dataKey="value" nameKey="name" innerRadius={55} outerRadius={85} paddingAngle={2}>
-                  {leadSourcesData.map((entry, idx) => (
-                    <Cell key={idx} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip formatter={(val) => [`${val}%`, '']} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-
-          <div className="lead-source-legend">
-            {leadSourcesData.map((s, i) => (
-              <div className="legend-row" key={i}>
-                <span className="legend-dot" style={{ background: s.color }}></span>
-                <span className="legend-label">{s.name}</span>
-                <span className="legend-value">{s.value}%</span>
+          <div className="smd-donut-container">
+            <div style={{ width: 180, height: 180, position: 'relative' }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={leadSources}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={3}
+                    dataKey="value"
+                  >
+                    {leadSources.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px', color: '#FFF' }} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="smd-donut-center">
+                <span className="center-total">{stats?.totalLeads || 0}</span>
+                <span className="center-lbl">Leads</span>
               </div>
-            ))}
+            </div>
+            <div className="smd-donut-legend">
+              {leadSources.map((entry, idx) => (
+                <div key={entry.name} className="smd-legend-row">
+                  <span className="legend-color-dot" style={{ backgroundColor: PIE_COLORS[idx % PIE_COLORS.length] }} />
+                  <span className="legend-name">{entry.name}</span>
+                  <span className="legend-val">{entry.value}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Sales Pipeline Board */}
-      <div className="sales-sm-card pipeline-board-card">
-        <div className="sales-sm-card-header">
-          <div>
-            <h3 className="sales-sm-card-title">Sales Pipeline</h3>
-            <p className="sales-sm-card-sub">Active deals across all stages</p>
+      {/* ── SECTION 3: REAL SALES PIPELINE STAGES KANBAN ── */}
+      <div className="smd-pipeline-section">
+        <div className="smd-section-header">
+          <div className="smd-section-title-wrap">
+            <Briefcase size={20} color="#2563EB" />
+            <h2 className="smd-section-heading">Sales Pipeline & Active Deals</h2>
           </div>
-          <button className="pipeline-view-all-btn" onClick={() => onNavigateTab && onNavigateTab('pipeline')}>
-            View All <ArrowRight size={14} />
+          <button className="smd-view-all-link" onClick={() => onNavigateTab?.('deals')}>
+            View All Deals <ArrowUpRight size={14} />
           </button>
         </div>
 
-        <div className="pipeline-columns-scroll">
-          {pipelineStages.map((stage) => (
-            <div className="pipeline-column" key={stage.id}>
-              <div
-                className="pipeline-column-header"
-                style={{ backgroundColor: stage.headerBg, borderColor: stage.headerBg }}
-              >
-                <div className="pipeline-column-header-top">
-                  <span className="pipeline-stage-label" style={{ color: stage.headerColor }}>
-                    {stage.label}
-                  </span>
-                  <span className="pipeline-count-badge" style={{ backgroundColor: stage.badgeBg }}>
-                    {stage.count}
-                  </span>
+        <div className="smd-kanban-grid">
+          {pipelineStages.map((stg) => (
+            <div key={stg.id} className="smd-kanban-col">
+              <div className="kanban-col-header">
+                <div className="kanban-header-top">
+                  <span className="kanban-col-title">{stg.label}</span>
+                  <span className="kanban-col-count">{stg.count}</span>
                 </div>
-                <span className="pipeline-stage-value" style={{ color: stage.headerColor }}>
-                  {stage.pipelineValue} pipeline
-                </span>
+                <span className="kanban-col-val">{stg.pipelineValue}</span>
               </div>
 
-              <div className="pipeline-deals-list">
-                {stage.deals.map((deal, i) => {
-                  const p = priorityColors[deal.priority] || priorityColors.Medium;
-                  return (
-                    <div className="pipeline-deal-card" key={i}>
-                      <div className="pipeline-deal-top">
-                        <span className="pipeline-deal-name">{deal.name}</span>
-                        <span
-                          className="pipeline-priority-tag"
-                          style={{ backgroundColor: p.bg, color: p.color }}
-                        >
-                          {deal.priority}
-                        </span>
+              <div className="kanban-cards-stack">
+                {stg.deals.length === 0 ? (
+                  <div className="kanban-empty-col">No deals</div>
+                ) : (
+                  stg.deals.slice(0, 4).map((deal) => (
+                    <div key={deal.id} className="kanban-deal-card">
+                      <div className="deal-card-top">
+                        <span className="deal-card-name">{deal.title || deal.name}</span>
+                        <span className="deal-card-val">{deal.value}</span>
                       </div>
-                      <div className="pipeline-deal-company">
-                        <Briefcase size={13} />
-                        {deal.company}
-                      </div>
-                      <div className="pipeline-deal-bottom">
-                        <span className="pipeline-deal-value">
-                          <DollarSign size={13} />
-                          {deal.value.replace('$', '')}
-                        </span>
-                        <span className="pipeline-deal-avatar">{deal.initials}</span>
+                      <div className="deal-card-meta">
+                        <span className="deal-card-company">{deal.company}</span>
+                        <div className="deal-card-rep" title={`Assigned to ${deal.assignedTo}`}>
+                          <div className="rep-avatar-xs">{deal.initials}</div>
+                          <span>{deal.assignedTo}</span>
+                        </div>
                       </div>
                     </div>
-                  );
-                })}
+                  ))
+                )}
               </div>
             </div>
           ))}
         </div>
       </div>
 
-      {/* Meetings / Activity / Team Performance */}
-      <div className="sales-sm-grid-triple">
-        {/* Upcoming Meetings */}
-        <div className="sales-sm-card">
-          <div className="sales-sm-card-header">
-            <h3 className="sales-sm-card-title">Upcoming Meetings</h3>
-            <button className="sales-sm-link-btn">View all</button>
+      {/* ── SECTION 4: SALES ACTIVITIES & PENDING TEAM TASKS ── */}
+      <div className="smd-bottom-grid">
+        {/* Recent Sales Activities */}
+        <div className="smd-widget-box">
+          <div className="smd-widget-header">
+            <div className="widget-header-title">
+              <Activity size={18} color="#2563EB" />
+              <h3>Recent Sales Team Activities</h3>
+            </div>
           </div>
-
-          <div className="meetings-list">
-            {upcomingMeetings.map((m, i) => (
-              <div className="meeting-row" key={i}>
-                <div className="meeting-date-box">
-                  <span className="meeting-day">{m.day}</span>
-                  <span className="meeting-month">{m.month}</span>
+          <div className="smd-activities-list">
+            {recentActivities.length === 0 ? (
+              <div className="sv-empty">No recent team activities recorded yet.</div>
+            ) : (
+              recentActivities.map((act) => (
+                <div key={act._id} className="smd-act-item">
+                  <div className="smd-act-node" />
+                  <div className="smd-act-info">
+                    <div className="smd-act-header-row">
+                      <span className="smd-act-rep">{act.performedBy?.fullName || 'Sales Team Member'}</span>
+                      <span className="smd-act-time">{act.createdAt ? new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
+                    </div>
+                    <p className="smd-act-desc">{act.description}</p>
+                  </div>
                 </div>
-                <div className="meeting-info">
-                  <span className="meeting-title">{m.title}</span>
-                  <span className="meeting-time">{m.time}</span>
-                  <span className="meeting-tag" style={{ backgroundColor: m.tagBg, color: m.tagColor }}>
-                    {m.tag}
-                  </span>
-                </div>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
 
-        {/* Activity Timeline */}
-        <div className="sales-sm-card">
-          <div className="sales-sm-card-header">
-            <h3 className="sales-sm-card-title">Activity Timeline</h3>
-            <span className="live-badge">Live</span>
+        {/* Pending Sales & Team Tasks */}
+        <div className="smd-widget-box">
+          <div className="smd-widget-header">
+            <div className="widget-header-title">
+              <CheckCircle size={18} color="#10B981" />
+              <h3>Pending Tasks & Action Items</h3>
+            </div>
           </div>
-
-          <div className="activity-list">
-            {activityTimeline.map((a, i) => (
-              <div className="activity-row" key={i}>
-                <span className="activity-icon">{a.icon}</span>
-                <div className="activity-info">
-                  <span className="activity-text">
-                    {a.text}
-                    {a.amount && <span className="activity-amount"> {a.amount}</span>}
-                  </span>
-                  <span className="activity-time">{a.time}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Team Performance */}
-        <div className="sales-sm-card">
-          <div className="sales-sm-card-header">
-            <h3 className="sales-sm-card-title">Team Performance</h3>
-            <button className="sales-sm-link-btn">Details</button>
-          </div>
-
-          <div className="team-perf-list">
-            {teamPerformance.map((t, i) => (
-              <div className="team-perf-row" key={i}>
-                <div className="team-perf-top">
-                  <div className="team-perf-left">
-                    <span className="team-perf-avatar" style={{ backgroundColor: t.avatarBg }}>{t.initials}</span>
-                    <div className="team-perf-names">
-                      <span className="team-perf-name">{t.name}</span>
-                      <span className="team-perf-deals">{t.deals}</span>
+          <div className="smd-tasks-list">
+            {pendingTasks.length === 0 ? (
+              <div className="sv-empty">No pending tasks. All clear!</div>
+            ) : (
+              pendingTasks.map((t) => (
+                <div key={t._id} className="smd-task-item">
+                  <div className="smd-task-left">
+                    <div className="smd-task-bullet" />
+                    <div>
+                      <span className="smd-task-title">{t.title}</span>
+                      <span className="smd-task-sub">Due: {t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'Ongoing'} · {t.project || 'Sales'}</span>
                     </div>
                   </div>
-                  <span className="team-perf-pct" style={{ color: t.barColor }}>{t.pct}%</span>
+                  <span className={`priority-badge ${(t.priority || 'medium').toLowerCase()}`}>
+                    {t.priority || 'Medium'}
+                  </span>
                 </div>
-                <div className="team-perf-bar-track">
-                  <div className="team-perf-bar-fill" style={{ width: `${t.pct}%`, backgroundColor: t.barColor }}></div>
-                </div>
-                <span className="team-perf-quota">{t.closed} / {t.quota} quota</span>
-              </div>
-            ))}
+              ))
+            )}
           </div>
         </div>
       </div>

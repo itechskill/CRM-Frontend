@@ -117,9 +117,9 @@
 }
 
 .employee-menu-title {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  color: #475569;
+  color: #FFFFFF !important;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   padding: 0 12px 6px;

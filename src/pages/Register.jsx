@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { User, Mail, Phone, Lock, Briefcase, Zap, AlertCircle, CheckCircle2, Eye, EyeOff, X } from 'lucide-react';
+import { API_BASE } from '../utils/api';
 import './Login.css';
 
 export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
@@ -9,7 +10,8 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
     phone: '',
     password: '',
     confirmPassword: '',
-    role: 'employee'
+    role: 'employee',
+    department: 'Sales'
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +29,21 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
     { value: 'accountant', label: 'Accountant' },
     { value: 'employee', label: 'Employee' }
   ];
+
+  const departments = [
+    'Sales', 'HR', 'Marketing', 'Development', 'Accounting',
+    'Administration', 'Operations', 'Finance', 'Customer Support', 'Other'
+  ];
+
+  // Reset department when role changes
+  const handleRoleChange = (e) => {
+    const newRole = e.target.value;
+    setFormData(prev => ({
+      ...prev,
+      role: newRole,
+      department: newRole === 'employee' ? 'Sales' : ''
+    }));
+  };
 
   const handleNameChange = (e) => {
     const rawVal = e.target.value;
@@ -105,10 +122,11 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
         phone: formData.phone.trim(),
         password: formData.password,
         confirmPassword: formData.confirmPassword,
-        role: formData.role
+        role: formData.role,
+        department: formData.role === 'employee' ? formData.department : ''
       };
 
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${API_BASE}/api/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -126,8 +144,8 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
 
       setSuccessMessage('Your registration has been submitted successfully and is pending Admin approval.');
     } catch (error) {
-      console.error('Registration API error:', error);
-      setErrorMessage('Unable to connect to backend server. Please ensure backend is running on port 5000.');
+      console.error('Registration request error:', error);
+      setErrorMessage('Unable to connect to backend server. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }
@@ -258,7 +276,7 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
                   name="role"
                   className="auth-select"
                   value={formData.role}
-                  onChange={handleChange}
+                  onChange={handleRoleChange}
                   required
                 >
                   {publicRoles.map((r) => (
@@ -269,6 +287,27 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
                 </select>
               </div>
             </div>
+
+            {/* Department — only shown for Employee role */}
+            {formData.role === 'employee' && (
+              <div className="auth-field-group">
+                <label className="auth-label">Department *</label>
+                <div className="auth-input-wrapper">
+                  <Briefcase className="auth-input-icon" size={16} />
+                  <select
+                    name="department"
+                    className="auth-select"
+                    value={formData.department}
+                    onChange={handleChange}
+                    required
+                  >
+                    {departments.map((dept) => (
+                      <option key={dept} value={dept}>{dept}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
 
             {/* Password & Confirm Password */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

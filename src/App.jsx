@@ -70,6 +70,7 @@ import SalesMeetingsView from './sales_manager/SalesMeetingsView';
 import SalesProposalsView from './sales_manager/SalesProposalsView';
 import SalesClientsView from './sales_manager/ClientsView';
 import SalesNotificationsView from './sales_manager/SalesNotificationsView';
+import SalesMgrInvoicesView from './sales_manager/SalesInvoicesView';
 
 // 4. Employee Components (src/employee/)
 import EmployeeSidebar from './employee/EmployeeSidebar';
@@ -85,6 +86,17 @@ import EmployeeProfileView from './employee/EmployeeProfileView';
 import EmployeeSettingsView from './employee/EmployeeSettingsView';
 import EmployeeLeaveView from './employee/EmployeeLeaveView';
 import NewTaskModal from './employee/NewTaskModal';
+
+// Sales Employee Components (src/employee/sales/)
+import EmpSalesLeadsView from './employee/sales/SalesLeadsView';
+import EmpSalesDealsView from './employee/sales/SalesDealsView';
+import EmpSalesQuotationsView from './employee/sales/SalesQuotationsView';
+import EmpSalesOrdersView from './employee/sales/SalesOrdersView';
+import EmpSalesInvoicesView from './employee/sales/SalesInvoicesView';
+import EmpSalesDeliveryNotesView from './employee/sales/SalesDeliveryNotesView';
+import EmpSalesFollowUpsView from './employee/sales/SalesFollowUpsView';
+import EmpSalesTargetsView from './employee/sales/SalesTargetsView';
+import EmpSalesActivitiesView from './employee/sales/SalesActivitiesView';
 
 // 5. HR Components (src/hr/)
 import HRSidebar from './hr/HRSidebar';
@@ -586,7 +598,10 @@ export default function App() {
   // React requires hooks to run in the same order on every render.
   useEffect(() => {
     const roleValidTabs = {
-      employee: ['dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings'],
+      employee: [
+        'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
+        'my_leads', 'my_quotations', 'my_orders', 'delivery_notes', 'followups', 'sales_targets', 'sales_activities'
+      ],
       sales_manager: ['dashboard', 'leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'clients', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
       admin: ['dashboard', 'clients', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'projects', 'finance', 'reports', 'settings', 'profile'],
@@ -737,7 +752,7 @@ export default function App() {
               onMenuToggle={() => setIsSidebarOpen(true)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings', 'my_leads', 'my_deals', 'my_quotations', 'my_orders', 'my_invoices', 'delivery_notes', 'followups', 'sales_targets', 'sales_activities'].includes(activeTab)) && (
                 <EmployeeDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
@@ -757,6 +772,17 @@ export default function App() {
               {activeTab === 'notifications' && <EmployeeNotificationsView />}
               {activeTab === 'profile' && <EmployeeProfileView onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
               {activeTab === 'settings' && <EmployeeSettingsView />}
+
+              {/* Sales Department Features inside Employee Portal */}
+              {activeTab === 'my_leads' && <EmpSalesLeadsView />}
+              {activeTab === 'my_deals' && <EmpSalesDealsView onNavigateInvoices={() => setActiveTab('my_invoices')} />}
+              {activeTab === 'my_quotations' && <EmpSalesQuotationsView />}
+              {activeTab === 'my_orders' && <EmpSalesOrdersView />}
+              {activeTab === 'my_invoices' && <EmpSalesInvoicesView />}
+              {activeTab === 'delivery_notes' && <EmpSalesDeliveryNotesView />}
+              {activeTab === 'followups' && <EmpSalesFollowUpsView />}
+              {activeTab === 'sales_targets' && <EmpSalesTargetsView />}
+              {activeTab === 'sales_activities' && <EmpSalesActivitiesView />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -789,7 +815,7 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'clients', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
+              {(activeTab === 'dashboard' || !['leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'invoices', 'clients', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
               {activeTab === 'leads' && <SalesLeadsView />}
               {activeTab === 'contacts' && <SalesContactsView />}
               {activeTab === 'deals' && <SalesDealsView />}
@@ -799,6 +825,7 @@ export default function App() {
               {activeTab === 'settings' && <SalesSettingsView />}
               {activeTab === 'meetings' && <SalesMeetingsView />}
               {activeTab === 'proposals' && <SalesProposalsView />}
+              {activeTab === 'invoices' && <SalesMgrInvoicesView />}
               {activeTab === 'clients' && <SalesClientsView />}
               {activeTab === 'notifications' && <SalesNotificationsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}

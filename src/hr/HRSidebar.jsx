@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import {
   Heart,
   LayoutGrid,
@@ -26,6 +27,21 @@ import './HRSidebar.css';
 export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwitchRole, isMobileOpen, onClose, onLogout, currentUser, userRole }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [counts, setCounts] = useState({ employees: 0, pendingLeaves: 0, jobApplications: 0, notifications: 0 });
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/users/sidebar-counts');
+        if (response.ok && data.success) {
+          setCounts(data.data);
+        }
+      } catch (e) {
+        console.error('Fetch HR sidebar counts error:', e);
+      }
+    };
+    fetchCounts();
+  }, []);
 
   const handleSetActiveTab = (tab) => {
     setActiveTab(tab);
@@ -34,16 +50,16 @@ export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwit
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { id: 'employees', label: 'Employees', icon: Users, badge: '142' },
-    { id: 'attendance', label: 'Attendance & Leave', icon: CalendarCheck, badge: '4 Pending' },
-    { id: 'recruitment', label: 'Recruitment', icon: UserPlus, badge: '12 Apps' },
+    { id: 'employees', label: 'Employees', icon: Users, badge: counts.employees > 0 ? String(counts.employees) : undefined },
+    { id: 'attendance', label: 'Attendance & Leave', icon: CalendarCheck, badge: counts.pendingLeaves > 0 ? `${counts.pendingLeaves} Pending` : undefined },
+    { id: 'recruitment', label: 'Recruitment', icon: UserPlus, badge: counts.jobApplications > 0 ? `${counts.jobApplications} Apps` : undefined },
     { id: 'performance', label: 'Performance', icon: Award },
     { id: 'hr_reports', label: 'HR Reports', icon: FileText },
   ];
 
   const bottomNav = [
     { id: 'profile', label: 'My Profile', icon: User },
-    { id: 'hr_notifications', label: 'Notifications', icon: Bell, badge: 5, badgeColor: '#EF4444' },
+    { id: 'hr_notifications', label: 'Notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : undefined, badgeColor: '#EF4444' },
     { id: 'hr_settings', label: 'Settings', icon: Settings },
   ];
 

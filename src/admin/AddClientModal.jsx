@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import './AddClientModal.css';
 
-import { authHeaders } from '../utils/api';
+import { authHeaders, API_BASE } from '../utils/api';
 
 export default function AddClientModal({ isOpen, onClose, onAddClient }) {
   const [name, setName] = useState('');
@@ -25,7 +25,7 @@ export default function AddClientModal({ isOpen, onClose, onAddClient }) {
     setErrorMsg('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/crm/clients', {
+      const response = await fetch(`${API_BASE}/api/crm/clients`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

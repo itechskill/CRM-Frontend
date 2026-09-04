@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X } from 'lucide-react';
 import './NewProjectModal.css';
 
-import { authHeaders } from '../utils/api';
+import { authHeaders, API_BASE } from '../utils/api';
 
 export default function NewProjectModal({ isOpen, onClose, onAddProject }) {
   const [name, setName] = useState('');
@@ -27,7 +27,7 @@ export default function NewProjectModal({ isOpen, onClose, onAddProject }) {
     setErrorMsg('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/projects', {
+      const response = await fetch(`${API_BASE}/api/projects`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -142,6 +142,28 @@ export default function ProfileView({ currentUser, onUpdateCurrentUser }) {
     }
   };
 
+  const handleRemovePicture = async () => {
+    setUploadingPic(true);
+    try {
+      const { response, data } = await apiRequest('/api/users/me', {
+        method: 'PATCH',
+        body: JSON.stringify({ profileImage: '' })
+      });
+
+      if (response.ok && data.success) {
+        setProfile(data.data);
+        showAlert('success', 'Profile picture removed!');
+        if (onUpdateCurrentUser) onUpdateCurrentUser(data.data);
+      } else {
+        showAlert('error', data.message || 'Failed to remove picture.');
+      }
+    } catch (e) {
+      showAlert('error', 'Error removing picture.');
+    } finally {
+      setUploadingPic(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="profile-loading">
@@ -193,6 +215,27 @@ export default function ProfileView({ currentUser, onUpdateCurrentUser }) {
               </button>
               <input ref={fileInputRef} type="file" accept="image/*" hidden onChange={handlePictureChange} />
             </div>
+            {profile.profileImage && (
+              <button
+                type="button"
+                onClick={handleRemovePicture}
+                disabled={uploadingPic}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#EF4444',
+                  fontSize: '0.78rem',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  marginTop: '8px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '4px'
+                }}
+              >
+                ✕ Remove Profile Photo
+              </button>
+            )}
             <h2 className="profile-name">{profile.fullName}</h2>
             <div className="profile-role-badge">{roleLabel}</div>
             {profile.department && <div className="profile-dept">{profile.department}</div>}

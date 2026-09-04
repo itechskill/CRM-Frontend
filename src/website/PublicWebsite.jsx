@@ -407,6 +407,12 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
       setApplyError('Resume file must be under 10MB.');
       return;
     }
+    const allowedExtensions = ['pdf', 'doc', 'docx', 'jpeg', 'jpg', 'png'];
+    const ext = file.name.split('.').pop().toLowerCase();
+    if (!allowedExtensions.includes(ext)) {
+      setApplyError('Invalid file format. Allowed formats: PDF, DOC, DOCX, JPEG, JPG, PNG.');
+      return;
+    }
     setApplyError('');
     const reader = new FileReader();
     reader.onload = () => {
@@ -494,43 +500,43 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
             <span className="pw-logo-text">NexusCRM</span>
           </div>
 
-         <ul className="pw-nav-links">
-  {NAV_ITEMS.map(item => (
-    <li key={item.id}>
-      <button
-        className={currentPage === item.id ? 'active-nav-item' : ''}
-        onClick={() => setCurrentPage(item.id)}
-        style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
-      >
-        {item.label}
-        {item.id === 'careers' && jobsList.length > 0 && (
-         <span
-    style={{
-      position: 'absolute',
-      top: '-11px',
-      right: '-6px',
-      display: 'inline-flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: '2px 7px',
-      borderRadius: '999px',
-      background: 'linear-gradient(135deg, #EF4444 0%, #F59E0B 100%)',
-      color: '#FFFFFF',
-      fontSize: '0.6rem',
-      fontWeight: 800,
-      lineHeight: 1,
-      letterSpacing: '0.5px',
-      boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
-      whiteSpace: 'nowrap'
-    }}
-          >
-            NEW
-          </span>
-        )}
-      </button>
-    </li>
-  ))}
-</ul>
+          <ul className="pw-nav-links">
+            {NAV_ITEMS.map(item => (
+              <li key={item.id}>
+                <button
+                  className={currentPage === item.id ? 'active-nav-item' : ''}
+                  onClick={() => setCurrentPage(item.id)}
+                  style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+                >
+                  {item.label}
+                  {item.id === 'careers' && jobsList.length > 0 && (
+                    <span
+                      style={{
+                        position: 'absolute',
+                        top: '-11px',
+                        right: '-6px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '2px 7px',
+                        borderRadius: '999px',
+                        background: 'linear-gradient(135deg, #EF4444 0%, #F59E0B 100%)',
+                        color: '#FFFFFF',
+                        fontSize: '0.6rem',
+                        fontWeight: 800,
+                        lineHeight: 1,
+                        letterSpacing: '0.5px',
+                        boxShadow: '0 2px 6px rgba(239, 68, 68, 0.4)',
+                        whiteSpace: 'nowrap'
+                      }}
+                    >
+                      NEW
+                    </span>
+                  )}
+                </button>
+              </li>
+            ))}
+          </ul>
 
           <div className="pw-nav-actions">
             <button className="pw-btn-outline-blue" onClick={onNavigateToLogin}>Login</button>
@@ -1100,9 +1106,9 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                         placeholder="John Smith"
                         value={contactForm.fullName}
                         onChange={(e) => {
-                     const lettersOnly = e.target.value.replace(/[^A-Za-z\s]/g, '');
-                      setContactForm({ ...contactForm, fullName: lettersOnly });
-                         }}
+                          const lettersOnly = e.target.value.replace(/[^A-Za-z\s]/g, '');
+                          setContactForm({ ...contactForm, fullName: lettersOnly });
+                        }}
                       />
                     </div>
                     <div className="pw-form-field">
@@ -1112,9 +1118,9 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                         required
                         placeholder="john@company.com"
                         value={contactForm.email}
-                       onChange={(e) => {
-                        const emailChars = e.target.value.replace(/[^A-Za-z0-9@._\-+]/g, '');
-                         setContactForm({ ...contactForm, email: emailChars });
+                        onChange={(e) => {
+                          const emailChars = e.target.value.replace(/[^A-Za-z0-9@._\-+]/g, '');
+                          setContactForm({ ...contactForm, email: emailChars });
                         }}
                       />
                     </div>
@@ -1133,11 +1139,11 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                         type="tel"
                         placeholder="+92 300 0000000"
                         value={contactForm.phone}
-                      onChange={(e) => {
-                      const phoneChars = e.target.value.replace(/[^0-9+\-\s]/g, '');
-                           setContactForm({ ...contactForm, phone: phoneChars });
-                          }}                     
-                           />
+                        onChange={(e) => {
+                          const phoneChars = e.target.value.replace(/[^0-9+\-\s]/g, '');
+                          setContactForm({ ...contactForm, phone: phoneChars });
+                        }}
+                      />
                     </div>
                     <div className="pw-form-field">
                       <label>Subject</label>
@@ -1205,9 +1211,9 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                     placeholder="Ali Raza"
                     value={demoForm.fullName}
                     onChange={(e) => {
-                     const lettersOnly = e.target.value.replace(/[^A-Za-z\s]/g, '');
+                      const lettersOnly = e.target.value.replace(/[^A-Za-z\s]/g, '');
                       setContactForm({ ...contactForm, fullName: lettersOnly });
-                         }}
+                    }}
                   />
                 </div>
                 <div className="pw-form-field">
@@ -1235,10 +1241,10 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                     type="tel"
                     placeholder="+92 300 0000000"
                     value={demoForm.phone}
-                     onChange={(e) => {
+                    onChange={(e) => {
                       const phoneChars = e.target.value.replace(/[^0-9+\-\s]/g, '');
-                           setContactForm({ ...contactForm, phone: phoneChars });
-                          }}                   
+                      setContactForm({ ...contactForm, phone: phoneChars });
+                    }}
                   />
                 </div>
                 <div className="pw-form-field">
@@ -1465,7 +1471,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                   }}>
                     <input
                       type="file"
-                      accept=".pdf,.doc,.docx"
+                      accept=".pdf,.doc,.docx,.jpeg,.jpg,.png,image/jpeg,image/png"
                       onChange={handleResumeFileChange}
                       style={{
                         position: 'absolute',
@@ -1476,7 +1482,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
                       <FileText size={18} color="#2563EB" />
                       <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#1E40AF' }}>
-                        {applyForm.resumeFileName ? `Selected: ${applyForm.resumeFileName}` : 'Click to select Resume/CV from your PC (.pdf, .doc, .docx)'}
+                        {applyForm.resumeFileName ? `Selected: ${applyForm.resumeFileName}` : 'Click to select Resume/CV from your PC (.pdf, .doc, .docx, .jpeg, .jpg, .png)'}
                       </span>
                     </div>
                   </div>

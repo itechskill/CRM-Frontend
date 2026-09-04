@@ -331,7 +331,21 @@ function ApplicantViewModal({ applicationId, onClose }) {
                   </div>
                 )}
 
-                {(app.resumeData || app.resumeUrl) && (
+                {app.resumeUrl && (
+                  <div style={{ marginTop: '8px', padding: '12px', background: '#F0FDF4', borderRadius: '8px', border: '1px solid #BBF7D0' }}>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#166534', marginBottom: '6px' }}>PORTFOLIO / LINKEDIN URL</div>
+                    <a
+                      href={app.resumeUrl.startsWith('http') ? app.resumeUrl : `https://${app.resumeUrl}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', color: '#2563EB', fontWeight: 600, textDecoration: 'none', wordBreak: 'break-all' }}
+                    >
+                      <Globe size={14} /> {app.resumeUrl}
+                    </a>
+                  </div>
+                )}
+
+                {(app.resumeData || app.resumeFileName) && (
                   <button onClick={downloadResume} className="btn-primary" style={{ marginTop: '8px', display: 'flex', alignItems: 'center', gap: '8px', width: 'fit-content' }}>
                     <Download size={15} /> Download Resume {app.resumeFileName && `(${app.resumeFileName})`}
                   </button>
@@ -756,10 +770,19 @@ export default function HRRecruitmentView({ searchQuery = '', isModalOpen, onClo
                       <td style={{ color: '#475569', fontSize: '0.83rem' }}>{app.jobTitle}</td>
                       <td style={{ color: '#64748B', fontSize: '0.82rem' }}>{app.email}</td>
                       <td>
-                        {(app.resumeFileName || app.resumeUrl) ? (
+                        {app.resumeFileName ? (
                           <span style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', color: '#2563EB', fontWeight: 600 }}>
-                            <FileText size={13} /> {app.resumeFileName || 'Resume'}
+                            <FileText size={13} /> {app.resumeFileName}
                           </span>
+                        ) : app.resumeUrl ? (
+                          <a
+                            href={app.resumeUrl.startsWith('http') ? app.resumeUrl : `https://${app.resumeUrl}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '0.78rem', color: '#0A66C2', fontWeight: 600, textDecoration: 'none' }}
+                          >
+                            <Globe size={13} /> Portfolio/LinkedIn
+                          </a>
                         ) : (
                           <span style={{ color: '#CBD5E1', fontSize: '0.78rem' }}>—</span>
                         )}

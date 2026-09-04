@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import { 
   LayoutDashboard, 
   Users, 
@@ -23,6 +24,21 @@ import './Sidebar.css';
 
 export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitchRole, isMobileOpen, onClose, onLogout, currentUser }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const [counts, setCounts] = useState({ pendingRegistrations: 0, users: 0, clients: 0, projects: 0 });
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/users/sidebar-counts');
+        if (response.ok && data.success) {
+          setCounts(data.data);
+        }
+      } catch (e) {
+        console.error('Fetch admin sidebar counts error:', e);
+      }
+    };
+    fetchCounts();
+  }, []);
 
   const handleSetActiveTab = (tab) => {
     setActiveTab(tab);
@@ -31,14 +47,14 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
 
   const mainMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'registration_requests', label: 'Registration Requests', icon: UserCheck, badge: 'PND' },
+    { id: 'registration_requests', label: 'Registration Requests', icon: UserCheck, badge: counts.pendingRegistrations > 0 ? String(counts.pendingRegistrations) : undefined },
     { id: 'create_ceo', label: 'Create CEO Account', icon: Crown },
-    { id: 'users', label: 'Users', icon: Users },
+    { id: 'users', label: 'Users', icon: Users, badge: counts.users > 0 ? String(counts.users) : undefined },
     { id: 'audit_logs', label: 'Audit Logs', icon: ShieldCheck },
-    { id: 'clients', label: 'Clients', icon: Building2 },
-    { id: 'projects', label: 'Projects', icon: FolderKanban },
+    { id: 'clients', label: 'Clients', icon: Building2, badge: counts.clients > 0 ? String(counts.clients) : undefined },
+    { id: 'projects', label: 'Projects', icon: FolderKanban, badge: counts.projects > 0 ? String(counts.projects) : undefined },
     { id: 'finance', label: 'Finance', icon: DollarSign },
-    { id: 'reports', label: 'Reports', icon: FileText, badge: 'NEW' },
+    { id: 'reports', label: 'Reports', icon: FileText },
   ];
 
   return (

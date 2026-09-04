@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import {
   Calculator,
   LayoutGrid,
@@ -27,6 +28,21 @@ import './AccountantSidebar.css';
 export default function AccountantSidebar({ activeTab, setActiveTab, currentRole, userRole, currentUser, onSwitchRole, isMobileOpen, onClose, onLogout }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [counts, setCounts] = useState({ invoices: 0, expenses: 0, notifications: 0 });
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/users/sidebar-counts');
+        if (response.ok && data.success) {
+          setCounts(data.data);
+        }
+      } catch (e) {
+        console.error('Fetch Accountant sidebar counts error:', e);
+      }
+    };
+    fetchCounts();
+  }, []);
 
   const handleSetActiveTab = (tab) => {
     setActiveTab(tab);
@@ -35,8 +51,8 @@ export default function AccountantSidebar({ activeTab, setActiveTab, currentRole
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { id: 'invoices', label: 'Invoices & Payments', icon: FileText, badge: '8' },
-    { id: 'expenses', label: 'Expenses', icon: Receipt, badge: '14' },
+    { id: 'invoices', label: 'Invoices & Payments', icon: FileText, badge: counts.invoices > 0 ? String(counts.invoices) : undefined },
+    { id: 'expenses', label: 'Expenses', icon: Receipt, badge: counts.expenses > 0 ? String(counts.expenses) : undefined },
     { id: 'payroll', label: 'Payroll', icon: DollarSign },
     { id: 'accounts', label: 'Accounts', icon: Landmark },
     { id: 'maintenance', label: 'Maintenance Charges', icon: Wrench },
@@ -45,7 +61,7 @@ export default function AccountantSidebar({ activeTab, setActiveTab, currentRole
 
   const bottomNav = [
     { id: 'profile', label: 'My Profile', icon: User },
-    { id: 'acc_notifications', label: 'Notifications', icon: Bell, badge: 3, badgeColor: '#EF4444' },
+    { id: 'acc_notifications', label: 'Notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : undefined, badgeColor: '#EF4444' },
     { id: 'acc_settings', label: 'Settings', icon: Settings },
   ];
 

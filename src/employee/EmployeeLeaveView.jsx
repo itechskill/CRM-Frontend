@@ -43,6 +43,17 @@ export default function EmployeeLeaveView() {
 
   useEffect(() => {
     fetchEmployeeData();
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        fetchEmployeeData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
 
   const handleSubmitLeave = async (e) => {
@@ -172,32 +183,52 @@ export default function EmployeeLeaveView() {
               </thead>
               <tbody>
                 {leaves.length > 0 ? (
-                  leaves.map((item) => (
-                    <tr key={item._id}>
-                      <td style={{ fontWeight: 700, color: '#0F172A' }}>{item.leaveType}</td>
-                      <td>
-                        {new Date(item.startDate).toLocaleDateString()} — {new Date(item.endDate).toLocaleDateString()}
-                      </td>
-                      <td style={{ color: '#475569', maxWidth: '220px' }}>{item.reason}</td>
-                      <td>
-                        {item.proofDocument ? (
-                          <span className="emp-proof-badge">
-                            <FileText size={13} /> {item.proofDocument}
+                  leaves.map((item) => {
+                    const proof = item.proofDocument || '';
+                    const isImg = proof.startsWith('data:image');
+                    const isUrl = !isImg && (proof.startsWith('http://') || proof.startsWith('https://'));
+                    return (
+                      <tr key={item._id}>
+                        <td style={{ fontWeight: 700, color: '#0F172A' }}>{item.leaveType}</td>
+                        <td>
+                          {new Date(item.startDate).toLocaleDateString()} — {new Date(item.endDate).toLocaleDateString()}
+                        </td>
+                        <td style={{ color: '#475569', maxWidth: '220px' }}>{item.reason}</td>
+                        <td>
+                          {isImg ? (
+                            <img
+                              src={proof}
+                              alt="Proof preview"
+                              style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', border: '1px solid #CBD5E1', cursor: 'pointer' }}
+                              onClick={() => {
+                                const w = window.open();
+                                if (w) { w.document.write(`<img src="${proof}" style="max-width:100%" />`); }
+                              }}
+                              title="Click to expand image"
+                            />
+                          ) : isUrl ? (
+                            <a href={proof} target="_blank" rel="noopener noreferrer" style={{ color: '#2563EB', fontSize: '0.8rem', fontWeight: 600 }}>
+                              View Attachment
+                            </a>
+                          ) : proof ? (
+                            <span className="emp-proof-badge">
+                              <FileText size={13} /> Attached
+                            </span>
+                          ) : (
+                            <span style={{ color: '#94A3B8', fontSize: '0.8rem' }}>None</span>
+                          )}
+                        </td>
+                        <td>
+                          <span className={`emp-status-badge ${item.status ? item.status.toLowerCase() : 'pending'}`}>
+                            {item.status}
                           </span>
-                        ) : (
-                          <span style={{ color: '#94A3B8', fontSize: '0.8rem' }}>None</span>
-                        )}
-                      </td>
-                      <td>
-                        <span className={`emp-status-badge ${item.status ? item.status.toLowerCase() : 'pending'}`}>
-                          {item.status}
-                        </span>
-                      </td>
+                        </td>
                       <td style={{ color: '#64748B', fontSize: '0.8rem' }}>
                         {new Date(item.createdAt).toLocaleDateString()}
                       </td>
                     </tr>
-                  ))
+                  );
+                })
                 ) : (
                   <tr>
                     <td colSpan="6" style={{ textAlign: 'center', padding: '32px', color: '#94A3B8' }}>

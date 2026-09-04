@@ -1,385 +1,505 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
-import { 
-  Briefcase, 
-  Clock, 
-  CheckCircle, 
-  AlertTriangle, 
-  Star, 
-  TrendingUp, 
-  Plus, 
-  ArrowUpRight, 
+import {
+  Briefcase,
+  Clock,
+  CheckCircle,
+  AlertTriangle,
+  Star,
+  TrendingUp,
+  Plus,
+  ArrowUpRight,
   Calendar,
   MoreVertical,
   CheckSquare,
   MessageSquare,
-  GitCommit
+  GitCommit,
+  Users,
+  FileText,
+  Target,
+  PhoneCall,
+  DollarSign,
+  ShoppingCart,
+  BarChart2,
+  FolderKanban,
+  CheckCircle2,
+  ShieldCheck,
+  ChevronRight,
+  Activity
 } from 'lucide-react';
 import './EmployeeDashboard.css';
 
 export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNewTaskModal }) {
   const [tasksList, setTasksList] = useState([]);
+  const [projectsList, setProjectsList] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [salesStats, setSalesStats] = useState(null);
+  const [salesLoading, setSalesLoading] = useState(false);
+  const [recentActivities, setRecentActivities] = useState([]);
 
+  const isSalesDept = (currentUser?.department || '').toLowerCase() === 'sales' || currentUser?.role === 'employee';
   const firstName = currentUser?.fullName ? currentUser.fullName.split(' ')[0] : 'there';
-  const todayFormatted = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  const todayFormatted = new Date().toLocaleDateString('en-US', {
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+    year: 'numeric'
+  });
+
+  // Fetch real tasks and projects from MongoDB
+  const fetchTasksAndProjects = async () => {
+    try {
+      const [tasksRes, projectsRes] = await Promise.all([
+        apiRequest('/api/tasks'),
+        apiRequest('/api/projects')
+      ]);
+
+      if (tasksRes.response.ok && tasksRes.data.success && Array.isArray(tasksRes.data.data)) {
+        setTasksList(tasksRes.data.data.map(t => ({
+          ...t,
+          id: t._id,
+          project: t.project || 'General CRM',
+          dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'No due date',
+          priority: t.priority || 'Medium'
+        })));
+      }
+
+      if (projectsRes.response.ok && projectsRes.data.success && Array.isArray(projectsRes.data.data)) {
+        setProjectsList(projectsRes.data.data);
+      }
+    } catch (err) {
+      console.error('Fetch tasks & projects error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fetch real sales stats and activities from MongoDB
+  const fetchSalesData = async () => {
+    setSalesLoading(true);
+    try {
+      const [statsRes, actRes] = await Promise.all([
+        apiRequest('/api/sales-employee/stats'),
+        apiRequest('/api/sales-employee/activities')
+      ]);
+
+      if (statsRes.response.ok && statsRes.data.success) {
+        setSalesStats(statsRes.data.data);
+      }
+      if (actRes.response.ok && actRes.data.success && Array.isArray(actRes.data.data)) {
+        setRecentActivities(actRes.data.data.slice(0, 6));
+      }
+    } catch (err) {
+      console.error('Fetch sales stats error:', err);
+    } finally {
+      setSalesLoading(false);
+    }
+  };
 
   useEffect(() => {
-    async function fetchMyTasks() {
-      setLoading(true);
-      try {
-        const { response, data } = await apiRequest('/api/tasks');
-        if (response.ok && data.success && Array.isArray(data.data)) {
-          setTasksList(data.data.map(t => ({
-            ...t,
-            id: t._id,
-            project: t.project || 'General',
-            dueDate: t.dueDate ? new Date(t.dueDate).toLocaleDateString() : 'No date',
-            estimated: '4.0h',
-            comments: 0
-          })));
-        }
-      } catch (err) {
-        console.error('Fetch dashboard tasks error:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
-    fetchMyTasks();
+    fetchTasksAndProjects();
+    fetchSalesData();
   }, []);
 
   const handleToggleTaskStatus = async (id) => {
     const task = tasksList.find(t => t.id === id);
-    const nextStatus = task?.status === 'In Progress' ? 'Completed' : 'In Progress';
+    const nextStatus = task?.status === 'Completed' ? 'In Progress' : 'Completed';
     setTasksList(tasksList.map(t => t.id === id ? { ...t, status: nextStatus } : t));
-    await apiRequest(`/api/tasks/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: nextStatus })
-    });
+    try {
+      await apiRequest(`/api/tasks/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: nextStatus })
+      });
+      fetchSalesData();
+    } catch (e) {
+      console.error('Update task error:', e);
+    }
   };
+
+  const salesPerf = salesStats?.salesPerformance || {
+    monthlyTarget: salesStats?.monthlyTarget || 0,
+    salesAchieved: salesStats?.salesAchieved || 0,
+    remainingTarget: salesStats?.remainingTarget || 0,
+    targetAchievementPct: salesStats?.targetAchievementPct || 0,
+    totalLeads: salesStats?.totalLeads || 0,
+    convertedLeads: salesStats?.convertedLeads || 0,
+    qualifiedLeads: 0,
+    leadConversionRate: 0,
+    totalQuotations: salesStats?.totalQuotations || 0,
+    acceptedQuotations: salesStats?.acceptedQuotations || 0,
+    totalOrders: salesStats?.totalOrders || 0,
+    completedOrders: salesStats?.completedOrders || 0,
+    wonDealsCount: 0,
+    wonDealsValue: 0
+  };
+
+  const finPerf = salesStats?.financialPerformance || {
+    receivables: salesStats?.receivables || 0,
+    overdueAmount: salesStats?.overdueAmount || 0,
+    salaryTarget: salesStats?.salaryTarget || 0,
+    liability: salesStats?.liability || 0,
+    netRevenue: salesStats?.salesAchieved || 0,
+    totalInvoicesCount: 0,
+    paidInvoicesAmount: 0
+  };
+
+  const pendingTasks = tasksList.filter(t => t.status !== 'Completed');
 
   return (
     <div className="employee-dashboard-container">
-      {/* Good Morning Greeting Banner */}
+      {/* Top Welcome Banner */}
       <div className="employee-welcome-banner">
         <div className="employee-welcome-left">
-          <h2 className="welcome-title">Good morning, {firstName} 👋</h2>
-          <p className="welcome-subtitle">Here's what's happening with your work today — {todayFormatted}</p>
+          <h2 className="welcome-title">Welcome back, {firstName} 👋</h2>
+          <p className="welcome-subtitle">Here is your real-time sales, financial performance, and workflow dashboard for {todayFormatted}</p>
+        </div>
+        <div className="welcome-quick-actions">
+          <button className="sv-btn-primary" onClick={() => onNavigateTab?.('my_leads')}>
+            <Plus size={15} /> New Lead
+          </button>
+          <button className="sv-btn-cancel" onClick={() => onNavigateTab?.('my_deals')}>
+            Deals Pipeline
+          </button>
         </div>
       </div>
 
-      {/* 6 KPI Cards Grid */}
-      <div className="employee-kpi-grid">
-        {/* Card 1: Assigned Projects */}
-        <div className="employee-kpi-card">
-          <div className="kpi-card-header">
-            <span className="kpi-card-title">Assigned Projects</span>
-            <div className="kpi-icon-box blue">
-              <Briefcase size={18} />
-            </div>
-          </div>
-          <div className="kpi-card-body">
-            <span className="kpi-value">4</span>
-            <span className="kpi-trend positive">+1 this month</span>
-          </div>
-        </div>
-
-        {/* Card 2: Pending Tasks */}
-        <div className="employee-kpi-card">
-          <div className="kpi-card-header">
-            <span className="kpi-card-title">Pending Tasks</span>
-            <div className="kpi-icon-box amber">
-              <Clock size={18} />
-            </div>
-          </div>
-          <div className="kpi-card-body">
-            <span className="kpi-value">8</span>
-            <span className="kpi-trend neutral">3 due soon</span>
-          </div>
-        </div>
-
-        {/* Card 3: Completed Tasks */}
-        <div className="employee-kpi-card">
-          <div className="kpi-card-header">
-            <span className="kpi-card-title">Completed Tasks</span>
-            <div className="kpi-icon-box green">
-              <CheckCircle size={18} />
-            </div>
-          </div>
-          <div className="kpi-card-body">
-            <span className="kpi-value">6</span>
-            <span className="kpi-trend positive">+2 this week</span>
-          </div>
-        </div>
-
-        {/* Card 4: Overdue Tasks */}
-        <div className="employee-kpi-card">
-          <div className="kpi-card-header">
-            <span className="kpi-card-title">Overdue Tasks</span>
-            <div className="kpi-icon-box red">
-              <AlertTriangle size={18} />
-            </div>
-          </div>
-          <div className="kpi-card-body">
-            <span className="kpi-value">1</span>
-            <span className="kpi-trend negative">Needs attention</span>
-          </div>
-        </div>
-
-        {/* Card 5: Hours Logged */}
-        <div className="employee-kpi-card">
-          <div className="kpi-card-header">
-            <span className="kpi-card-title">Hours Logged</span>
-            <div className="kpi-icon-box purple">
-              <Clock size={18} />
-            </div>
-          </div>
-          <div className="kpi-card-body">
-            <span className="kpi-value">38.5h</span>
-            <span className="kpi-trend neutral">This week</span>
-          </div>
-        </div>
-
-        {/* Card 6: Performance */}
-        <div className="employee-kpi-card">
-          <div className="kpi-card-header">
-            <span className="kpi-card-title">Performance</span>
-            <div className="kpi-icon-box gold">
-              <Star size={18} />
-            </div>
-          </div>
-          <div className="kpi-card-body">
-            <span className="kpi-value">94%</span>
-            <span className="kpi-trend positive">Top 10%</span>
-          </div>
-        </div>
-      </div>
-
-      {/* Analytics & Charts Row */}
-      <div className="employee-charts-row">
-        {/* Weekly Hours Logged Line Chart */}
-        <div className="employee-chart-card hours-logged-card">
-          <div className="chart-card-header">
-            <div>
-              <h3 className="chart-card-title">Weekly Hours Logged</h3>
-              <p className="chart-card-sub">38.5 hours this week</p>
-            </div>
-            <div className="chart-badge-trend">
-              <TrendingUp size={14} />
-              <span>+12%</span>
-            </div>
-          </div>
-
-          <div className="hours-line-chart-wrapper">
-            <svg viewBox="0 0 500 160" className="hours-svg-chart">
-              {/* Grid lines */}
-              <line x1="0" y1="40" x2="500" y2="40" stroke="#F1F5F9" strokeWidth="1" />
-              <line x1="0" y1="80" x2="500" y2="80" stroke="#F1F5F9" strokeWidth="1" />
-              <line x1="0" y1="120" x2="500" y2="120" stroke="#F1F5F9" strokeWidth="1" />
-
-              {/* Area gradient under curve */}
-              <defs>
-                <linearGradient id="hoursGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#2563EB" stopOpacity="0.25" />
-                  <stop offset="100%" stopColor="#2563EB" stopOpacity="0.0" />
-                </linearGradient>
-              </defs>
-              <path 
-                d="M 30 110 Q 100 130, 150 90 T 270 70 T 380 40 T 470 75 L 470 150 L 30 150 Z" 
-                fill="url(#hoursGrad)" 
-              />
-
-              {/* Spline Line */}
-              <path 
-                d="M 30 110 Q 100 130, 150 90 T 270 70 T 380 40 T 470 75" 
-                fill="none" 
-                stroke="#2563EB" 
-                strokeWidth="3.5" 
-                strokeLinecap="round"
-              />
-
-              {/* Data points */}
-              <circle cx="30" cy="110" r="5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="110" cy="115" r="5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="190" cy="85" r="5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="270" cy="70" r="5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="350" cy="40" r="6" fill="#2563EB" stroke="#FFFFFF" strokeWidth="3" />
-              <circle cx="430" cy="65" r="5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
-              <circle cx="470" cy="75" r="5" fill="#2563EB" stroke="#FFFFFF" strokeWidth="2" />
-            </svg>
-
-            <div className="hours-chart-labels">
-              <span>Mon (7.5h)</span>
-              <span>Tue (7.0h)</span>
-              <span>Wed (8.5h)</span>
-              <span>Thu (8.0h)</span>
-              <span>Fri (7.5h)</span>
-              <span>Sat (0h)</span>
-              <span>Sun (0h)</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Task Status Donut Chart */}
-        <div className="employee-chart-card task-status-card">
-          <div className="chart-card-header">
-            <div>
-              <h3 className="chart-card-title">Task Status</h3>
-              <p className="chart-card-sub">15 total tasks</p>
-            </div>
-          </div>
-
-          <div className="donut-chart-container">
-            <div className="donut-graphic">
-              <svg viewBox="0 0 100 100" className="donut-svg">
-                {/* Completed - 6/15 = 40% (Green) */}
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#10B981" strokeWidth="14"
-                  strokeDasharray="95.5 143.2" strokeDashoffset="0" />
-                {/* In Progress - 5/15 = 33.3% (Blue) */}
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#2563EB" strokeWidth="14"
-                  strokeDasharray="79.5 159.2" strokeDashoffset="-98.5" />
-                {/* In Review - 3/15 = 20% (Amber) */}
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#F59E0B" strokeWidth="14"
-                  strokeDasharray="47.7 191" strokeDashoffset="-179" />
-                {/* Overdue - 1/15 = 6.7% (Red) */}
-                <circle cx="50" cy="50" r="38" fill="none" stroke="#EF4444" strokeWidth="14"
-                  strokeDasharray="16 222.7" strokeDashoffset="-227.7" />
-              </svg>
-              <div className="donut-center-text">
-                <span className="donut-total">15</span>
-                <span className="donut-label">Tasks</span>
+      {/* ── TOP SECTION: 2 HERO KPI CARDS (Sales Performance & Financial Performance) ── */}
+      <div className="hero-kpi-row">
+        {/* HERO CARD 1: SALES PERFORMANCE */}
+        <div className="hero-kpi-card sales-hero-card">
+          <div className="hero-card-header">
+            <div className="hero-header-left">
+              <div className="hero-icon-box sales">
+                <Target size={22} color="#FFFFFF" />
+              </div>
+              <div>
+                <h3 className="hero-card-title">Sales Performance</h3>
+                <p className="hero-card-subtitle">Monthly sales quota & deal conversion</p>
               </div>
             </div>
+            <div className="hero-badge-pct">
+              <span>{salesPerf.targetAchievementPct}%</span>
+              <span className="hero-badge-sub">Achieved</span>
+            </div>
+          </div>
 
-            <div className="donut-legend">
-              <div className="legend-item">
-                <span className="legend-dot" style={{ backgroundColor: '#10B981' }} />
-                <span className="legend-name">Completed</span>
-                <span className="legend-count">6</span>
+          <div className="hero-card-main-val">
+            <div className="hero-val-group">
+              <span className="hero-val-label">Sales Achieved</span>
+              <span className="hero-val-num">${Number(salesPerf.salesAchieved || 0).toLocaleString()}</span>
+            </div>
+            <div className="hero-val-divider" />
+            <div className="hero-val-group">
+              <span className="hero-val-label">Target Quota</span>
+              <span className="hero-val-num light">${Number(salesPerf.monthlyTarget || 0).toLocaleString()}</span>
+            </div>
+            <div className="hero-val-divider" />
+            <div className="hero-val-group">
+              <span className="hero-val-label">Remaining</span>
+              <span className="hero-val-num rem">${Number(salesPerf.remainingTarget || 0).toLocaleString()}</span>
+            </div>
+          </div>
+
+          {/* Target Progress Bar */}
+          <div className="hero-progress-track">
+            <div
+              className="hero-progress-fill sales"
+              style={{ width: `${Math.min(100, salesPerf.targetAchievementPct)}%` }}
+            />
+          </div>
+
+          {/* Sales Performance Key Metric Pills */}
+          <div className="hero-pills-grid">
+            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_leads')}>
+              <span className="pill-title">Total Leads</span>
+              <span className="pill-value">{salesPerf.totalLeads}</span>
+              <span className="pill-sub positive">+{salesPerf.convertedLeads} Converted</span>
+            </div>
+            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_deals')}>
+              <span className="pill-title">Won Deals</span>
+              <span className="pill-value" style={{ color: '#059669' }}>{salesPerf.wonDealsCount || 0}</span>
+              <span className="pill-sub">${Number(salesPerf.wonDealsValue || 0).toLocaleString()} volume</span>
+            </div>
+            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_quotations')}>
+              <span className="pill-title">Quotations</span>
+              <span className="pill-value">{salesPerf.totalQuotations}</span>
+              <span className="pill-sub">{salesPerf.acceptedQuotations} Accepted</span>
+            </div>
+            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_orders')}>
+              <span className="pill-title">Sales Orders</span>
+              <span className="pill-value">{salesPerf.totalOrders}</span>
+              <span className="pill-sub">{salesPerf.completedOrders} Delivered</span>
+            </div>
+          </div>
+        </div>
+
+        {/* HERO CARD 2: FINANCIAL PERFORMANCE */}
+        <div className="hero-kpi-card financial-hero-card">
+          <div className="hero-card-header">
+            <div className="hero-header-left">
+              <div className="hero-icon-box finance">
+                <DollarSign size={22} color="#FFFFFF" />
               </div>
-              <div className="legend-item">
-                <span className="legend-dot" style={{ backgroundColor: '#2563EB' }} />
-                <span className="legend-name">In Progress</span>
-                <span className="legend-count">5</span>
+              <div>
+                <h3 className="hero-card-title">Financial Performance</h3>
+                <p className="hero-card-subtitle">Receivables, overdue balances & settlement</p>
               </div>
-              <div className="legend-item">
-                <span className="legend-dot" style={{ backgroundColor: '#F59E0B' }} />
-                <span className="legend-name">In Review</span>
-                <span className="legend-count">3</span>
-              </div>
-              <div className="legend-item">
-                <span className="legend-dot" style={{ backgroundColor: '#EF4444' }} />
-                <span className="legend-name">Overdue</span>
-                <span className="legend-count">1</span>
-              </div>
+            </div>
+            <div className="hero-badge-pct green">
+              <span>${Number(finPerf.netRevenue || 0).toLocaleString()}</span>
+              <span className="hero-badge-sub">Net Revenue</span>
+            </div>
+          </div>
+
+          <div className="hero-card-main-val">
+            <div className="hero-val-group">
+              <span className="hero-val-label">Total Receivables</span>
+              <span className="hero-val-num" style={{ color: '#0284C7' }}>
+                ${Number(finPerf.receivables || 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="hero-val-divider" />
+            <div className="hero-val-group">
+              <span className="hero-val-label">Overdue Amount</span>
+              <span className="hero-val-num" style={{ color: finPerf.overdueAmount > 0 ? '#DC2626' : '#059669' }}>
+                ${Number(finPerf.overdueAmount || 0).toLocaleString()}
+              </span>
+            </div>
+            <div className="hero-val-divider" />
+            <div className="hero-val-group">
+              <span className="hero-val-label">Salary Target</span>
+              <span className="hero-val-num light">
+                ${Number(finPerf.salaryTarget || 0).toLocaleString()}
+              </span>
+            </div>
+          </div>
+
+          {/* Financial Indicator Bar */}
+          <div className="hero-progress-track">
+            <div
+              className="hero-progress-fill finance"
+              style={{
+                width: finPerf.overdueAmount > 0 ? '60%' : '100%',
+                background: finPerf.overdueAmount > 0
+                  ? 'linear-gradient(90deg, #10B981 70%, #EF4444 100%)'
+                  : 'linear-gradient(90deg, #10B981, #059669)'
+              }}
+            />
+          </div>
+
+          {/* Financial Performance Key Metric Pills */}
+          <div className="hero-pills-grid">
+            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_invoices')}>
+              <span className="pill-title">Invoices</span>
+              <span className="pill-value">{finPerf.totalInvoicesCount || 0}</span>
+              <span className="pill-sub">Created from Won Deals</span>
+            </div>
+            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_invoices')}>
+              <span className="pill-title">Settled Invoices</span>
+              <span className="pill-value" style={{ color: '#059669' }}>
+                ${Number(finPerf.paidInvoicesAmount || 0).toLocaleString()}
+              </span>
+              <span className="pill-sub positive">Collected</span>
+            </div>
+            <div className="hero-pill-item">
+              <span className="pill-title">Liabilities</span>
+              <span className="pill-value" style={{ color: '#64748B' }}>
+                ${Number(finPerf.liability || 0).toLocaleString()}
+              </span>
+              <span className="pill-sub">Cancellations/Returns</span>
+            </div>
+            <div className="hero-pill-item" onClick={() => onNavigateTab?.('sales_targets')}>
+              <span className="pill-title">Follow-ups Done</span>
+              <span className="pill-value">{salesPerf.completedFollowUps || 0}</span>
+              <span className="pill-sub">{salesPerf.totalFollowUps || 0} Total</span>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Bottom Grid: Active Tasks & Recent Activity */}
-      <div className="employee-bottom-grid">
-        {/* Active Assigned Tasks List */}
-        <div className="employee-widget-card active-tasks-widget">
+      {/* ── MIDDLE SECTION: SALES WORKFLOW & RECENT ACTIVITY ── */}
+      <div className="employee-middle-grid">
+        {/* Quick Sales Navigation Cards */}
+        <div className="sales-quick-nav-card">
           <div className="widget-header">
             <div className="widget-title-area">
-              <CheckSquare size={18} color="#2563EB" />
-              <h3>My Active Tasks</h3>
+              <TrendingUp size={18} color="#2563EB" />
+              <h3>Sales Workflow & Pipelines</h3>
             </div>
-            <button className="widget-action-link" onClick={() => onNavigateTab('tasks')}>
-              View All Tasks
-              <ArrowUpRight size={14} />
+            <span className="widget-badge-count">{salesPerf.totalLeads + salesPerf.totalOrders} records</span>
+          </div>
+
+          <div className="sales-quick-grid">
+            <div className="sales-workflow-item" onClick={() => onNavigateTab?.('my_leads')}>
+              <div className="sw-icon-box blue"><Users size={18} /></div>
+              <div className="sw-info">
+                <h4>My Leads</h4>
+                <p>{salesPerf.totalLeads} active leads assigned to you</p>
+              </div>
+              <ChevronRight size={16} color="#94A3B8" />
+            </div>
+
+            <div className="sales-workflow-item" onClick={() => onNavigateTab?.('my_deals')}>
+              <div className="sw-icon-box green"><DollarSign size={18} /></div>
+              <div className="sw-info">
+                <h4>Deals Pipeline</h4>
+                <p>{salesPerf.wonDealsCount || 0} won deals ready for invoice</p>
+              </div>
+              <ChevronRight size={16} color="#94A3B8" />
+            </div>
+
+            <div className="sales-workflow-item" onClick={() => onNavigateTab?.('my_quotations')}>
+              <div className="sw-icon-box purple"><FileText size={18} /></div>
+              <div className="sw-info">
+                <h4>Quotations</h4>
+                <p>{salesPerf.totalQuotations} formal proposals sent</p>
+              </div>
+              <ChevronRight size={16} color="#94A3B8" />
+            </div>
+
+            <div className="sales-workflow-item" onClick={() => onNavigateTab?.('my_invoices')}>
+              <div className="sw-icon-box amber"><DollarSign size={18} /></div>
+              <div className="sw-info">
+                <h4>Sales Invoices</h4>
+                <p>Generate & track invoices synced with Finance</p>
+              </div>
+              <ChevronRight size={16} color="#94A3B8" />
+            </div>
+          </div>
+        </div>
+
+        {/* Real Activity Stream from SalesActivity Collection */}
+        <div className="sales-activity-stream-card">
+          <div className="widget-header">
+            <div className="widget-title-area">
+              <Activity size={18} color="#10B981" />
+              <h3>Recent Sales Activities</h3>
+            </div>
+            <button className="widget-action-link" onClick={() => onNavigateTab?.('sales_activities')}>
+              View All <ArrowUpRight size={14} />
+            </button>
+          </div>
+
+          <div className="sales-activity-list">
+            {recentActivities.length === 0 ? (
+              <div className="sv-empty" style={{ padding: '24px 0' }}>
+                No recent sales activity recorded yet. Actions you take on leads, quotations, deals, and orders will appear here automatically.
+              </div>
+            ) : (
+              recentActivities.map((act) => (
+                <div key={act._id} className="sales-activity-row-item">
+                  <div className="sales-act-dot" />
+                  <div className="sales-act-content">
+                    <div className="sales-act-header">
+                      <span className="sales-act-type">{act.type}</span>
+                      <span className="sales-act-time">
+                        {act.createdAt ? new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </span>
+                    </div>
+                    <p className="sales-act-desc">{act.description}</p>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* ── BOTTOM SECTION: ASSIGNED PROJECTS & PENDING TASKS (Required at bottom) ── */}
+      <div className="employee-bottom-grid">
+        {/* ASSIGNED PROJECTS */}
+        <div className="employee-widget-card assigned-projects-widget">
+          <div className="widget-header">
+            <div className="widget-title-area">
+              <FolderKanban size={18} color="#2563EB" />
+              <h3>Assigned Projects</h3>
+            </div>
+            <button className="widget-action-link" onClick={() => onNavigateTab?.('projects')}>
+              All Projects <ArrowUpRight size={14} />
+            </button>
+          </div>
+
+          <div className="projects-scroll-list">
+            {projectsList.length === 0 ? (
+              <div className="sv-empty" style={{ padding: '28px 0' }}>
+                No assigned projects at this time.
+              </div>
+            ) : (
+              projectsList.slice(0, 5).map((project) => (
+                <div key={project._id} className="project-item-card">
+                  <div className="project-item-left">
+                    <div className="project-icon-box">
+                      <Briefcase size={16} color="#2563EB" />
+                    </div>
+                    <div className="project-item-info">
+                      <h4 className="project-title">{project.name}</h4>
+                      <div className="project-meta">
+                        <span className="project-client">{project.client || 'Internal Client'}</span>
+                        <span className="project-date">Due {project.deadline ? new Date(project.deadline).toLocaleDateString() : 'Ongoing'}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="project-item-right">
+                    <span className={`priority-badge ${(project.priority || 'medium').toLowerCase()}`}>
+                      {project.priority || 'Medium'}
+                    </span>
+                    <span className="project-status-pill">
+                      {project.status || 'Active'}
+                    </span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        {/* PENDING TASKS */}
+        <div className="employee-widget-card pending-tasks-widget">
+          <div className="widget-header">
+            <div className="widget-title-area">
+              <CheckSquare size={18} color="#D97706" />
+              <h3>Pending Tasks ({pendingTasks.length})</h3>
+            </div>
+            <button className="widget-action-link" onClick={() => onNavigateTab?.('tasks')}>
+              Task Board <ArrowUpRight size={14} />
             </button>
           </div>
 
           <div className="tasks-list">
-            {tasksList.map((task) => (
-              <div key={task.id} className="task-item-card">
-                <div className="task-left">
-                  <input 
-                    type="checkbox"
-                    checked={task.status === 'Completed'}
-                    onChange={() => handleToggleTaskStatus(task.id)}
-                    className="task-checkbox"
-                  />
-                  <div className="task-info">
-                    <span className={`task-title ${task.status === 'Completed' ? 'completed' : ''}`}>
-                      {task.title}
-                    </span>
-                    <div className="task-meta-row">
-                      <span className="task-project-tag">{task.project}</span>
-                      <span className="task-due-date">Due: {task.dueDate}</span>
-                      <span className="task-est">Est: {task.estimated}</span>
+            {pendingTasks.length === 0 ? (
+              <div className="sv-empty" style={{ padding: '28px 0' }}>
+                <CheckCircle2 size={32} color="#10B981" style={{ marginBottom: '8px' }} />
+                <p>All caught up! No pending tasks.</p>
+              </div>
+            ) : (
+              pendingTasks.slice(0, 6).map((task) => (
+                <div key={task.id} className="task-item-card">
+                  <div className="task-left">
+                    <input
+                      type="checkbox"
+                      checked={task.status === 'Completed'}
+                      onChange={() => handleToggleTaskStatus(task.id)}
+                      className="task-checkbox"
+                    />
+                    <div className="task-info">
+                      <span className="task-title">{task.title}</span>
+                      <div className="task-meta-row">
+                        <span className="task-project-tag">{task.project}</span>
+                        <span className="task-due-date">Due: {task.dueDate}</span>
+                      </div>
                     </div>
                   </div>
+                  <div className="task-right">
+                    <span className={`priority-badge ${(task.priority || 'medium').toLowerCase()}`}>
+                      {task.priority || 'Medium'}
+                    </span>
+                    <span className="status-pill in-progress">
+                      {task.status || 'In Progress'}
+                    </span>
+                  </div>
                 </div>
-
-                <div className="task-right">
-                  <span className={`priority-badge ${(task.priority || 'medium').toLowerCase()}`}>
-                    {task.priority || 'Medium'}
-                  </span>
-                  <span className={`status-pill ${(task.status || 'in-progress').toLowerCase().replace(' ', '-')}`}>
-                    {task.status || 'In Progress'}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Activity Feed */}
-        <div className="employee-widget-card activity-feed-widget">
-          <div className="widget-header">
-            <div className="widget-title-area">
-              <GitCommit size={18} color="#10B981" />
-              <h3>Recent Activity</h3>
-            </div>
-            <button className="widget-action-link" onClick={() => onNavigateTab('activity')}>
-              Full Feed
-              <ArrowUpRight size={14} />
-            </button>
-          </div>
-
-          <div className="activity-timeline">
-            <div className="activity-timeline-item">
-              <div className="activity-node blue" />
-              <div className="activity-content">
-                <p className="activity-text">
-                  <strong>You</strong> submitted code review for <span className="highlight">PR #142</span> (Platform Migration)
-                </p>
-                <span className="activity-time">35m ago</span>
-              </div>
-            </div>
-
-            <div className="activity-timeline-item">
-              <div className="activity-node green" />
-              <div className="activity-content">
-                <p className="activity-text">
-                  <strong>Logged 3.5 hours</strong> on <span className="highlight">Analytics Engine API Parsing</span>
-                </p>
-                <span className="activity-time">2h ago</span>
-              </div>
-            </div>
-
-            <div className="activity-timeline-item">
-              <div className="activity-node purple" />
-              <div className="activity-content">
-                <p className="activity-text">
-                  <strong>Daniel Torres</strong> assigned you task <span className="highlight">ERP OAuth Token Refresh</span>
-                </p>
-                <span className="activity-time">4h ago</span>
-              </div>
-            </div>
-
-            <div className="activity-timeline-item">
-              <div className="activity-node amber" />
-              <div className="activity-content">
-                <p className="activity-text">
-                  Completed daily standup check-in: <span className="highlight">"Finished dark mode mockups"</span>
-                </p>
-                <span className="activity-time">9:00 AM Today</span>
-              </div>
-            </div>
+              ))
+            )}
           </div>
         </div>
       </div>

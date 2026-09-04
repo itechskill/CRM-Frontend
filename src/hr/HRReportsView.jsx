@@ -173,12 +173,7 @@ export default function HRReportsView() {
           const Icon = card.icon;
           const isExporting = exporting === card.label;
           return (
-            <div key={card.label} style={{
-              background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: 14,
-              padding: '18px 20px', boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-              display: 'flex', alignItems: 'center', gap: 14,
-              transition: 'all 0.2s ease'
-            }}>
+            <div key={card.label} className="hr-report-card">
               <div className={`hr-summary-icon ${card.color}`}>
                 <Icon size={20} />
               </div>
@@ -187,11 +182,7 @@ export default function HRReportsView() {
                 <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: 2 }}>{card.desc}</div>
               </div>
               <button
-                style={{
-                  display: 'flex', alignItems: 'center', gap: 5, padding: '6px 12px',
-                  borderRadius: 8, border: 'none', background: '#F3E8FF', color: '#7C3AED',
-                  fontSize: '0.76rem', fontWeight: 600, cursor: 'pointer', flexShrink: 0
-                }}
+                className="hr-report-card-btn"
                 onClick={() => handleExportReport(card.label)}
                 disabled={loading || !!exporting}
               >

@@ -153,20 +153,7 @@ export default function CEODashboard({ onNavigateTab, currentUser }) {
 
         <button
           onClick={openAssignTaskModal}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: '#6366F1',
-            color: '#FFFFFF',
-            border: 'none',
-            borderRadius: '10px',
-            padding: '10px 18px',
-            fontSize: '0.875rem',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 4px 14px rgba(99, 102, 241, 0.35)'
-          }}
+          className="ceo-assign-btn"
         >
           <Plus size={18} />
           <span>Assign Task to Manager</span>

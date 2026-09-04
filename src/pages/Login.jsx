@@ -50,7 +50,7 @@ export default function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToFo
       }
     } catch (error) {
       console.error('Login request error:', error);
-      setErrorMessage('Unable to connect to backend server. Please make sure backend is running on port 5000.');
+      setErrorMessage('Unable to connect to backend server. Please check your connection and try again.');
     } finally {
       setLoading(false);
     }

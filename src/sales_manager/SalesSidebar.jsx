@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import { 
   Zap, 
   LayoutGrid, 
@@ -26,8 +27,22 @@ import './SalesSidebar.css';
 
 export default function SalesSidebar({ activeTab, setActiveTab, currentRole, userRole, currentUser, onSwitchRole, onSignOut, onLogout, isMobileOpen, onClose }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
-  const notificationCount = 5;
+  const [counts, setCounts] = useState({ leads: 0, meetings: 0, proposals: 0, notifications: 0 });
   const handleLogout = onLogout || onSignOut;
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/users/sidebar-counts');
+        if (response.ok && data.success) {
+          setCounts(data.data);
+        }
+      } catch (e) {
+        console.error('Fetch sales sidebar counts error:', e);
+      }
+    };
+    fetchCounts();
+  }, []);
 
   const handleSetActiveTab = (tab) => {
     setActiveTab(tab);
@@ -36,10 +51,11 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { id: 'leads', label: 'Leads', icon: Target, badge: '12' },
+    { id: 'leads', label: 'Leads', icon: Target, badge: counts.leads > 0 ? String(counts.leads) : undefined },
     { id: 'contacts', label: 'Contacts', icon: Users },
-    { id: 'meetings', label: 'Meetings', icon: Calendar, badge: '3' },
-    { id: 'proposals', label: 'Proposals', icon: FileText, badge: '4' },
+    { id: 'meetings', label: 'Meetings', icon: Calendar, badge: counts.meetings > 0 ? String(counts.meetings) : undefined },
+    { id: 'proposals', label: 'Proposals', icon: FileText, badge: counts.proposals > 0 ? String(counts.proposals) : undefined },
+    { id: 'invoices', label: 'Invoices & Billing', icon: Calculator },
     { id: 'clients', label: 'Clients', icon: Briefcase },
     { id: 'reports', label: 'Reports', icon: BarChart3 },
   ];
@@ -47,6 +63,8 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
   const systemNav = [
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings },
+    { id: 'notifications', label: 'Notifications', icon: Bell, badge: counts.notifications > 0 ? String(counts.notifications) : undefined },
+    { id: 'help', label: 'Help & Support', icon: HelpCircle },
   ];
 
   const userInitials = currentUser?.fullName
@@ -107,13 +125,14 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
                   <Icon size={18} />
                   <span>{item.label}</span>
                 </div>
+                {item.badge && <span className="sales-menu-badge">{item.badge}</span>}
               </div>
             );
           })}
         </div>
       </div>
 
-      {/* User Footer Profile & Role Switcher */}
+      {/* User Footer Profile & Role Switcher with Sign Out Icon */}
       <div 
         className="sales-sidebar-user" 
         onClick={() => {
@@ -121,7 +140,7 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
             setShowRoleMenu(!showRoleMenu);
           }
         }}
-        style={{ cursor: (userRole === 'admin' || userRole === 'ceo') ? 'pointer' : 'default' }}
+        style={{ cursor: (userRole === 'admin' || userRole === 'ceo') ? 'pointer' : 'default', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
       >
         <div className="sales-user-left">
           <div className="sales-user-avatar" style={{ backgroundColor: '#2563EB', color: '#FFF', fontWeight: 'bold', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -136,7 +155,30 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
             <span className="sales-user-role">{currentUser?.role ? currentUser.role.replace('_', ' ').toUpperCase() : 'SALES MANAGER'}</span>
           </div>
         </div>
-        {(userRole === 'admin' || userRole === 'ceo') && <ChevronDown size={16} color="#94A3B8" />}
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          {(userRole === 'admin' || userRole === 'ceo') && <ChevronDown size={16} color="#94A3B8" />}
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              if (handleLogout) handleLogout();
+            }}
+            title="Sign Out"
+            style={{
+              background: 'rgba(239, 68, 68, 0.1)',
+              border: '1px solid rgba(239, 68, 68, 0.2)',
+              borderRadius: '6px',
+              padding: '5px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: '#EF4444'
+            }}
+          >
+            <LogOut size={16} />
+          </button>
+        </div>
 
         {(userRole === 'admin' || userRole === 'ceo') && showRoleMenu && (
           <div className="role-switcher-menu">
@@ -249,40 +291,6 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
             </div>
           </div>
         )}
-      </div>
-
-      {/* Footer Utility Nav: Notifications, Help & Support, Sign Out */}
-      <div className="sales-sidebar-footer-nav">
-        <div
-          className={`sales-footer-item ${activeTab === 'notifications' ? 'active' : ''}`}
-          onClick={() => handleSetActiveTab('notifications')}
-        >
-          <div className="sales-menu-left">
-            <Bell size={18} />
-            <span>Notifications</span>
-          </div>
-          {notificationCount > 0 && (
-            <span className="sales-footer-notification-badge">{notificationCount}</span>
-          )}
-        </div>
-
-        <div className="sales-footer-item">
-          <div className="sales-menu-left">
-            <HelpCircle size={18} />
-            <span>Help &amp; Support</span>
-          </div>
-        </div>
-
-        <div
-          className="sales-footer-item"
-          style={{ cursor: 'pointer' }}
-          onClick={() => handleLogout && handleLogout()}
-        >
-          <div className="sales-menu-left">
-            <LogOut size={18} color="#EF4444" />
-            <span style={{ color: '#EF4444', fontWeight: 600 }}>Sign Out</span>
-          </div>
-        </div>
       </div>
     </aside>
     </>

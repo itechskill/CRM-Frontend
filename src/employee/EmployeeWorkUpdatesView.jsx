@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Clock, AlertCircle, CheckCircle, Send, Calendar, User } from 'lucide-react';
 import './EmployeeWorkUpdatesView.css';
-import { authHeaders } from '../utils/api';
+import { authHeaders, API_BASE } from '../utils/api';
 
 export default function EmployeeWorkUpdatesView() {
   const [hours, setHours] = useState(7.5);
@@ -21,7 +21,7 @@ export default function EmployeeWorkUpdatesView() {
   const fetchWorkUpdates = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/work-updates', {
+      const response = await fetch(`${API_BASE}/api/work-updates`, {
         headers: authHeaders()
       });
       const data = await response.json();
@@ -41,7 +41,7 @@ export default function EmployeeWorkUpdatesView() {
 
     setSubmitting(true);
     try {
-      const response = await fetch('http://localhost:5000/api/work-updates', {
+      const response = await fetch(`${API_BASE}/api/work-updates`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

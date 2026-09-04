@@ -306,6 +306,10 @@ function LeaveFormModal({ initialValues, employees, onClose, onSubmit, saving })
 }
 
 function LeaveViewModal({ request, onClose }) {
+  const proof = request.proofDocument || '';
+  const isImage = proof.startsWith('data:image');
+  const isUrl = !isImage && (proof.startsWith('http://') || proof.startsWith('https://'));
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -349,6 +353,40 @@ function LeaveViewModal({ request, onClose }) {
               <Eye size={16} color="#64748B" style={{ marginTop: '2px' }} />
               <span style={{ fontSize: '0.88rem', color: '#334155' }}>{request.reason || '—'}</span>
             </div>
+
+            {/* Supporting Proof Display */}
+            {proof ? (
+              <div style={{ marginTop: '4px', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', marginBottom: '8px', letterSpacing: '0.05em' }}>SUPPORTING PROOF / DOCUMENT</div>
+                {isImage ? (
+                  <img
+                    src={proof}
+                    alt="Leave proof document"
+                    style={{
+                      maxWidth: '100%', maxHeight: '280px', objectFit: 'contain',
+                      borderRadius: '6px', border: '1px solid #E2E8F0', display: 'block'
+                    }}
+                  />
+                ) : isUrl ? (
+                  <a
+                    href={proof}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{ color: '#2563EB', fontSize: '0.85rem', fontWeight: 600, textDecoration: 'none', wordBreak: 'break-all' }}
+                  >
+                    🔗 {proof}
+                  </a>
+                ) : (
+                  <span style={{ fontSize: '0.85rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📎 {proof}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <div style={{ padding: '10px 12px', background: '#F8FAFC', borderRadius: '8px', fontSize: '0.83rem', color: '#94A3B8' }}>
+                No supporting document provided.
+              </div>
+            )}
           </div>
         </div>
 
@@ -451,7 +489,8 @@ export default function HRAttendanceView({ searchQuery = '', headerAction = null
           to: new Date(l.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
           days: Math.max(1, Math.ceil((new Date(l.endDate) - new Date(l.startDate)) / (1000 * 60 * 60 * 24))),
           reason: l.reason,
-          status: l.status
+          status: l.status,
+          proofDocument: l.proofDocument || ''
         })));
       }
     } catch (err) {

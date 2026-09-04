@@ -1,7 +1,10 @@
 import { getToken } from './authStorage';
 export { getToken };
 
-export const API_BASE = 'http://localhost:5000';
+// In local development (npm run dev), uses http://localhost:5000
+// In production deployment, uses https://nexuscrm-backend-six.vercel.app
+export const API_BASE = import.meta.env?.VITE_API_BASE_URL ||
+  (import.meta.env.DEV ? 'http://localhost:5000' : 'https://nexuscrm-backend-six.vercel.app');
 
 export async function apiRequest(path, options = {}) {
   const token = getToken();

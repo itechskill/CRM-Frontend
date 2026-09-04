@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import {
   Megaphone,
   LayoutGrid,
@@ -26,6 +27,21 @@ import './MarketingSidebar.css';
 export default function MarketingSidebar({ activeTab, setActiveTab, currentRole, userRole, currentUser, onSwitchRole, isMobileOpen, onClose, onLogout }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [counts, setCounts] = useState({ activeCampaigns: 0, leads: 0, notifications: 0 });
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/users/sidebar-counts');
+        if (response.ok && data.success) {
+          setCounts(data.data);
+        }
+      } catch (e) {
+        console.error('Fetch sidebar counts error:', e);
+      }
+    };
+    fetchCounts();
+  }, []);
 
   const handleSetActiveTab = (tab) => {
     setActiveTab(tab);
@@ -34,8 +50,8 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { id: 'campaigns', label: 'Campaigns', icon: Target, badge: '5 Active' },
-    { id: 'mkt_leads', label: 'Leads & Growth', icon: Users, badge: '128' },
+    { id: 'campaigns', label: 'Campaigns', icon: Target, badge: counts.activeCampaigns > 0 ? `${counts.activeCampaigns} Active` : undefined },
+    { id: 'mkt_leads', label: 'Leads & Growth', icon: Users, badge: counts.leads > 0 ? String(counts.leads) : undefined },
     { id: 'content', label: 'Content Hub', icon: FileText },
     { id: 'analytics', label: 'Analytics', icon: BarChart2 },
     { id: 'mkt_reports', label: 'Marketing Reports', icon: PieChart },
@@ -43,7 +59,7 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
 
   const bottomNav = [
     { id: 'profile', label: 'My Profile', icon: User },
-    { id: 'mkt_notifications', label: 'Notifications', icon: Bell, badge: 4, badgeColor: '#EF4444' },
+    { id: 'mkt_notifications', label: 'Notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : undefined, badgeColor: '#EF4444' },
     { id: 'mkt_settings', label: 'Settings', icon: Settings },
   ];
 

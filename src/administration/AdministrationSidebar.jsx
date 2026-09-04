@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import {
   Briefcase,
   LayoutGrid,
@@ -24,6 +25,21 @@ import './AdministrationSidebar.css';
 export default function AdministrationSidebar({ activeTab, setActiveTab, currentRole, userRole, currentUser, onSwitchRole, isMobileOpen, onClose, onLogout }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
+  const [counts, setCounts] = useState({ pendingLeaves: 0, employees: 0, resources: 0 });
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/users/sidebar-counts');
+        if (response.ok && data.success) {
+          setCounts(data.data);
+        }
+      } catch (e) {
+        console.error('Fetch Administration sidebar counts error:', e);
+      }
+    };
+    fetchCounts();
+  }, []);
 
   const handleSetActiveTab = (tab) => {
     setActiveTab(tab);
@@ -32,10 +48,10 @@ export default function AdministrationSidebar({ activeTab, setActiveTab, current
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { id: 'employees', label: 'Employees', icon: Users },
+    { id: 'employees', label: 'Employees', icon: Users, badge: counts.employees > 0 ? String(counts.employees) : undefined },
     { id: 'departments', label: 'Departments', icon: Building2 },
-    { id: 'attendance_leave', label: 'Attendance', icon: CalendarCheck, badge: '5 Pending' },
-    { id: 'company_resources', label: 'Company Resources', icon: Package },
+    { id: 'attendance_leave', label: 'Attendance', icon: CalendarCheck, badge: counts.pendingLeaves > 0 ? `${counts.pendingLeaves} Pending` : undefined },
+    { id: 'company_resources', label: 'Company Resources', icon: Package, badge: counts.resources > 0 ? String(counts.resources) : undefined },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'profile', label: 'My Profile', icon: User },
   ];

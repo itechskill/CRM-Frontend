@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import { 
   Zap, 
   LayoutGrid, 
@@ -25,6 +26,21 @@ import './ProjectSidebar.css';
 
 export default function ProjectSidebar({ activeTab, setActiveTab, currentRole, userRole, currentUser, onSwitchRole, isMobileOpen, onClose, onLogout }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
+  const [counts, setCounts] = useState({ projects: 0, tasks: 0 });
+
+  useEffect(() => {
+    const fetchCounts = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/users/sidebar-counts');
+        if (response.ok && data.success) {
+          setCounts(data.data);
+        }
+      } catch (e) {
+        console.error('Fetch Project sidebar counts error:', e);
+      }
+    };
+    fetchCounts();
+  }, []);
 
   const handleSetActiveTab = (tab) => {
     setActiveTab(tab);
@@ -33,9 +49,9 @@ export default function ProjectSidebar({ activeTab, setActiveTab, currentRole, u
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
-    { id: 'projects', label: 'Projects', icon: Folder, badge: '5' },
+    { id: 'projects', label: 'Projects', icon: Folder, badge: counts.projects > 0 ? String(counts.projects) : undefined },
     { id: 'teams', label: 'Teams', icon: Users },
-    { id: 'tasks', label: 'Tasks', icon: CheckSquare, badge: '11' },
+    { id: 'tasks', label: 'Tasks', icon: CheckSquare, badge: counts.tasks > 0 ? String(counts.tasks) : undefined },
     { id: 'timeline', label: 'Timeline', icon: Calendar },
     { id: 'deliveries', label: 'Deliveries', icon: Truck },
   ];

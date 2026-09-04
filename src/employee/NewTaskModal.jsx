@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { X, CheckSquare, Plus } from 'lucide-react';
 import './NewTaskModal.css';
 
-import { getToken, authHeaders } from '../utils/api';
+import { getToken, authHeaders, API_BASE } from '../utils/api';
 
 export default function NewTaskModal({ isOpen, onClose, onAddTask }) {
   const [title, setTitle] = useState('');
@@ -24,7 +24,7 @@ export default function NewTaskModal({ isOpen, onClose, onAddTask }) {
     setErrorMsg('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/tasks', {
+      const response = await fetch(`${API_BASE}/api/tasks`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

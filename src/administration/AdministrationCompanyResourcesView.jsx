@@ -194,10 +194,11 @@ export default function AdministrationCompanyResourcesView() {
                     style={{ backgroundColor: '#0F172A', border: '1px solid #334155', borderRadius: '8px', color: '#FFF', padding: '10px', outline: 'none' }}
                   >
                     <option value="Hardware">Hardware</option>
-                    <option value="Software">Software License</option>
+                    <option value="Software">Software</option>
                     <option value="Document">Document</option>
                     <option value="Policy">Policy</option>
                     <option value="Template">Template</option>
+                    <option value="Asset">Asset</option>
                     <option value="Other">Other</option>
                   </select>
                 </div>
