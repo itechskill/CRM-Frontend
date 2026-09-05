@@ -57,7 +57,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
     if (onClose) onClose();
   };
 
-  const isSalesDept = (currentUser?.department || '').toLowerCase() === 'sales' || currentUser?.role === 'employee';
+  const isSalesDept = (currentUser?.department || '').trim().toLowerCase() === 'sales';
 
   const generalNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -108,15 +108,17 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
             <div className="employee-brand-logo">
               <Zap size={20} color="#FFFFFF" />
             </div>
-            {!collapsed && (
+            {(!collapsed || isMobileOpen) && (
               <div className="employee-brand-info">
                 <span className="employee-brand-name">NexusCRM</span>
-                <span className="employee-brand-subtitle">SALES MEMBER PORTAL</span>
+                <span className="employee-brand-subtitle">
+                  {isSalesDept ? 'SALES MEMBER PORTAL' : 'EMPLOYEE PORTAL'}
+                </span>
               </div>
             )}
           </div>
           <button
-            className="employee-collapse-btn"
+            className="employee-collapse-btn desktop-only"
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
@@ -126,7 +128,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
 
         {/* Navigation Menu */}
         <div className="employee-sidebar-menu">
-          {!collapsed && <div className="employee-menu-title white-title">WORK PORTAL</div>}
+          {(!collapsed || isMobileOpen) && <div className="employee-menu-title white-title">WORK PORTAL</div>}
 
           <div className="employee-menu-section">
             {currentMainNav.map((item) => {
@@ -228,13 +230,13 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
                 userInitials
               )}
             </div>
-            {!collapsed && (
+            {(!collapsed || isMobileOpen) && (
               <div className="employee-user-info" style={{ display: 'flex', flexDirection: 'column' }}>
                 <span className="employee-user-name" style={{ color: '#FFFFFF', fontSize: '0.825rem', fontWeight: 600 }}>
-                  {currentUser?.fullName || 'Sales Member'}
+                  {currentUser?.fullName || (isSalesDept ? 'Sales Member' : 'Employee')}
                 </span>
                 <span className="employee-user-role" style={{ color: '#94A3B8', fontSize: '0.72rem' }}>
-                  {currentUser?.position || 'Sales Representative'}
+                  {currentUser?.position || (currentUser?.department ? `${currentUser.department} Dept` : 'Employee')}
                 </span>
               </div>
             )}

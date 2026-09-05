@@ -600,9 +600,9 @@ export default function App() {
     const roleValidTabs = {
       employee: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'my_leads', 'my_quotations', 'my_orders', 'delivery_notes', 'followups', 'sales_targets', 'sales_activities'
+        'my_leads', 'my_deals', 'my_quotations', 'my_orders', 'my_invoices', 'delivery_notes', 'followups', 'sales_targets', 'sales_activities'
       ],
-      sales_manager: ['dashboard', 'leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'clients', 'notifications', 'profile'],
+      sales_manager: ['dashboard', 'leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'invoices', 'clients', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
       admin: ['dashboard', 'clients', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'projects', 'finance', 'reports', 'settings', 'profile'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],

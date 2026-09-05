@@ -829,28 +829,72 @@ body {
     overflow: hidden;
   }
 
-  /* Sidebar overlay on mobile — all sidebar variants */
+  /* Universal Sidebar overlay on mobile for all 9 CRM portal sidebars */
   .sidebar,
   .employee-sidebar,
   .sales-sidebar,
-  .project-sidebar {
+  .project-sidebar,
+  .hr-sidebar,
+  .acc-sidebar,
+  .mkt-sidebar,
+  .ceo-sidebar,
+  .admin-side-sidebar {
     position: fixed !important;
     left: 0;
     top: 0;
-    height: 100vh;
-    transform: translateX(-100%);
-    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    width: 280px !important;
+    max-width: 85vw !important;
+    height: 100vh !important;
+    transform: translateX(-100%) !important;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
     z-index: 200 !important;
     display: flex !important;
+    flex-direction: column !important;
+    box-shadow: none;
   }
 
   .sidebar.mobile-open,
   .employee-sidebar.mobile-open,
   .sales-sidebar.mobile-open,
-  .project-sidebar.mobile-open {
-    transform: translateX(0);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.35);
+  .project-sidebar.mobile-open,
+  .hr-sidebar.mobile-open,
+  .acc-sidebar.mobile-open,
+  .mkt-sidebar.mobile-open,
+  .ceo-sidebar.mobile-open,
+  .admin-side-sidebar.mobile-open {
+    transform: translateX(0) !important;
+    box-shadow: 6px 0 30px rgba(0, 0, 0, 0.5) !important;
     z-index: 300 !important;
+  }
+
+  /* Ensure User Card & Sign Out footer are always fully visible on mobile */
+  .sidebar-user,
+  .employee-sidebar-footer,
+  .sales-sidebar-user,
+  .project-sidebar-user,
+  .hr-sidebar-footer,
+  .acc-sidebar-footer,
+  .mkt-sidebar-footer,
+  .ceo-sidebar-footer,
+  .admin-side-sidebar-footer {
+    display: flex !important;
+    margin-top: auto !important;
+    padding: 12px 16px !important;
+    background-color: rgba(15, 23, 42, 0.95) !important;
+    border-top: 1px solid #1E293B !important;
+  }
+
+  .user-details,
+  .employee-user-info,
+  .sales-user-info,
+  .project-user-info,
+  .hr-user-info,
+  .acc-user-info,
+  .mkt-user-info,
+  .ceo-user-info,
+  .admin-side-user-info {
+    display: flex !important;
+    flex-direction: column !important;
   }
 
   /* Backdrop overlay behind open sidebar */
@@ -860,12 +904,55 @@ body {
 
   /* Content grids */
   .kpi-grid { grid-template-columns: 1fr; }
-  .header { padding: 0 16px; }
-  .content-area { padding: 16px 16px 32px; }
+  .header, .employee-header, .sales-header, .project-header, .hr-header, .acc-header, .mkt-header, .ceo-header, .admin-side-header {
+    padding: 0 16px !important;
+  }
+  .content-area {
+    padding: 14px 14px 32px !important;
+    height: calc(100vh - 65px) !important;
+  }
 
   /* Hide hamburger hide class on desktop */
-  .mobile-menu-btn { display: flex !important; }
-  .desktop-only { display: none !important; }
+  .mobile-menu-btn,
+  .ceo-menu-toggle,
+  .admin-side-menu-toggle {
+    display: flex !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Responsive Tables & Cards */
+  .sv-table-container,
+  .table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sv-header-row,
+  .widget-header,
+  .smd-top-banner,
+  .employee-welcome-banner {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .sv-actions,
+  .welcome-quick-actions,
+  .smd-actions-row {
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .sv-actions button,
+  .welcome-quick-actions button,
+  .smd-actions-row button {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
 }
 
 /* Hamburger button — hidden on desktop by default */
@@ -873,8 +960,8 @@ body {
   display: none;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 38px;
+  height: 38px;
   background: white;
   border: 1px solid var(--card-border);
   border-radius: var(--radius-sm);
@@ -894,7 +981,8 @@ body {
   display: none;
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.55);
+  background: rgba(15, 23, 42, 0.65);
   z-index: 190;
   animation: fadeIn 0.2s ease;
+  backdrop-filter: blur(2px);
 }

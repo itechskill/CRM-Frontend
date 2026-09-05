@@ -37,7 +37,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
   const [salesLoading, setSalesLoading] = useState(false);
   const [recentActivities, setRecentActivities] = useState([]);
 
-  const isSalesDept = (currentUser?.department || '').toLowerCase() === 'sales' || currentUser?.role === 'employee';
+  const isSalesDept = (currentUser?.department || '').trim().toLowerCase() === 'sales';
   const firstName = currentUser?.fullName ? currentUser.fullName.split(' ')[0] : 'there';
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -74,8 +74,9 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
     }
   };
 
-  // Fetch real sales stats and activities from MongoDB
+  // Fetch real sales stats and activities from MongoDB (only if sales department)
   const fetchSalesData = async () => {
+    if (!isSalesDept) return;
     setSalesLoading(true);
     try {
       const [statsRes, actRes] = await Promise.all([
@@ -98,8 +99,10 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
 
   useEffect(() => {
     fetchTasksAndProjects();
-    fetchSalesData();
-  }, []);
+    if (isSalesDept) {
+      fetchSalesData();
+    }
+  }, [isSalesDept]);
 
   const handleToggleTaskStatus = async (id) => {
     const task = tasksList.find(t => t.id === id);
@@ -110,7 +113,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
         method: 'PATCH',
         body: JSON.stringify({ status: nextStatus })
       });
-      fetchSalesData();
+      if (isSalesDept) fetchSalesData();
     } catch (e) {
       console.error('Update task error:', e);
     }
@@ -144,14 +147,171 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
   };
 
   const pendingTasks = tasksList.filter(t => t.status !== 'Completed');
+  const completedTasks = tasksList.filter(t => t.status === 'Completed');
 
+  // ══════════════════════════════════════════════════════════════
+  // STANDARD EMPLOYEE PORTAL (For Non-Sales Departments)
+  // ══════════════════════════════════════════════════════════════
+  if (!isSalesDept) {
+    return (
+      <div className="employee-dashboard-container">
+        {/* Top Welcome Banner */}
+        <div className="employee-welcome-banner">
+          <div className="employee-welcome-left">
+            <h2 className="welcome-title">Welcome back, {firstName} 👋</h2>
+            <p className="welcome-subtitle">
+              {currentUser?.department ? `${currentUser.department} Department` : 'Employee Workspace'} — Overview of your active tasks, projects, and work deliverables for {todayFormatted}
+            </p>
+          </div>
+          <div className="welcome-quick-actions">
+            <button className="sv-btn-primary" onClick={onOpenNewTaskModal}>
+              <Plus size={15} /> New Task
+            </button>
+            <button className="sv-btn-cancel" onClick={() => onNavigateTab?.('work_updates')}>
+              <FileText size={15} /> Work Updates
+            </button>
+          </div>
+        </div>
+
+        {/* 4 Standard Employee Metric Cards */}
+        <div className="hero-pills-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', marginBottom: '20px' }}>
+          <div className="hero-pill-item" onClick={() => onNavigateTab?.('tasks')} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '16px', borderRadius: '12px' }}>
+            <span className="pill-title" style={{ fontSize: '0.85rem', color: '#64748B' }}>Total Tasks</span>
+            <span className="pill-value" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A' }}>{tasksList.length}</span>
+            <span className="pill-sub" style={{ color: '#2563EB', fontWeight: 600 }}>Assigned to you</span>
+          </div>
+
+          <div className="hero-pill-item" onClick={() => onNavigateTab?.('tasks')} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '16px', borderRadius: '12px' }}>
+            <span className="pill-title" style={{ fontSize: '0.85rem', color: '#64748B' }}>In Progress</span>
+            <span className="pill-value" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#D97706' }}>{pendingTasks.length}</span>
+            <span className="pill-sub" style={{ color: '#D97706', fontWeight: 600 }}>Active task queue</span>
+          </div>
+
+          <div className="hero-pill-item" onClick={() => onNavigateTab?.('completed_tasks')} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '16px', borderRadius: '12px' }}>
+            <span className="pill-title" style={{ fontSize: '0.85rem', color: '#64748B' }}>Completed</span>
+            <span className="pill-value" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#10B981' }}>{completedTasks.length}</span>
+            <span className="pill-sub" style={{ color: '#10B981', fontWeight: 600 }}>Finished items</span>
+          </div>
+
+          <div className="hero-pill-item" onClick={() => onNavigateTab?.('projects')} style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', padding: '16px', borderRadius: '12px' }}>
+            <span className="pill-title" style={{ fontSize: '0.85rem', color: '#64748B' }}>Assigned Projects</span>
+            <span className="pill-value" style={{ fontSize: '1.6rem', fontWeight: 800, color: '#6366F1' }}>{projectsList.length}</span>
+            <span className="pill-sub" style={{ color: '#6366F1', fontWeight: 600 }}>Active projects</span>
+          </div>
+        </div>
+
+        {/* Bottom Section: Assigned Projects & Pending Tasks */}
+        <div className="employee-bottom-grid">
+          {/* ASSIGNED PROJECTS */}
+          <div className="employee-widget-card assigned-projects-widget">
+            <div className="widget-header">
+              <div className="widget-title-area">
+                <FolderKanban size={18} color="#2563EB" />
+                <h3>My Assigned Projects</h3>
+              </div>
+              <button className="widget-action-link" onClick={() => onNavigateTab?.('projects')}>
+                View All <ArrowUpRight size={14} />
+              </button>
+            </div>
+
+            <div className="projects-scroll-list">
+              {projectsList.length === 0 ? (
+                <div className="sv-empty" style={{ padding: '28px 0' }}>
+                  No assigned projects at this time.
+                </div>
+              ) : (
+                projectsList.slice(0, 6).map((project) => (
+                  <div key={project._id} className="project-item-card">
+                    <div className="project-item-left">
+                      <div className="project-icon-box">
+                        <Briefcase size={16} color="#2563EB" />
+                      </div>
+                      <div className="project-item-info">
+                        <h4 className="project-title">{project.name}</h4>
+                        <div className="project-meta">
+                          <span className="project-client">{project.client || 'Internal Project'}</span>
+                          <span className="project-date">Due {project.deadline ? new Date(project.deadline).toLocaleDateString() : 'Ongoing'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="project-item-right">
+                      <span className={`priority-badge ${(project.priority || 'medium').toLowerCase()}`}>
+                        {project.priority || 'Medium'}
+                      </span>
+                      <span className="project-status-pill">
+                        {project.status || 'Active'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* PENDING TASKS */}
+          <div className="employee-widget-card pending-tasks-widget">
+            <div className="widget-header">
+              <div className="widget-title-area">
+                <CheckSquare size={18} color="#D97706" />
+                <h3>My Task Checklist ({pendingTasks.length})</h3>
+              </div>
+              <button className="widget-action-link" onClick={() => onNavigateTab?.('tasks')}>
+                Task Board <ArrowUpRight size={14} />
+              </button>
+            </div>
+
+            <div className="tasks-list">
+              {pendingTasks.length === 0 ? (
+                <div className="sv-empty" style={{ padding: '28px 0' }}>
+                  <CheckCircle2 size={32} color="#10B981" style={{ marginBottom: '8px' }} />
+                  <p>All caught up! No pending tasks.</p>
+                </div>
+              ) : (
+                pendingTasks.slice(0, 6).map((task) => (
+                  <div key={task.id} className="task-item-card">
+                    <div className="task-left">
+                      <input
+                        type="checkbox"
+                        checked={task.status === 'Completed'}
+                        onChange={() => handleToggleTaskStatus(task.id)}
+                        className="task-checkbox"
+                      />
+                      <div className="task-info">
+                        <span className="task-title">{task.title}</span>
+                        <div className="task-meta-row">
+                          <span className="task-project-tag">{task.project}</span>
+                          <span className="task-due-date">Due: {task.dueDate}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="task-right">
+                      <span className={`priority-badge ${(task.priority || 'medium').toLowerCase()}`}>
+                        {task.priority || 'Medium'}
+                      </span>
+                      <span className="status-pill in-progress">
+                        {task.status || 'In Progress'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // SALES MEMBER DASHBOARD (For Sales Department Employees)
+  // ══════════════════════════════════════════════════════════════
   return (
     <div className="employee-dashboard-container">
       {/* Top Welcome Banner */}
       <div className="employee-welcome-banner">
         <div className="employee-welcome-left">
           <h2 className="welcome-title">Welcome back, {firstName} 👋</h2>
-          <p className="welcome-subtitle">Here is your real-time sales, financial performance, and workflow dashboard for {todayFormatted}</p>
+          <p className="welcome-subtitle">Here is your real-time sales quota, deals pipeline, and performance dashboard for {todayFormatted}</p>
         </div>
         <div className="welcome-quick-actions">
           <button className="sv-btn-primary" onClick={() => onNavigateTab?.('my_leads')}>
