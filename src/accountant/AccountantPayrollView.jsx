@@ -148,7 +148,7 @@ export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
 
     doc.setFontSize(18);
     doc.setTextColor(124, 58, 237);
-    doc.text('NexusCRM Enterprise Payroll Slip', 14, 20);
+    doc.text('Fortline CRM Enterprise Payroll Slip', 14, 20);
 
     doc.setFontSize(10);
     doc.setTextColor(100, 116, 139);

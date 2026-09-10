@@ -114,7 +114,7 @@ export default function MarketingCampaignsView({ isModalOpen, onCloseModal }) {
             <span className="mkt-kpi-title">Total Ad Spend</span>
             <div className="mkt-kpi-icon blue"><DollarSign size={18} /></div>
           </div>
-          <div className="mkt-kpi-value">${totalSpend.toLocaleString()}</div>
+          <div className="mkt-kpi-value">Rs. {totalSpend.toLocaleString()}</div>
           <div className="mkt-kpi-subtitle">Across active ad networks</div>
         </div>
 
@@ -173,8 +173,8 @@ export default function MarketingCampaignsView({ isModalOpen, onCloseModal }) {
                 <th>Campaign Name</th>
                 <th>Channel</th>
                 <th>Start Date</th>
-                <th>Budget ($)</th>
-                <th>Spent ($)</th>
+                <th>Budget (Rs.)</th>
+                <th>Spent (Rs.)</th>
                 <th>MQLs</th>
                 <th>CTR</th>
                 <th>Status</th>
@@ -187,8 +187,8 @@ export default function MarketingCampaignsView({ isModalOpen, onCloseModal }) {
                   <td style={{ fontWeight: 600, color: '#1E293B' }}>{cmp.name}</td>
                   <td><span className="mkt-badge draft">{cmp.channel}</span></td>
                   <td>{cmp.startDate}</td>
-                  <td style={{ fontWeight: 600 }}>${cmp.budget.toLocaleString()}</td>
-                  <td style={{ color: '#64748B' }}>${cmp.spend.toLocaleString()}</td>
+                  <td style={{ fontWeight: 600 }}>Rs. {cmp.budget.toLocaleString()}</td>
+                  <td style={{ color: '#64748B' }}>Rs. {cmp.spend.toLocaleString()}</td>
                   <td style={{ fontWeight: 700, color: '#0F172A' }}>{cmp.leads}</td>
                   <td style={{ color: '#2563EB', fontWeight: 600 }}>{cmp.ctr}</td>
                   <td>
@@ -238,7 +238,7 @@ export default function MarketingCampaignsView({ isModalOpen, onCloseModal }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="mkt-form-group">
-                    <label>Budget Allocation ($)</label>
+                    <label>Budget Allocation (PKR / Rs.)</label>
                     <input
                       type="number"
                       required

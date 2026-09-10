@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../../utils/api';
-import { Plus, Phone, CheckCircle, Clock, X, Save } from 'lucide-react';
+import { Plus, Phone, CheckCircle, Clock, X, Save, Eye, Trash2, Edit2, Mail, Calendar, User } from 'lucide-react';
 import './SalesViews.css';
 
 const STATUS_COLORS = {
@@ -20,6 +20,12 @@ export default function SalesFollowUpsView() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  // View & Delete Modal States
+  const [viewFU, setViewFU] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [feedback, setFeedback] = useState('');
+
   const fetchFU = useCallback(async () => {
     setLoading(true);
     try {
@@ -33,28 +39,69 @@ export default function SalesFollowUpsView() {
   useEffect(() => { fetchFU(); }, [fetchFU]);
 
   const openCreate = () => { setForm(EMPTY_FORM); setEditFU(null); setError(''); setShowModal(true); };
+  
   const openEdit = (f) => {
-    setForm({ title: f.title, description: f.description, contactName: f.contactName, contactEmail: f.contactEmail, contactPhone: f.contactPhone, type: f.type, status: f.status, scheduledAt: f.scheduledAt ? f.scheduledAt.substring(0, 16) : '', outcome: f.outcome, leadId: f.lead?._id || '' });
-    setEditFU(f); setError(''); setShowModal(true);
+    setForm({
+      title: f.title,
+      description: f.description || '',
+      contactName: f.contactName || '',
+      contactEmail: f.contactEmail || '',
+      contactPhone: f.contactPhone || '',
+      type: f.type || 'Call',
+      status: f.status || 'Pending',
+      scheduledAt: f.scheduledAt ? f.scheduledAt.substring(0, 16) : '',
+      outcome: f.outcome || '',
+      leadId: f.lead?._id || ''
+    });
+    setEditFU(f);
+    setError('');
+    setShowModal(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.title.trim()) { setError('Title is required.'); return; }
-    setSaving(true); setError('');
+    setSaving(true);
+    setError('');
     const payload = { ...form, scheduledAt: form.scheduledAt || null, leadId: form.leadId || null };
     try {
       const url = editFU ? `/api/sales-employee/followups/${editFU._id}` : '/api/sales-employee/followups';
-      const { response, data } = await apiRequest(url, { method: editFU ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
-      if (response.ok && data.success) { setShowModal(false); fetchFU(); }
-      else setError(data.message || 'Failed to save.');
+      const method = editFU ? 'PATCH' : 'POST';
+      const { response, data } = await apiRequest(url, { method, body: JSON.stringify(payload) });
+      if (response.ok && data.success) {
+        setShowModal(false);
+        setFeedback(editFU ? `Follow-up updated.` : 'Follow-up scheduled.');
+        setTimeout(() => setFeedback(''), 3000);
+        fetchFU();
+      } else {
+        setError(data.message || 'Failed to save.');
+      }
     } catch (e) { setError('Server error.'); }
     finally { setSaving(false); }
   };
 
   const markDone = async (id) => {
     await apiRequest(`/api/sales-employee/followups/${id}`, { method: 'PATCH', body: JSON.stringify({ status: 'Completed', outcome: 'Completed via quick action' }) });
+    setFeedback('Follow-up marked as completed.');
+    setTimeout(() => setFeedback(''), 3000);
     fetchFU();
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/followups/${deleteTarget._id}`, { method: 'DELETE' });
+      if (response.ok && data.success) {
+        setFeedback(`Follow-up "${deleteTarget.title}" deleted.`);
+        setDeleteTarget(null);
+        fetchFU();
+        setTimeout(() => setFeedback(''), 3000);
+      } else {
+        setFeedback(data.message || 'Failed to delete.');
+      }
+    } catch (e) { setFeedback('Server error.'); }
+    finally { setDeleting(false); }
   };
 
   return (
@@ -62,10 +109,16 @@ export default function SalesFollowUpsView() {
       <div className="sv-header">
         <div>
           <h2 className="sv-title"><Phone size={20} /> Follow-ups</h2>
-          <p className="sv-subtitle">Track customer and lead follow-ups</p>
+          <p className="sv-subtitle">Track customer and lead follow-ups and interactions</p>
         </div>
         <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Follow-up</button>
       </div>
+
+      {feedback && (
+        <div style={{ background: '#ECFDF5', color: '#065F46', padding: '10px 16px', borderRadius: '8px', border: '1px solid #A7F3D0', fontWeight: 600, fontSize: '0.85rem', marginBottom: '14px' }}>
+          {feedback}
+        </div>
+      )}
 
       <div className="sv-filters">
         <div className="sv-status-tabs">
@@ -81,7 +134,7 @@ export default function SalesFollowUpsView() {
             : followUps.map(fu => (
               <div key={fu._id} className={`sv-followup-card ${fu.status === 'Completed' ? 'done' : ''}`}>
                 <div className="sv-fu-header">
-                  <span className="sv-fu-type">{TYPE_ICONS[fu.type]} {fu.type}</span>
+                  <span className="sv-fu-type">{TYPE_ICONS[fu.type] || '📋'} {fu.type}</span>
                   <span className="sv-badge" style={{ background: STATUS_COLORS[fu.status] + '22', color: STATUS_COLORS[fu.status], border: `1px solid ${STATUS_COLORS[fu.status]}44` }}>{fu.status}</span>
                 </div>
                 <h4 className="sv-fu-title">{fu.title}</h4>
@@ -91,13 +144,102 @@ export default function SalesFollowUpsView() {
                 {fu.outcome && <p className="sv-fu-outcome">✅ {fu.outcome}</p>}
                 <div className="sv-fu-actions">
                   {fu.status === 'Pending' && <button className="sv-btn-done" onClick={() => markDone(fu._id)}><CheckCircle size={13} /> Mark Done</button>}
-                  <button className="sv-edit-btn" onClick={() => openEdit(fu)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg></button>
+                  <button className="sv-btn-action-icon" onClick={() => setViewFU(fu)} title="View Details"><Eye size={14} /></button>
+                  <button className="sv-edit-btn" onClick={() => openEdit(fu)} title="Edit Follow-up"><Edit2 size={14} /></button>
+                  <button className="sv-btn-action-icon" onClick={() => setDeleteTarget(fu)} title="Delete Follow-up" style={{ color: '#EF4444' }}><Trash2 size={14} /></button>
                 </div>
               </div>
             ))}
         </div>
       )}
 
+      {/* VIEW FOLLOW-UP MODAL */}
+      {viewFU && (
+        <div className="sv-modal-overlay" onClick={() => setViewFU(null)}>
+          <div className="sv-modal" style={{ maxWidth: '540px' }} onClick={e => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Phone size={18} color="#2563EB" />
+                <h3 style={{ margin: 0 }}>Follow-up Details</h3>
+              </div>
+              <button onClick={() => setViewFU(null)}><X size={18} /></button>
+            </div>
+            <div style={{ padding: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A' }}>{viewFU.title}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#64748B', marginTop: '3px' }}>{TYPE_ICONS[viewFU.type] || '📋'} Type: {viewFU.type}</div>
+                </div>
+                <span className="sv-badge" style={{ background: STATUS_COLORS[viewFU.status] + '22', color: STATUS_COLORS[viewFU.status], border: `1px solid ${STATUS_COLORS[viewFU.status]}44`, fontSize: '0.82rem', padding: '5px 12px' }}>
+                  {viewFU.status}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', background: '#F8FAFC', padding: '12px', borderRadius: '8px', marginBottom: '14px' }}>
+                <div>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>Contact Person</div>
+                  <div style={{ fontSize: '0.875rem', color: '#0F172A', fontWeight: 600, marginTop: '2px' }}>{viewFU.contactName || '—'}</div>
+                  {viewFU.contactPhone && <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>📞 {viewFU.contactPhone}</div>}
+                  {viewFU.contactEmail && <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>✉ {viewFU.contactEmail}</div>}
+                </div>
+                <div>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#94A3B8', textTransform: 'uppercase' }}>Schedule & Date</div>
+                  <div style={{ fontSize: '0.875rem', color: '#0F172A', fontWeight: 600, marginTop: '2px' }}>
+                    {viewFU.scheduledAt ? new Date(viewFU.scheduledAt).toLocaleString() : 'Not scheduled'}
+                  </div>
+                </div>
+              </div>
+
+              {viewFU.description && (
+                <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '4px' }}>Description</div>
+                  <div style={{ fontSize: '0.875rem', color: '#334155', lineHeight: 1.5 }}>{viewFU.description}</div>
+                </div>
+              )}
+
+              {viewFU.outcome && (
+                <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#065F46', marginBottom: '4px' }}>Outcome / Result</div>
+                  <div style={{ fontSize: '0.875rem', color: '#065F46', fontWeight: 600 }}>{viewFU.outcome}</div>
+                </div>
+              )}
+
+              <div className="sv-modal-actions" style={{ marginTop: '16px' }}>
+                <button className="sv-btn-cancel" onClick={() => setViewFU(null)}>Close</button>
+                <button className="sv-btn-primary" onClick={() => { setViewFU(null); openEdit(viewFU); }}><Edit2 size={14} /> Edit Follow-up</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE CONFIRM MODAL */}
+      {deleteTarget && (
+        <div className="sv-modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="sv-modal" style={{ maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Trash2 size={18} color="#EF4444" />
+                <h3 style={{ margin: 0 }}>Delete Follow-up</h3>
+              </div>
+              <button onClick={() => setDeleteTarget(null)}><X size={18} /></button>
+            </div>
+            <div className="sv-form">
+              <p style={{ fontSize: '0.9rem', color: '#334155', margin: '0 0 16px' }}>
+                Are you sure you want to delete follow-up <strong>"{deleteTarget.title}"</strong>? This action cannot be undone.
+              </p>
+              <div className="sv-modal-actions">
+                <button className="sv-btn-cancel" onClick={() => setDeleteTarget(null)}>Cancel</button>
+                <button className="sv-btn-primary" onClick={handleDelete} disabled={deleting} style={{ background: '#EF4444' }}>
+                  <Trash2 size={14} /> {deleting ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE / EDIT MODAL */}
       {showModal && (
         <div className="sv-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="sv-modal" onClick={e => e.stopPropagation()}>

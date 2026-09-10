@@ -79,7 +79,7 @@ export default function Login({ onLoginSuccess, onSwitchToRegister, onSwitchToFo
             <div className="auth-logo-badge auth-logo-badge-brand">
               <Zap size={24} color="#FFFFFF" />
             </div>
-            <span className="auth-brand-name">NexusCRM</span>
+            <span className="auth-brand-name">Fortline CRM</span>
           </div>
 
           <h2 className="auth-brand-heading">

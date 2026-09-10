@@ -3,12 +3,12 @@ import { Building2, Users, UserCheck, Plus, X, Search, Edit2, Trash2 } from 'luc
 import './AdministrationDepartmentsView.css';
 
 const INITIAL_DEPTS = [
-  { id: 1, name: 'Executive Administration', head: 'Marcus Brody', count: 12, location: 'Building A - Executive Floor', budget: '$450,000' },
-  { id: 2, name: 'Engineering & Software', head: 'Daniel Torres', count: 142, location: 'Building A - Floor 3', budget: '$1,200,000' },
-  { id: 3, name: 'Sales & Business Dev', head: 'Sarah Mitchell', count: 86, location: 'Building B - Floor 2', budget: '$850,000' },
-  { id: 4, name: 'Human Resources (HR)', head: 'Rachel Okafor', count: 24, location: 'Building A - Floor 1', budget: '$320,000' },
-  { id: 5, name: 'Finance & Accounting', head: 'Alex Vance', count: 32, location: 'Building A - Floor 2', budget: '$400,000' },
-  { id: 6, name: 'Growth & Marketing', head: 'Jessica Blake', count: 42, location: 'Building B - Floor 1', budget: '$600,000' },
+  { id: 1, name: 'Executive Administration', head: 'Marcus Brody', count: 12, location: 'Building A - Executive Floor', budget: 'Rs. 450,000' },
+  { id: 2, name: 'Engineering & Software', head: 'Daniel Torres', count: 142, location: 'Building A - Floor 3', budget: 'Rs. 1,200,000' },
+  { id: 3, name: 'Sales & Business Dev', head: 'Sarah Mitchell', count: 86, location: 'Building B - Floor 2', budget: 'Rs. 850,000' },
+  { id: 4, name: 'Human Resources (HR)', head: 'Rachel Okafor', count: 24, location: 'Building A - Floor 1', budget: 'Rs. 320,000' },
+  { id: 5, name: 'Finance & Accounting', head: 'Alex Vance', count: 32, location: 'Building A - Floor 2', budget: 'Rs. 400,000' },
+  { id: 6, name: 'Growth & Marketing', head: 'Jessica Blake', count: 42, location: 'Building B - Floor 1', budget: 'Rs. 600,000' },
 ];
 
 export default function AdministrationDepartmentsView({ searchQuery = '' }) {
@@ -29,7 +29,7 @@ export default function AdministrationDepartmentsView({ searchQuery = '' }) {
       head: newDept.head.trim() || 'Unassigned',
       count: parseInt(newDept.count) || 1,
       location: newDept.location.trim() || 'Main Headquarters',
-      budget: newDept.budget ? `$${newDept.budget}` : '$100,000'
+      budget: newDept.budget ? `Rs. ${newDept.budget}` : 'Rs. 100,000'
     };
 
     setDepartments([dept, ...departments]);

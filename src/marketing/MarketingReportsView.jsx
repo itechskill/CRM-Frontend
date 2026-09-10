@@ -13,11 +13,11 @@ import {
 import './MarketingViews.css';
 
 const reportData = [
-  { channel: 'Google Paid Search', spend: '$42,500', mqls: 840, sqls: 380, customers: 112, revenue: '$224,000', cpl: '$50.59', roas: '5.2x', romi: '427%' },
-  { channel: 'Organic Search (SEO)', spend: '$14,000', mqls: 620, sqls: 290, customers: 98, revenue: '$196,000', cpl: '$22.58', roas: '14.0x', romi: '1300%' },
-  { channel: 'LinkedIn & Social Ads', spend: '$28,000', mqls: 490, sqls: 210, customers: 64, revenue: '$128,000', cpl: '$57.14', roas: '4.5x', romi: '357%' },
-  { channel: 'Email Automation Sprints', spend: '$4,500', mqls: 310, sqls: 145, customers: 52, revenue: '$104,000', cpl: '$14.51', roas: '23.1x', romi: '2211%' },
-  { channel: 'Webinars & Virtual Summits', spend: '$12,000', mqls: 260, sqls: 115, customers: 42, revenue: '$84,000', cpl: '$46.15', roas: '7.0x', romi: '600%' },
+  { channel: 'Google Paid Search', spend: 'Rs. 42,500', mqls: 840, sqls: 380, customers: 112, revenue: 'Rs. 224,000', cpl: 'Rs. 50.59', roas: '5.2x', romi: '427%' },
+  { channel: 'Organic Search (SEO)', spend: 'Rs. 14,000', mqls: 620, sqls: 290, customers: 98, revenue: 'Rs. 196,000', cpl: 'Rs. 22.58', roas: '14.0x', romi: '1300%' },
+  { channel: 'LinkedIn & Social Ads', spend: 'Rs. 28,000', mqls: 490, sqls: 210, customers: 64, revenue: 'Rs. 128,000', cpl: 'Rs. 57.14', roas: '4.5x', romi: '357%' },
+  { channel: 'Email Automation Sprints', spend: 'Rs. 4,500', mqls: 310, sqls: 145, customers: 52, revenue: 'Rs. 104,000', cpl: 'Rs. 14.51', roas: '23.1x', romi: '2211%' },
+  { channel: 'Webinars & Virtual Summits', spend: 'Rs. 12,000', mqls: 260, sqls: 115, customers: 42, revenue: 'Rs. 84,000', cpl: 'Rs. 46.15', roas: '7.0x', romi: '600%' },
 ];
 
 export default function MarketingReportsView() {
@@ -95,7 +95,7 @@ export default function MarketingReportsView() {
             <span className="mkt-kpi-title">Total Marketing Spend</span>
             <div className="mkt-kpi-icon pink"><DollarSign size={18} /></div>
           </div>
-          <div className="mkt-kpi-value">$101,000</div>
+          <div className="mkt-kpi-value">Rs. 101,000</div>
           <div className="mkt-kpi-subtitle">Across all paid & content channels</div>
         </div>
 
@@ -104,7 +104,7 @@ export default function MarketingReportsView() {
             <span className="mkt-kpi-title">Attributed Revenue</span>
             <div className="mkt-kpi-icon emerald"><TrendingUp size={18} /></div>
           </div>
-          <div className="mkt-kpi-value">$736,000</div>
+          <div className="mkt-kpi-value">Rs. 736,000</div>
           <div className="mkt-kpi-subtitle up"><ArrowUpRight size={14} /> 7.2x Overall ROAS</div>
         </div>
 
@@ -113,7 +113,7 @@ export default function MarketingReportsView() {
             <span className="mkt-kpi-title">Blended Cost per MQL</span>
             <div className="mkt-kpi-icon purple"><PieChart size={18} /></div>
           </div>
-          <div className="mkt-kpi-value">$39.92</div>
+          <div className="mkt-kpi-value">Rs. 39.92</div>
           <div className="mkt-kpi-subtitle">2,520 Total MQLs acquired</div>
         </div>
 
@@ -167,12 +167,12 @@ export default function MarketingReportsView() {
               ))}
               <tr style={{ backgroundColor: '#F8FAFC', fontWeight: 800, fontSize: '0.95rem' }}>
                 <td>TOTAL / BLENDED AVERAGE</td>
-                <td>$101,000</td>
+                <td>Rs. 101,000</td>
                 <td>2,520</td>
                 <td>1,140</td>
                 <td>368</td>
-                <td style={{ color: '#059669' }}>$736,000</td>
-                <td>$39.92</td>
+                <td style={{ color: '#059669' }}>Rs. 736,000</td>
+                <td>Rs. 39.92</td>
                 <td style={{ color: '#2563EB' }}>7.2x</td>
                 <td style={{ color: '#BE185D' }}>628%</td>
               </tr>

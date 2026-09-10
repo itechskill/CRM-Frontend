@@ -40,7 +40,7 @@ export default function AdministrationReportsView() {
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.setTextColor(37, 99, 235); // #2563EB
-    doc.text('NexusCRM Administration Report', 14, 18);
+    doc.text('Fortline CRM Administration Report', 14, 18);
     doc.setFontSize(12);
     doc.setTextColor(15, 23, 42);
     doc.text(title, 14, 26);

@@ -22,13 +22,13 @@ const netProfitTrendData = [
 ];
 
 const transactionsData = [
-  { id: 'INV-2847', name: 'Proxima Labs', type: 'Invoice', date: 'Dec 14, 2024', amount: '+$32,500', direction: 'up', status: 'Paid' },
-  { id: 'INV-2846', name: 'BuildCo Industries', type: 'Invoice', date: 'Dec 12, 2024', amount: '+$18,200', direction: 'up', status: 'Pending' },
-  { id: 'EXP-0391', name: 'Software Licenses', type: 'Expense', date: 'Dec 10, 2024', amount: '$4,800', direction: 'down', status: 'Processed' },
-  { id: 'INV-2845', name: 'TechFlow Inc', type: 'Invoice', date: 'Dec 9, 2024', amount: '+$11,000', direction: 'up', status: 'Overdue' },
-  { id: 'EXP-0390', name: 'Cloud Infrastructure', type: 'Expense', date: 'Dec 8, 2024', amount: '$9,200', direction: 'down', status: 'Processed' },
-  { id: 'INV-2844', name: 'Orion Systems', type: 'Invoice', date: 'Dec 7, 2024', amount: '+$24,000', direction: 'up', status: 'Paid' },
-  { id: 'INV-2843', name: 'CloudBridge', type: 'Invoice', date: 'Dec 5, 2024', amount: '+$15,600', direction: 'up', status: 'Paid' },
+  { id: 'INV-2847', name: 'Proxima Labs', type: 'Invoice', date: 'Dec 14, 2024', amount: '+Rs. 32,500', direction: 'up', status: 'Paid' },
+  { id: 'INV-2846', name: 'BuildCo Industries', type: 'Invoice', date: 'Dec 12, 2024', amount: '+Rs. 18,200', direction: 'up', status: 'Pending' },
+  { id: 'EXP-0391', name: 'Software Licenses', type: 'Expense', date: 'Dec 10, 2024', amount: 'Rs. 4,800', direction: 'down', status: 'Processed' },
+  { id: 'INV-2845', name: 'TechFlow Inc', type: 'Invoice', date: 'Dec 9, 2024', amount: '+Rs. 11,000', direction: 'up', status: 'Overdue' },
+  { id: 'EXP-0390', name: 'Cloud Infrastructure', type: 'Expense', date: 'Dec 8, 2024', amount: 'Rs. 9,200', direction: 'down', status: 'Processed' },
+  { id: 'INV-2844', name: 'Orion Systems', type: 'Invoice', date: 'Dec 7, 2024', amount: '+Rs. 24,000', direction: 'up', status: 'Paid' },
+  { id: 'INV-2843', name: 'CloudBridge', type: 'Invoice', date: 'Dec 5, 2024', amount: '+Rs. 15,600', direction: 'up', status: 'Paid' },
 ];
 
 const typeStyles = {
@@ -105,9 +105,9 @@ export default function FinanceView() {
               alignItems: 'center',
               justifyContent: 'center',
               fontWeight: 700,
-              fontSize: '1.2rem'
+              fontSize: '1rem'
             }}>
-              $
+              Rs.
             </div>
             <div style={{
               display: 'inline-flex',
@@ -125,7 +125,7 @@ export default function FinanceView() {
             </div>
           </div>
           <div style={{ marginTop: '16px' }}>
-            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>$674K</div>
+            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>Rs. 674K</div>
             <div style={{ fontSize: '0.875rem', color: '#64748B', fontWeight: 500, marginTop: '4px' }}>Monthly Revenue</div>
           </div>
         </div>
@@ -171,7 +171,7 @@ export default function FinanceView() {
             </div>
           </div>
           <div style={{ marginTop: '16px' }}>
-            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>$255K</div>
+            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>Rs. 255K</div>
             <div style={{ fontSize: '0.875rem', color: '#64748B', fontWeight: 500, marginTop: '4px' }}>Total Expenses</div>
           </div>
         </div>
@@ -217,7 +217,7 @@ export default function FinanceView() {
             </div>
           </div>
           <div style={{ marginTop: '16px' }}>
-            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>$419K</div>
+            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>Rs. 419K</div>
             <div style={{ fontSize: '0.875rem', color: '#64748B', fontWeight: 500, marginTop: '4px' }}>Net Profit</div>
           </div>
         </div>
@@ -263,7 +263,7 @@ export default function FinanceView() {
             </div>
           </div>
           <div style={{ marginTop: '16px' }}>
-            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>$89K</div>
+            <div style={{ fontSize: '2.2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>Rs. 89K</div>
             <div style={{ fontSize: '0.875rem', color: '#64748B', fontWeight: 500, marginTop: '4px' }}>Outstanding AR</div>
           </div>
         </div>
@@ -296,10 +296,10 @@ export default function FinanceView() {
                   tickLine={false}
                   tick={{ fill: '#94A3B8', fontSize: 11 }}
                   ticks={[200, 400, 600, 800]}
-                  tickFormatter={(v) => `$${v}K`}
+                  tickFormatter={(v) => `Rs. ${v}K`}
                 />
                 <Tooltip
-                  formatter={(val) => [`$${val}K`, '']}
+                  formatter={(val) => [`Rs. ${val}K`, '']}
                   contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 />
                 <Bar dataKey="revenue" fill="#2563EB" radius={[4, 4, 0, 0]} barSize={18} name="Revenue" />
@@ -340,10 +340,10 @@ export default function FinanceView() {
                   tickLine={false}
                   tick={{ fill: '#94A3B8', fontSize: 11 }}
                   ticks={[150, 300, 450, 600]}
-                  tickFormatter={(v) => `$${v}K`}
+                  tickFormatter={(v) => `Rs. ${v}K`}
                 />
                 <Tooltip
-                  formatter={(val) => [`$${val}K`, 'Net Profit']}
+                  formatter={(val) => [`Rs. ${val}K`, 'Net Profit']}
                   contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                 />
                 <Area type="monotone" dataKey="profit" stroke="#10B981" strokeWidth={3} fillOpacity={1} fill="url(#profitGradient)" />

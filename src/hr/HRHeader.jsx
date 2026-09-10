@@ -23,7 +23,7 @@ export default function HRHeader({ activeTab, onMenuToggle, searchQuery = '', on
       case 'hr_settings':
         return { title: 'HR Settings', subtitle: 'Configure HR policies, payroll, and portal preferences' };
       default:
-        return { title: 'HR Portal', subtitle: 'Welcome to FlowBridge HR' };
+        return { title: 'HR Portal', subtitle: 'Welcome to Fortline CRM HR' };
     }
   };
 

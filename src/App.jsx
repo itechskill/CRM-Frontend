@@ -71,6 +71,9 @@ import SalesProposalsView from './sales_manager/SalesProposalsView';
 import SalesClientsView from './sales_manager/ClientsView';
 import SalesNotificationsView from './sales_manager/SalesNotificationsView';
 import SalesMgrInvoicesView from './sales_manager/SalesInvoicesView';
+import SalesManagerOrdersView from './sales_manager/SalesManagerOrdersView';
+import SalesManagerPaymentsView from './sales_manager/SalesManagerPaymentsView';
+import SalesManagerActivitiesView from './sales_manager/SalesManagerActivitiesView';
 
 // 4. Employee Components (src/employee/)
 import EmployeeSidebar from './employee/EmployeeSidebar';
@@ -91,9 +94,12 @@ import NewTaskModal from './employee/NewTaskModal';
 import EmpSalesLeadsView from './employee/sales/SalesLeadsView';
 import EmpSalesDealsView from './employee/sales/SalesDealsView';
 import EmpSalesQuotationsView from './employee/sales/SalesQuotationsView';
+import EmpSalesCustomerPOsView from './employee/sales/SalesCustomerPOsView';
+import EmpSalesProductFilesView from './employee/sales/SalesProductFilesView';
 import EmpSalesOrdersView from './employee/sales/SalesOrdersView';
 import EmpSalesInvoicesView from './employee/sales/SalesInvoicesView';
 import EmpSalesDeliveryNotesView from './employee/sales/SalesDeliveryNotesView';
+import EmpSalesPaymentsView from './employee/sales/SalesPaymentsView';
 import EmpSalesFollowUpsView from './employee/sales/SalesFollowUpsView';
 import EmpSalesTargetsView from './employee/sales/SalesTargetsView';
 import EmpSalesActivitiesView from './employee/sales/SalesActivitiesView';
@@ -207,7 +213,7 @@ const initialClientsList = [
     industry: 'Technology',
     contactName: 'Eric Vance',
     contactEmail: 'e.vance@proxima.io',
-    revenueYtd: '$148,000',
+    revenueYtd: 'Rs. 148,000',
     dealsCount: 4,
     status: 'Active'
   },
@@ -220,7 +226,7 @@ const initialClientsList = [
     industry: 'Construction',
     contactName: 'Rachel Okafor',
     contactEmail: 'r.okafor@buildco.com',
-    revenueYtd: '$112,000',
+    revenueYtd: 'Rs. 112,000',
     dealsCount: 2,
     status: 'Active'
   },
@@ -233,7 +239,7 @@ const initialClientsList = [
     industry: 'Finance & VC',
     contactName: 'David Miller',
     contactEmail: 'd.miller@starlight.io',
-    revenueYtd: '$210,000',
+    revenueYtd: 'Rs. 210,000',
     dealsCount: 7,
     status: 'Active'
   },
@@ -246,7 +252,7 @@ const initialClientsList = [
     industry: 'Logistics',
     contactName: 'Sophia Martinez',
     contactEmail: 's.martinez@nexusdyn.com',
-    revenueYtd: '$85,000',
+    revenueYtd: 'Rs. 85,000',
     dealsCount: 1,
     status: 'At Risk'
   }
@@ -261,8 +267,8 @@ const initialProjectsList = [
     leadInitials: 'DT',
     leadBg: '#2563EB',
     progress: 78,
-    budgetSpent: '$34K',
-    budgetTotal: '$42K',
+    budgetSpent: 'Rs. 34K',
+    budgetTotal: 'Rs. 42K',
     budgetRatio: 80,
     dueDate: 'Feb 28, 2025',
     priority: 'High',
@@ -276,8 +282,8 @@ const initialProjectsList = [
     leadInitials: 'SM',
     leadBg: '#10B981',
     progress: 45,
-    budgetSpent: '$22K',
-    budgetTotal: '$28K',
+    budgetSpent: 'Rs. 22K',
+    budgetTotal: 'Rs. 28K',
     budgetRatio: 78,
     dueDate: 'Jan 15, 2025',
     priority: 'Critical',
@@ -291,8 +297,8 @@ const initialProjectsList = [
     leadInitials: 'CN',
     leadBg: '#F59E0B',
     progress: 90,
-    budgetSpent: '$17K',
-    budgetTotal: '$20K',
+    budgetSpent: 'Rs. 17K',
+    budgetTotal: 'Rs. 20K',
     budgetRatio: 85,
     dueDate: 'Dec 31, 2024',
     priority: 'Medium',
@@ -306,8 +312,8 @@ const initialProjectsList = [
     leadInitials: 'LC',
     leadBg: '#8B5CF6',
     progress: 60,
-    budgetSpent: '$45K',
-    budgetTotal: '$60K',
+    budgetSpent: 'Rs. 45K',
+    budgetTotal: 'Rs. 60K',
     budgetRatio: 75,
     dueDate: 'Mar 20, 2025',
     priority: 'Medium',
@@ -321,8 +327,8 @@ const initialProjectsList = [
     leadInitials: 'ER',
     leadBg: '#EC4899',
     progress: 25,
-    budgetSpent: '$12K',
-    budgetTotal: '$50K',
+    budgetSpent: 'Rs. 12K',
+    budgetTotal: 'Rs. 50K',
     budgetRatio: 24,
     dueDate: 'Apr 10, 2025',
     priority: 'High',
@@ -519,8 +525,8 @@ export default function App() {
             status: p.status || 'In Progress',
             priority: p.priority || 'Medium',
             progress: p.progress || 0,
-            budgetSpent: spent ? `$${Math.round(spent / 1000)}K` : '$0',
-            budgetTotal: budget ? `$${Math.round(budget / 1000)}K` : '$0',
+            budgetSpent: spent ? `Rs. ${Math.round(spent / 1000)}K` : 'Rs. 0',
+            budgetTotal: budget ? `Rs. ${Math.round(budget / 1000)}K` : 'Rs. 0',
             budgetRatio: budget ? Math.round((spent / budget) * 100) : 0,
             dueDate: p.endDate ? new Date(p.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Feb 28, 2025'
           };
@@ -539,7 +545,7 @@ export default function App() {
           industry: c.industry || 'Technology',
           contactName: c.name,
           contactEmail: c.email || 'contact@client.com',
-          revenueYtd: c.totalValue ? `$${c.totalValue.toLocaleString()}` : '$0',
+          revenueYtd: c.totalValue ? `Rs. ${c.totalValue.toLocaleString()}` : 'Rs. 0',
           dealsCount: 1,
           status: c.status || 'Active'
         })));
@@ -600,9 +606,9 @@ export default function App() {
     const roleValidTabs = {
       employee: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'my_leads', 'my_deals', 'my_quotations', 'my_orders', 'my_invoices', 'delivery_notes', 'followups', 'sales_targets', 'sales_activities'
+        'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'
       ],
-      sales_manager: ['dashboard', 'leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'invoices', 'clients', 'notifications', 'profile'],
+      sales_manager: ['dashboard', 'leads', 'deals', 'pipeline', 'orders', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
       admin: ['dashboard', 'clients', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'projects', 'finance', 'reports', 'settings', 'profile'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
@@ -748,11 +754,12 @@ export default function App() {
           <div className="main-wrapper">
             <EmployeeHeader
               activeTab={activeTab}
+              currentUser={currentUser}
               onOpenNewTaskModal={() => setIsNewTaskModalOpen(true)}
               onMenuToggle={() => setIsSidebarOpen(true)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings', 'my_leads', 'my_deals', 'my_quotations', 'my_orders', 'my_invoices', 'delivery_notes', 'followups', 'sales_targets', 'sales_activities'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'].includes(activeTab)) && (
                 <EmployeeDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
@@ -777,9 +784,12 @@ export default function App() {
               {activeTab === 'my_leads' && <EmpSalesLeadsView />}
               {activeTab === 'my_deals' && <EmpSalesDealsView onNavigateInvoices={() => setActiveTab('my_invoices')} />}
               {activeTab === 'my_quotations' && <EmpSalesQuotationsView />}
+              {activeTab === 'customer_pos' && <EmpSalesCustomerPOsView />}
+              {activeTab === 'product_files' && <EmpSalesProductFilesView />}
               {activeTab === 'my_orders' && <EmpSalesOrdersView />}
-              {activeTab === 'my_invoices' && <EmpSalesInvoicesView />}
               {activeTab === 'delivery_notes' && <EmpSalesDeliveryNotesView />}
+              {activeTab === 'my_invoices' && <EmpSalesInvoicesView />}
+              {activeTab === 'my_payments' && <EmpSalesPaymentsView />}
               {activeTab === 'followups' && <EmpSalesFollowUpsView />}
               {activeTab === 'sales_targets' && <EmpSalesTargetsView />}
               {activeTab === 'sales_activities' && <EmpSalesActivitiesView />}
@@ -809,24 +819,26 @@ export default function App() {
           <div className="main-wrapper">
             <SalesHeader
               activeTab={activeTab}
+              currentUser={currentUser}
               onOpenNewDealModal={() => setIsNewProjectModalOpen(true)}
               onMenuToggle={() => setIsSidebarOpen(true)}
               searchQuery={portalSearch}
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leads', 'contacts', 'deals', 'pipeline', 'team', 'reports', 'settings', 'meetings', 'proposals', 'invoices', 'clients', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
+              {(activeTab === 'dashboard' || !['leads', 'deals', 'pipeline', 'orders', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
               {activeTab === 'leads' && <SalesLeadsView />}
-              {activeTab === 'contacts' && <SalesContactsView />}
               {activeTab === 'deals' && <SalesDealsView />}
               {activeTab === 'pipeline' && <SalesPipelineView />}
-              {activeTab === 'team' && <SalesTeamsView />}
-              {activeTab === 'reports' && <SalesReportsView />}
-              {activeTab === 'settings' && <SalesSettingsView />}
-              {activeTab === 'meetings' && <SalesMeetingsView />}
-              {activeTab === 'proposals' && <SalesProposalsView />}
+              {activeTab === 'orders' && <SalesManagerOrdersView />}
+              {activeTab === 'payments' && <SalesManagerPaymentsView />}
+              {activeTab === 'activities' && <SalesManagerActivitiesView />}
               {activeTab === 'invoices' && <SalesMgrInvoicesView />}
+              {activeTab === 'contacts' && <SalesContactsView />}
+              {activeTab === 'meetings' && <SalesMeetingsView />}
               {activeTab === 'clients' && <SalesClientsView />}
+              {activeTab === 'team' && <SalesTeamsView />}
+              {activeTab === 'settings' && <SalesSettingsView />}
               {activeTab === 'notifications' && <SalesNotificationsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>

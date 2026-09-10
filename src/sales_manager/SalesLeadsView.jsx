@@ -35,9 +35,11 @@ export default function SalesLeadsView() {
           company: l.company || 'Individual Client',
           priority: (l.value || 0) >= 50000 ? 'High' : 'Medium',
           rawValue: l.value || 0,
-          valueFormatted: `$${(l.value || 0).toLocaleString()}`,
-          rep: l.assignedTo?.fullName || 'Sales Team',
-          repInitials: l.assignedTo?.fullName ? l.assignedTo.fullName.split(' ').map(n => n[0]).join('') : 'ST',
+          valueFormatted: `Rs. ${(l.value || 0).toLocaleString()}`,
+          createdByName: l.createdBy?.fullName || l.assignedTo?.fullName || 'Sales Member',
+          createdByEmail: l.createdBy?.email || l.assignedTo?.email || '—',
+          rep: l.createdBy?.fullName || l.assignedTo?.fullName || 'Sales Team',
+          repInitials: (l.createdBy?.fullName || l.assignedTo?.fullName || 'Sales Team').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
           repColor: '#2563EB',
           date: new Date(l.createdAt).toISOString().split('T')[0]
         })));
@@ -106,7 +108,7 @@ export default function SalesLeadsView() {
   const dealsWonCount = leadsList.filter((l) => l.status === 'Won').length;
   const avgDealValue = leadsList.length > 0 ? Math.round(totalPipelineValue / leadsList.length) : 0;
 
-  const formatK = (num) => `$${Math.round(num / 1000)}k`;
+  const formatK = (num) => `Rs. ${Math.round(num / 1000)}k`;
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
@@ -444,7 +446,7 @@ export default function SalesLeadsView() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Est. Value ($)</label>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Est. Value (PKR / Rs.)</label>
                   <input
                     type="number"
                     placeholder="25000"
@@ -521,7 +523,7 @@ export default function SalesLeadsView() {
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Est. Value ($)</label>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>Est. Value (PKR / Rs.)</label>
                   <input type="number" value={leadValue} onChange={(e) => setLeadValue(e.target.value)} style={{ width: '100%', padding: '9px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.88rem' }} />
                 </div>
                 <div>
@@ -561,7 +563,17 @@ export default function SalesLeadsView() {
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 700, color: '#0F172A' }}>Lead Details</h3>
               <button onClick={() => setViewingLead(null)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748B' }}>✕</button>
             </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '8px', padding: '12px' }}>
+                <div style={{ fontSize: '0.72rem', color: '#1E40AF', fontWeight: 700, textTransform: 'uppercase' }}>Created By Sales Member</div>
+                <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#1E293B', marginTop: '2px' }}>
+                  {viewingLead.createdByName || viewingLead.rep}
+                </div>
+                {viewingLead.createdByEmail && viewingLead.createdByEmail !== '—' && (
+                  <div style={{ fontSize: '0.82rem', color: '#3B82F6' }}>
+                    {viewingLead.createdByEmail}
+                  </div>
+                )}
+              </div>
               <div>
                 <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600 }}>NAME</div>
                 <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#0F172A' }}>{viewingLead.name}</div>
@@ -600,7 +612,18 @@ export default function SalesLeadsView() {
                   <div style={{ fontSize: '0.85rem', color: '#2563EB', fontWeight: 700 }}>{viewingLead.status}</div>
                 </div>
               </div>
-            </div>
+              {viewingLead.requirements && (
+                <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Requirements / Inquiry</div>
+                  <div style={{ fontSize: '0.85rem', color: '#334155', marginTop: '4px' }}>{viewingLead.requirements}</div>
+                </div>
+              )}
+              {viewingLead.notes && (
+                <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px', border: '1px solid #E2E8F0' }}>
+                  <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Notes</div>
+                  <div style={{ fontSize: '0.85rem', color: '#334155', marginTop: '4px' }}>{viewingLead.notes}</div>
+                </div>
+              )}
             <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '20px' }}>
               <button onClick={() => setViewingLead(null)} style={{ padding: '8px 16px', background: '#F1F5F9', border: 'none', borderRadius: '8px', fontWeight: 600, color: '#475569', cursor: 'pointer' }}>Close</button>
             </div>

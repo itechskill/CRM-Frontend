@@ -9,10 +9,11 @@
   display: flex;
   align-items: center;
   gap: 24px;
-  background-color: #0F172A;
-  border: 1px solid #1E293B;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: 12px;
   padding: 16px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .deals-stat {
@@ -24,14 +25,15 @@
 .stat-label {
   color: #64748B;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .stat-val {
-  color: #F8FAFC;
-  font-weight: 700;
-  font-size: 1.2rem;
+  color: #0F172A;
+  font-weight: 800;
+  font-size: 1.25rem;
 }
 
 .new-deal-btn {
@@ -47,6 +49,13 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
+  box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+  transition: all 0.2s ease;
+}
+
+.new-deal-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(37, 99, 235, 0.3);
 }
 
 .kanban-board {
@@ -56,8 +65,8 @@
 }
 
 .kanban-col {
-  background-color: #0F172A;
-  border: 1px solid #1E293B;
+  background-color: #F8FAFC;
+  border: 1px solid #E2E8F0;
   border-radius: 14px;
   padding: 14px;
   display: flex;
@@ -70,22 +79,25 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: 8px 12px;
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.col-header.qualification { background-color: rgba(59, 130, 246, 0.15); color: #60A5FA; }
-.col-header.proposal { background-color: rgba(245, 158, 11, 0.15); color: #FBBF24; }
-.col-header.negotiation { background-color: rgba(236, 72, 153, 0.15); color: #F472B6; }
-.col-header.won { background-color: rgba(16, 185, 129, 0.15); color: #34D399; }
+.col-header.qualification { background-color: #EFF6FF; color: #2563EB; border: 1px solid #BFDBFE; }
+.col-header.proposal { background-color: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; }
+.col-header.negotiation { background-color: #FDF2F8; color: #DB2777; border: 1px solid #FBCFE8; }
+.col-header.won { background-color: #ECFDF5; color: #059669; border: 1px solid #A7F3D0; }
 
 .col-count {
-  background-color: rgba(0, 0, 0, 0.3);
+  background-color: rgba(0, 0, 0, 0.06);
   padding: 2px 8px;
   border-radius: 12px;
   font-size: 0.72rem;
+  font-weight: 800;
 }
 
 .col-cards {
@@ -95,8 +107,8 @@
 }
 
 .kanban-card {
-  background-color: #1E293B;
-  border: 1px solid #334155;
+  background-color: #FFFFFF;
+  border: 1px solid #E2E8F0;
   border-radius: 10px;
   padding: 14px;
   display: flex;
@@ -104,20 +116,21 @@
   gap: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .kanban-card:hover {
   transform: translateY(-2px);
-  border-color: #38BDF8;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+  border-color: #3B82F6;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .kanban-card.highlighted {
-  border-left: 3px solid #EC4899;
+  border-left: 4px solid #EC4899;
 }
 
 .kanban-card.won-card {
-  border-left: 3px solid #10B981;
+  border-left: 4px solid #10B981;
 }
 
 .card-top {
@@ -129,12 +142,13 @@
 .card-client {
   color: #64748B;
   font-size: 0.72rem;
-  font-weight: 600;
+  font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.02em;
 }
 
 .card-opt {
-  color: #64748B;
+  color: #94A3B8;
 }
 
 .won-icon {
@@ -142,15 +156,15 @@
 }
 
 .card-title {
-  color: #F8FAFC;
-  font-size: 0.88rem;
-  font-weight: 600;
+  color: #0F172A;
+  font-size: 0.9rem;
+  font-weight: 700;
   margin: 0;
 }
 
 .card-val {
-  color: #10B981;
-  font-weight: 700;
+  color: #059669;
+  font-weight: 800;
   font-size: 1.05rem;
 }
 
@@ -158,9 +172,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  color: #94A3B8;
+  color: #64748B;
   font-size: 0.72rem;
-  border-top: 1px solid rgba(255,255,255,0.05);
+  border-top: 1px solid #F1F5F9;
   padding-top: 8px;
   margin-top: 4px;
 }

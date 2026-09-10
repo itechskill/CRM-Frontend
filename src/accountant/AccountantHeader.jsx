@@ -25,7 +25,7 @@ export default function AccountantHeader({ activeTab, onMenuToggle, onOpenPrimar
       case 'acc_settings':
         return { title: 'Accounting Settings', subtitle: 'Tax rates, payment gateways, currencies, and fiscal year setup' };
       default:
-        return { title: 'Accountant Portal', subtitle: 'Welcome to FlowBridge Financial Management' };
+        return { title: 'Accountant Portal', subtitle: 'Welcome to Fortline CRM Financial Management' };
     }
   };
 

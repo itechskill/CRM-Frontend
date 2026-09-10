@@ -51,7 +51,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
             </div>
             {!collapsed && (
               <div className="ceo-brand-info">
-                <span className="ceo-brand-name">NexusCRM</span>
+                <span className="ceo-brand-name">Fortline CRM</span>
                 <span className="ceo-brand-subtitle">EXECUTIVE PORTAL</span>
               </div>
             )}

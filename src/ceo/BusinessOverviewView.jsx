@@ -59,7 +59,7 @@ export default function BusinessOverviewView() {
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.setTextColor(124, 58, 237);
-    doc.text('NexusCRM - CEO Executive Department Report', 14, 18);
+    doc.text('Fortline CRM - CEO Executive Department Report', 14, 18);
     doc.setFontSize(13);
     doc.setTextColor(15, 23, 42);
     doc.text(`Department: ${deptName}`, 14, 26);

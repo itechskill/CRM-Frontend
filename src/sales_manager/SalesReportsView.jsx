@@ -43,8 +43,8 @@ const leaderboardData = [
     avatarBg: '#2563EB',
     leads: 42,
     dealsClosed: 8,
-    revenue: '$620k',
-    quota: '$700k',
+    revenue: 'Rs. 620k',
+    quota: 'Rs. 700k',
     attainment: 89,
     attainmentColor: '#D97706',
     progressColor: '#F59E0B',
@@ -57,8 +57,8 @@ const leaderboardData = [
     avatarBg: '#8B5CF6',
     leads: 38,
     dealsClosed: 6,
-    revenue: '$445k',
-    quota: '$500k',
+    revenue: 'Rs. 445k',
+    quota: 'Rs. 500k',
     attainment: 89,
     attainmentColor: '#D97706',
     progressColor: '#F59E0B',
@@ -71,8 +71,8 @@ const leaderboardData = [
     avatarBg: '#10B981',
     leads: 35,
     dealsClosed: 7,
-    revenue: '$512k',
-    quota: '$550k',
+    revenue: 'Rs. 512k',
+    quota: 'Rs. 550k',
     attainment: 93,
     attainmentColor: '#16A34A',
     progressColor: '#10B981',
@@ -98,7 +98,7 @@ const monthlyTrendData = [
 const statCards = [
   {
     label: 'Total Revenue',
-    value: '$2.51M',
+    value: 'Rs. 2.51M',
     change: '+23%',
     icon: DollarSign,
     iconBg: '#EFF6FF',
@@ -122,7 +122,7 @@ const statCards = [
   },
   {
     label: 'Avg Deal Size',
-    value: '$43.3k',
+    value: 'Rs. 43.3k',
     change: '+9%',
     icon: TrendingUp,
     iconBg: '#FEF3C7',
@@ -132,7 +132,7 @@ const statCards = [
 
 export default function SalesReportsView() {
   const handleExportCSV = () => {
-    const headers = ['Quarter', 'Revenue ($k)', 'Leads'];
+    const headers = ['Quarter', 'Revenue (Rs. k)', 'Leads'];
     const rows = quarterlyData.map(q => [q.quarter, q.revenue, q.leads]);
     const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(e => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
@@ -205,7 +205,7 @@ export default function SalesReportsView() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: '#94A3B8', fontSize: 11 }}
-                  tickFormatter={(v) => `$${v}k`}
+                  tickFormatter={(v) => `Rs. ${v}k`}
                 />
                 <YAxis
                   yAxisId="right"
@@ -252,7 +252,7 @@ export default function SalesReportsView() {
                   axisLine={false}
                   tickLine={false}
                   tick={{ fill: '#94A3B8', fontSize: 11 }}
-                  tickFormatter={(v) => `$${v}k`}
+                  tickFormatter={(v) => `Rs. ${v}k`}
                 />
                 <Tooltip
                   contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}

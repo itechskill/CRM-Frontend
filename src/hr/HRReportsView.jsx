@@ -32,7 +32,7 @@ export default function HRReportsView() {
     const doc = new jsPDF();
     doc.setFontSize(16);
     doc.setTextColor(124, 58, 237); // #7C3AED
-    doc.text('NexusCRM HR Report', 14, 18);
+    doc.text('Fortline CRM HR Report', 14, 18);
     doc.setFontSize(12);
     doc.setTextColor(15, 23, 42);
     doc.text(title, 14, 26);
@@ -124,8 +124,8 @@ export default function HRReportsView() {
           const rows = deptStats.map(d => [
             d.dept,
             d.headcount,
-            `$${(d.headcount * 5500).toLocaleString()}`,
-            `$${(d.headcount * 6500).toLocaleString()}`
+            `Rs. ${(d.headcount * 5500).toLocaleString()}`,
+            `Rs. ${(d.headcount * 6500).toLocaleString()}`
           ]);
           generatePDF('Departmental Payroll Allocation Summary', cols, rows, `Payroll_Summary_${new Date().toISOString().slice(0, 10)}.pdf`);
           break;

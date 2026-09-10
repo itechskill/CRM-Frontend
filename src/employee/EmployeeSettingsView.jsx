@@ -84,7 +84,7 @@ export default function EmployeeSettingsView() {
     <>
       <div className="emp-settings-main-header">
         <h1>Appearance</h1>
-        <p>Customize how FlowBridge looks for you</p>
+        <p>Customize how Fortline CRM looks for you</p>
       </div>
 
       <div className="emp-settings-card">
@@ -214,7 +214,7 @@ export default function EmployeeSettingsView() {
         <div className="emp-settings-toggle-row">
           <div>
             <div className="emp-settings-row-title">Share Usage Analytics</div>
-            <div className="emp-settings-row-desc">Help improve FlowBridge by sharing anonymous usage data</div>
+            <div className="emp-settings-row-desc">Help improve Fortline CRM by sharing anonymous usage data</div>
           </div>
           <button
             className={`emp-toggle-switch ${shareAnalytics ? 'emp-toggle-switch-on' : ''}`}

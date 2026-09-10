@@ -43,7 +43,7 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
   const netProfit = netIncomeBeforeTax - estimatedTax;
 
   const handleExportCSV = () => {
-    let csvContent = "data:text/csv;charset=utf-8,Category,Item,Amount ($)\n";
+    let csvContent = "data:text/csv;charset=utf-8,Category,Item,Amount (PKR)\n";
     pnlData.revenue.forEach(r => csvContent += `Revenue,"${r.item}",${r.amount}\n`);
     pnlData.cogs.forEach(c => csvContent += `COGS,"${c.item}",${c.amount}\n`);
     pnlData.operatingExpenses.forEach(o => csvContent += `OPEX,"${o.item}",${o.amount}\n`);
@@ -149,7 +149,7 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Gross Revenue</span>
             <div className="acc-kpi-icon emerald"><DollarSign size={18} /></div>
           </div>
-          <div className="acc-kpi-value">${totalRevenue.toLocaleString()}</div>
+          <div className="acc-kpi-value">Rs. {totalRevenue.toLocaleString()}</div>
           <div className="acc-kpi-subtitle up"><ArrowUpRight size={14} /> Total operating sales</div>
         </div>
 
@@ -158,7 +158,7 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Gross Profit</span>
             <div className="acc-kpi-icon blue"><TrendingUp size={18} /></div>
           </div>
-          <div className="acc-kpi-value">${grossProfit.toLocaleString()}</div>
+          <div className="acc-kpi-value">Rs. {grossProfit.toLocaleString()}</div>
           <div className="acc-kpi-subtitle">{Math.round((grossProfit / totalRevenue) * 100)}% gross margin</div>
         </div>
 
@@ -167,7 +167,7 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Operating Expenses</span>
             <div className="acc-kpi-icon red"><PieChart size={18} /></div>
           </div>
-          <div className="acc-kpi-value">${totalOpex.toLocaleString()}</div>
+          <div className="acc-kpi-value">Rs. {totalOpex.toLocaleString()}</div>
           <div className="acc-kpi-subtitle">Fixed & variable costs</div>
         </div>
 
@@ -176,7 +176,7 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Net Profit After Tax</span>
             <div className="acc-kpi-icon teal"><CheckCircle2 size={18} /></div>
           </div>
-          <div className="acc-kpi-value">${netProfit.toLocaleString()}</div>
+          <div className="acc-kpi-value">Rs. {netProfit.toLocaleString()}</div>
           <div className="acc-kpi-subtitle up">Bottom line earnings</div>
         </div>
       </div>
@@ -186,7 +186,7 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
         <div className="acc-card-header">
           <div>
             <h3 className="acc-card-title">Statement of Profit and Loss ({period})</h3>
-            <p className="acc-card-desc">Amounts in USD • Audited internal ledger figures</p>
+            <p className="acc-card-desc">Amounts in PKR (Rs.) • Audited internal ledger figures</p>
           </div>
         </div>
 
@@ -195,7 +195,7 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
             <thead>
               <tr>
                 <th style={{ width: '60%' }}>Line Item / Account Description</th>
-                <th style={{ textAlign: 'right' }}>Amount ($)</th>
+                <th style={{ textAlign: 'right' }}>Amount (Rs.)</th>
               </tr>
             </thead>
             <tbody>
@@ -207,12 +207,12 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
               {pnlData.revenue.map((r, i) => (
                 <tr key={i}>
                   <td style={{ paddingLeft: '32px' }}>{r.item}</td>
-                  <td style={{ textAlign: 'right', fontWeight: 600 }}>${r.amount.toLocaleString()}</td>
+                  <td style={{ textAlign: 'right', fontWeight: 600 }}>Rs. {r.amount.toLocaleString()}</td>
                 </tr>
               ))}
               <tr style={{ borderTop: '1px solid #CBD5E1', fontWeight: 700 }}>
                 <td style={{ paddingLeft: '20px', color: '#059669' }}>TOTAL OPERATING REVENUE</td>
-                <td style={{ textAlign: 'right', color: '#059669', fontSize: '1rem' }}>${totalRevenue.toLocaleString()}</td>
+                <td style={{ textAlign: 'right', color: '#059669', fontSize: '1rem' }}>Rs. {totalRevenue.toLocaleString()}</td>
               </tr>
 
               {/* COGS SECTION */}
@@ -223,12 +223,12 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
               {pnlData.cogs.map((c, i) => (
                 <tr key={i}>
                   <td style={{ paddingLeft: '32px' }}>{c.item}</td>
-                  <td style={{ textAlign: 'right', color: '#DC2626' }}>-${c.amount.toLocaleString()}</td>
+                  <td style={{ textAlign: 'right', color: '#DC2626' }}>-Rs. {c.amount.toLocaleString()}</td>
                 </tr>
               ))}
               <tr style={{ borderTop: '1px solid #CBD5E1', fontWeight: 700, backgroundColor: '#EFF6FF' }}>
                 <td style={{ color: '#1E40AF' }}>GROSS PROFIT</td>
-                <td style={{ textAlign: 'right', color: '#1E40AF', fontSize: '1rem' }}>${grossProfit.toLocaleString()}</td>
+                <td style={{ textAlign: 'right', color: '#1E40AF', fontSize: '1rem' }}>Rs. {grossProfit.toLocaleString()}</td>
               </tr>
 
               {/* OPEX SECTION */}
@@ -239,28 +239,28 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
               {pnlData.operatingExpenses.map((o, i) => (
                 <tr key={i}>
                   <td style={{ paddingLeft: '32px' }}>{o.item}</td>
-                  <td style={{ textAlign: 'right', color: '#DC2626' }}>-${o.amount.toLocaleString()}</td>
+                  <td style={{ textAlign: 'right', color: '#DC2626' }}>-Rs. {o.amount.toLocaleString()}</td>
                 </tr>
               ))}
               <tr style={{ borderTop: '1px solid #CBD5E1', fontWeight: 700 }}>
                 <td style={{ paddingLeft: '20px', color: '#DC2626' }}>TOTAL OPERATING EXPENSES</td>
-                <td style={{ textAlign: 'right', color: '#DC2626' }}>-${totalOpex.toLocaleString()}</td>
+                <td style={{ textAlign: 'right', color: '#DC2626' }}>-Rs. {totalOpex.toLocaleString()}</td>
               </tr>
 
               {/* NET INCOME BEFORE TAX */}
               <tr style={{ borderTop: '2px solid #0F172A', fontWeight: 700 }}>
                 <td>NET OPERATING INCOME BEFORE TAX</td>
-                <td style={{ textAlign: 'right', fontSize: '1rem' }}>${netIncomeBeforeTax.toLocaleString()}</td>
+                <td style={{ textAlign: 'right', fontSize: '1rem' }}>Rs. {netIncomeBeforeTax.toLocaleString()}</td>
               </tr>
               <tr>
                 <td style={{ paddingLeft: '32px', color: '#64748B' }}>Corporate Income Tax Provision (15%)</td>
-                <td style={{ textAlign: 'right', color: '#DC2626' }}>-${estimatedTax.toLocaleString()}</td>
+                <td style={{ textAlign: 'right', color: '#DC2626' }}>-Rs. {estimatedTax.toLocaleString()}</td>
               </tr>
 
               {/* NET PROFIT */}
               <tr style={{ backgroundColor: '#DCFCE7', fontWeight: 800, fontSize: '1.05rem' }}>
                 <td style={{ color: '#15803D' }}>NET PROFIT AFTER TAX</td>
-                <td style={{ textAlign: 'right', color: '#15803D' }}>${netProfit.toLocaleString()}</td>
+                <td style={{ textAlign: 'right', color: '#15803D' }}>Rs. {netProfit.toLocaleString()}</td>
               </tr>
             </tbody>
           </table>

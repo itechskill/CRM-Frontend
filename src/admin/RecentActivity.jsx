@@ -27,7 +27,7 @@ const activities = [
     initials: 'JR',
     bg: '#F59E0B',
     action: 'Updated deal status for',
-    target: 'Apex Global ($32k)',
+    target: 'Apex Global (Rs. 32k)',
     time: '1 hour ago',
   },
   {
@@ -36,7 +36,7 @@ const activities = [
     initials: 'EF',
     bg: '#8B5CF6',
     action: 'Won deal with',
-    target: 'TechCorp ($45,000)',
+    target: 'TechCorp (Rs. 45,000)',
     time: '2 hours ago',
   },
   {

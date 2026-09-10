@@ -67,7 +67,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
           <Zap size={22} color="#FFFFFF" fill="#FFFFFF" />
         </div>
         <div className="brand-info">
-          <span className="brand-name">NexusCRM</span>
+          <span className="brand-name">Fortline CRM</span>
           <span className="brand-subtitle" style={{ textTransform: 'none', color: '#94A3B8', fontSize: '0.75rem' }}>
             Admin Dashboard
           </span>

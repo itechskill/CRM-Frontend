@@ -78,9 +78,12 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
     { id: 'my_leads', label: 'My Leads', icon: Users },
     { id: 'my_deals', label: 'Deals Pipeline', icon: TrendingUp },
     { id: 'my_quotations', label: 'Quotations', icon: FileText },
-    { id: 'my_orders', label: 'Sales Orders', icon: FileCheck },
-    { id: 'my_invoices', label: 'Invoices & Billing', icon: DollarSign },
+    { id: 'customer_pos', label: 'Customer POs', icon: FileCheck },
+    { id: 'product_files', label: 'Product Files', icon: FolderKanban },
+    { id: 'my_orders', label: 'Sales Orders', icon: Briefcase },
     { id: 'delivery_notes', label: 'Delivery Notes', icon: Truck },
+    { id: 'my_invoices', label: 'Invoices', icon: Calculator },
+    { id: 'my_payments', label: 'Customer Payments', icon: DollarSign },
     { id: 'followups', label: 'Follow-ups', icon: Phone },
     { id: 'sales_targets', label: 'Sales Targets', icon: Target },
     { id: 'sales_activities', label: 'Activity Log', icon: ClipboardList },
@@ -110,7 +113,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
             </div>
             {(!collapsed || isMobileOpen) && (
               <div className="employee-brand-info">
-                <span className="employee-brand-name">NexusCRM</span>
+                <span className="employee-brand-name">Fortline CRM</span>
                 <span className="employee-brand-subtitle">
                   {isSalesDept ? 'SALES MEMBER PORTAL' : 'EMPLOYEE PORTAL'}
                 </span>
@@ -236,7 +239,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
                   {currentUser?.fullName || (isSalesDept ? 'Sales Member' : 'Employee')}
                 </span>
                 <span className="employee-user-role" style={{ color: '#94A3B8', fontSize: '0.72rem' }}>
-                  {currentUser?.position || (currentUser?.department ? `${currentUser.department} Dept` : 'Employee')}
+                  {currentUser?.position || (isSalesDept ? 'Sales Representative' : (currentUser?.department ? `${currentUser.department} Dept` : 'Employee'))}
                 </span>
               </div>
             )}

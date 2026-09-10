@@ -24,7 +24,7 @@ export default function MarketingHeader({ activeTab, onMenuToggle, onOpenPrimary
       case 'mkt_settings':
         return { title: 'Marketing Settings', subtitle: 'Tracking pixels, social media API keys, and campaign parameters' };
       default:
-        return { title: 'Marketing Dept Portal', subtitle: 'Welcome to FlowBridge Growth & Marketing' };
+        return { title: 'Marketing Dept Portal', subtitle: 'Welcome to Fortline CRM Growth & Marketing' };
     }
   };
 

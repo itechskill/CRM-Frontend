@@ -86,7 +86,7 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Total Month Expenses</span>
             <div className="acc-kpi-icon red"><Receipt size={18} /></div>
           </div>
-          <div className="acc-kpi-value">${totalExpense.toLocaleString()}</div>
+          <div className="acc-kpi-value">Rs. {totalExpense.toLocaleString()}</div>
           <div className="acc-kpi-subtitle">{expenses.length} Total outlays</div>
         </div>
 
@@ -95,7 +95,7 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Software & Cloud</span>
             <div className="acc-kpi-icon blue"><Building2 size={18} /></div>
           </div>
-          <div className="acc-kpi-value">$13,750</div>
+          <div className="acc-kpi-value">Rs. 13,750</div>
           <div className="acc-kpi-subtitle">Primary operational expense</div>
         </div>
 
@@ -155,7 +155,7 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
                 <th>Category</th>
                 <th>Date</th>
                 <th>Claimer / Dept</th>
-                <th>Amount ($)</th>
+                <th>Amount (Rs.)</th>
                 <th>Tax Deductible</th>
                 <th>Status</th>
               </tr>
@@ -168,7 +168,7 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
                   <td><span className="acc-badge draft"><Tag size={12} /> {exp.category}</span></td>
                   <td>{exp.date}</td>
                   <td>{exp.claimer}</td>
-                  <td style={{ fontWeight: 700, color: '#DC2626' }}>${exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
+                  <td style={{ fontWeight: 700, color: '#DC2626' }}>Rs. {exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
                   <td>{exp.taxDeductible}</td>
                   <td>
                     <span className={`acc-badge ${exp.status.toLowerCase()}`}>
@@ -216,7 +216,7 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="acc-form-group">
-                    <label>Amount ($)</label>
+                    <label>Amount (Rs.)</label>
                     <input
                       type="number"
                       step="0.01"

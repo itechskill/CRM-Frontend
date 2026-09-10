@@ -27,7 +27,7 @@ export default function SalesDealsView() {
           ...d,
           id: d._id,
           client: d.clientName,
-          valueFormatted: `$${(d.value || 0).toLocaleString()}`,
+          valueFormatted: `Rs. ${(d.value || 0).toLocaleString()}`,
           date: d.closingDate ? new Date(d.closingDate).toLocaleDateString() : 'Dec 2026',
           rep: d.createdBy?.fullName || 'Sales Team'
         })));
@@ -115,7 +115,7 @@ export default function SalesDealsView() {
       <div className="deals-top-bar">
         <div className="deals-stat">
           <span className="stat-label">Total Active Pipeline</span>
-          <span className="stat-val">${totalPipelineValue.toLocaleString()}</span>
+          <span className="stat-val">Rs. {totalPipelineValue.toLocaleString()}</span>
         </div>
         <div className="deals-stat">
           <span className="stat-label">Deals Won</span>
@@ -123,7 +123,7 @@ export default function SalesDealsView() {
         </div>
         <div className="deals-stat">
           <span className="stat-label">Average Deal Size</span>
-          <span className="stat-val">${avgDealSize.toLocaleString()}</span>
+          <span className="stat-val">Rs. {avgDealSize.toLocaleString()}</span>
         </div>
         <button className="new-deal-btn" onClick={() => { setIsModalOpen(true); setErrorMessage(''); }}>
           <Plus size={16} />
@@ -284,7 +284,7 @@ export default function SalesDealsView() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>Value ($ USD)</label>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '4px' }}>Value (PKR / Rs.)</label>
                   <input
                     type="number"
                     style={{ width: '100%', padding: '8px', borderRadius: '6px', border: '1px solid #CBD5E1' }}

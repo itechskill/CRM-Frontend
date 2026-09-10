@@ -54,7 +54,7 @@ export default function ProjectsPerformanceView() {
         </div>
         <div className="ceo-stat-box">
           <span className="ceo-stat-title">Portfolio Total Budget</span>
-          <span className="ceo-stat-num">${totalBudget.toLocaleString()}</span>
+          <span className="ceo-stat-num">Rs. {totalBudget.toLocaleString()}</span>
           <span style={{ color: '#2563EB', fontSize: '0.8rem', fontWeight: 600 }}>Real MongoDB Projects Sum</span>
         </div>
       </div>
@@ -91,7 +91,7 @@ export default function ProjectsPerformanceView() {
                     <td className="ceo-table-name">{p.name}</td>
                     <td>{p.client || 'Internal'}</td>
                     <td>{p.priority || 'Medium'}</td>
-                    <td>${(p.budget || 0).toLocaleString()}</td>
+                    <td>Rs. {(p.budget || 0).toLocaleString()}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ flex: 1, height: '6px', backgroundColor: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>

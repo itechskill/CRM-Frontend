@@ -20,7 +20,7 @@ const reportKpis = [
     icon: Target,
     iconBg: '#EFF6FF',
     iconColor: '#2563EB',
-    value: '$1.065M',
+    value: 'Rs. 1.065M',
     label: 'Total Portfolio Value',
     subtext: 'Across 6 projects',
   },
@@ -73,12 +73,12 @@ const teamProductivityData = [
 ];
 
 const projectSummaryData = [
-  { id: 1, name: 'Nexus Platform Redesign', client: 'TechCorp', budget: '$185,000', progress: 68, health: 'Good', status: 'In Progress' },
-  { id: 2, name: 'DataSync Integration Suite', client: 'FinanceHub', budget: '$95,000', progress: 42, health: 'At Risk', status: 'In Progress' },
-  { id: 3, name: 'Mobile Commerce App', client: 'RetailMax', budget: '$220,000', progress: 85, health: 'Good', status: 'Review' },
-  { id: 4, name: 'Cloud Migration v2.0', client: 'GlobalBank', budget: '$340,000', progress: 31, health: 'At Risk', status: 'In Progress' },
-  { id: 5, name: 'AI Analytics Dashboard', client: 'MetaInsights', budget: '$150,000', progress: 100, health: 'Good', status: 'Completed' },
-  { id: 6, name: 'Security Audit System', client: 'SecureVault', budget: '$75,000', progress: 15, health: 'Good', status: 'Planning' },
+  { id: 1, name: 'Nexus Platform Redesign', client: 'TechCorp', budget: 'Rs. 185,000', progress: 68, health: 'Good', status: 'In Progress' },
+  { id: 2, name: 'DataSync Integration Suite', client: 'FinanceHub', budget: 'Rs. 95,000', progress: 42, health: 'At Risk', status: 'In Progress' },
+  { id: 3, name: 'Mobile Commerce App', client: 'RetailMax', budget: 'Rs. 220,000', progress: 85, health: 'Good', status: 'Review' },
+  { id: 4, name: 'Cloud Migration v2.0', client: 'GlobalBank', budget: 'Rs. 340,000', progress: 31, health: 'At Risk', status: 'In Progress' },
+  { id: 5, name: 'AI Analytics Dashboard', client: 'MetaInsights', budget: 'Rs. 150,000', progress: 100, health: 'Good', status: 'Completed' },
+  { id: 6, name: 'Security Audit System', client: 'SecureVault', budget: 'Rs. 75,000', progress: 15, health: 'Good', status: 'Planning' },
 ];
 
 const summaryStatusStyles = {

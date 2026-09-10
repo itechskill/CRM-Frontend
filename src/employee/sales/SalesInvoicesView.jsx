@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOMServer from 'react-dom/server';
+import { QRCodeSVG } from 'qrcode.react';
 import { apiRequest } from '../../utils/api';
 import { 
   Plus, 
   Search, 
   FileText, 
-  CheckCircle, 
   Clock, 
   AlertTriangle, 
   X, 
@@ -20,7 +21,9 @@ import {
   Phone,
   Calendar,
   Layers,
-  Printer
+  Printer,
+  Download,
+  Edit2
 } from 'lucide-react';
 import './SalesViews.css';
 
@@ -69,7 +72,8 @@ export default function SalesInvoicesView() {
   const [search, setSearch] = useState('');
   
   // Create / Edit Modal State
-  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [editInvoice, setEditInvoice] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -77,6 +81,11 @@ export default function SalesInvoicesView() {
   // View / Preview Modal State
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showPreviewModal, setShowPreviewModal] = useState(false);
+
+  // Delete State
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [feedback, setFeedback] = useState('');
 
   const fetchInvoices = useCallback(async () => {
     setLoading(true);
@@ -122,8 +131,44 @@ export default function SalesInvoicesView() {
       items: initialItems,
       ...totals
     });
+    setEditInvoice(null);
     setError('');
-    setShowCreateModal(true);
+    setShowModal(true);
+  };
+
+  const openEdit = (inv) => {
+    const items = inv.items && inv.items.length > 0 ? inv.items : [
+      { description: inv.dealTitle || 'Commercial Sales Services', quantity: 1, unitPrice: inv.amount, total: inv.amount }
+    ];
+    setForm({
+      dealId: inv.dealId?._id || inv.dealId || '',
+      dealTitle: inv.dealTitle || '',
+      saleReference: inv.saleReference || '',
+      clientName: inv.clientName || '',
+      customerEmail: inv.customerEmail || '',
+      customerPhone: inv.customerPhone || '',
+      customerAddress: inv.customerAddress || '',
+      paymentTerms: inv.paymentTerms || 'Net 30',
+      issueDate: inv.issueDate ? new Date(inv.issueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+      dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : '',
+      items: items.map(it => ({
+        description: it.description || '',
+        quantity: it.quantity || 1,
+        unitPrice: it.unitPrice || 0,
+        total: it.total || (Number(it.quantity || 1) * Number(it.unitPrice || 0))
+      })),
+      subtotal: inv.subtotal || inv.amount,
+      taxRate: inv.taxRate || 0,
+      tax: inv.tax || 0,
+      discount: inv.discount || 0,
+      amount: inv.amount || 0,
+      notes: inv.notes || '',
+      description: inv.description || '',
+      status: inv.status === 'Rejected' ? 'Pending Review' : inv.status
+    });
+    setEditInvoice(inv);
+    setError('');
+    setShowModal(true);
   };
 
   // Handle selecting an eligible completed/won deal
@@ -229,30 +274,232 @@ export default function SalesInvoicesView() {
         tax: Number(form.tax),
         taxRate: Number(form.taxRate),
         discount: Number(form.discount),
-        status: submitForReview ? 'Pending Review' : 'Draft'
+        status: submitForReview ? 'Pending Review' : (editInvoice ? form.status : 'Draft')
       };
 
-      const { response, data } = await apiRequest('/api/sales-employee/invoices', {
-        method: 'POST',
+      const url = editInvoice ? `/api/sales-employee/invoices/${editInvoice._id}` : '/api/sales-employee/invoices';
+      const method = editInvoice ? 'PATCH' : 'POST';
+
+      const { response, data } = await apiRequest(url, {
+        method,
         body: JSON.stringify(payload)
       });
 
       if (response.ok && data.success) {
-        setShowCreateModal(false);
+        setShowModal(false);
+        setFeedback(editInvoice ? `Invoice ${editInvoice.invoiceNumber} updated successfully.` : 'Invoice submitted successfully.');
+        setTimeout(() => setFeedback(''), 3500);
         fetchInvoices();
       } else {
-        setError(data.message || 'Failed to create invoice.');
+        setError(data.message || 'Failed to save invoice.');
       }
     } catch (e) {
-      setError('Server error creating invoice.');
+      setError('Server error saving invoice.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteInvoice = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/invoices/${deleteTarget._id}`, { method: 'DELETE' });
+      if (response.ok && data.success) {
+        setFeedback(`Invoice ${deleteTarget.invoiceNumber} deleted.`);
+        setDeleteTarget(null);
+        fetchInvoices();
+        setTimeout(() => setFeedback(''), 3000);
+      } else {
+        setFeedback(data.message || 'Failed to delete invoice.');
+      }
+    } catch (e) {
+      setFeedback('Server error deleting invoice.');
+    } finally {
+      setDeleting(false);
     }
   };
 
   const openPreview = (inv) => {
     setSelectedInvoice(inv);
     setShowPreviewModal(true);
+  };
+
+  // PDF Download — generates complete, styled printable document
+  const handleDownloadPDF = (inv) => {
+    const items = inv.items && inv.items.length > 0 ? inv.items : [
+      { description: inv.dealTitle || 'Commercial Sales Services', quantity: 1, unitPrice: inv.amount, total: inv.amount }
+    ];
+    const statusStyle = INVOICE_STATUS_STYLES[inv.status] || { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' };
+
+    const qrData = `INVOICE: ${inv.invoiceNumber}\nCUSTOMER: ${inv.clientName}\nAMOUNT: PKR ${Number(inv.amount || 0).toLocaleString()}\nREFERENCE: ${inv.dealTitle || inv.saleReference || 'Direct'}\nDATE: ${new Date(inv.issueDate || inv.createdAt).toLocaleDateString()}`;
+    let qrSvgString = '';
+    try {
+      qrSvgString = ReactDOMServer.renderToStaticMarkup(
+        React.createElement(QRCodeSVG, { value: qrData, size: 84, level: 'M' })
+      );
+    } catch (e) {
+      console.error('QR code generation error:', e);
+    }
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invoice - ${inv.invoiceNumber}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #0F172A; background: #F8FAFC; padding: 24px; }
+    .page-container { max-width: 820px; margin: 0 auto; background: #ffffff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    .action-bar { max-width: 820px; margin: 0 auto 16px; display: flex; justify-content: space-between; align-items: center; }
+    .btn-print { background: #2563EB; color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(37,99,235,0.3); }
+    .btn-print:hover { background: #1D4ED8; }
+    .btn-close { background: #E2E8F0; color: #334155; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+    .btn-close:hover { background: #CBD5E1; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 3px solid #1E3A5F; }
+    .brand { font-size: 1.85rem; font-weight: 800; color: #1E3A5F; letter-spacing: -0.5px; }
+    .brand-sub { font-size: 0.85rem; color: #64748B; margin-top: 4px; font-weight: 500; }
+    .inv-num { font-size: 1.5rem; font-weight: 800; color: #2563EB; font-family: monospace; text-align: right; }
+    .status-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-top: 8px; background: ${statusStyle.bg}; color: ${statusStyle.color}; border: 1px solid ${statusStyle.border}; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 28px; }
+    .meta-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #94A3B8; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .meta-client { font-size: 1.15rem; font-weight: 700; color: #0F172A; }
+    .meta-detail { font-size: 0.85rem; color: #475569; margin-top: 3px; }
+    .meta-right { text-align: right; }
+    .meta-right .meta-detail { color: #334155; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    thead tr { background: #1E3A5F; }
+    thead th { padding: 11px 14px; font-size: 0.78rem; font-weight: 700; color: #ffffff; text-align: left; letter-spacing: 0.5px; }
+    thead th:nth-child(2) { text-align: center; width: 70px; }
+    thead th:nth-child(3), thead th:nth-child(4) { text-align: right; width: 140px; }
+    tbody tr:nth-child(even) { background: #F8FAFC; }
+    tbody td { padding: 11px 14px; font-size: 0.875rem; color: #0F172A; border-bottom: 1px solid #F1F5F9; }
+    tbody td:nth-child(2) { text-align: center; color: #475569; }
+    tbody td:nth-child(3) { text-align: right; color: #475569; }
+    tbody td:nth-child(4) { text-align: right; font-weight: 700; }
+    .totals { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+    .totals-box { width: 320px; }
+    .totals-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 0.875rem; color: #475569; border-bottom: 1px solid #F1F5F9; }
+    .totals-final { display: flex; justify-content: space-between; padding: 12px 0 4px; font-size: 1.2rem; font-weight: 800; color: #0F172A; border-top: 3px solid #1E3A5F; margin-top: 6px; }
+    .totals-final span:last-child { color: #2563EB; }
+    .notes-box { margin-bottom: 0; padding: 14px 16px; background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0; }
+    .notes-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #94A3B8; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .notes-text { font-size: 0.875rem; color: #334155; line-height: 1.5; }
+    .qr-box { text-align: center; border: 1px solid #E2E8F0; padding: 10px 14px; border-radius: 8px; background: #FFF; flex-shrink: 0; }
+    .qr-caption { font-size: 0.65rem; color: #64748B; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .footer { display: flex; justify-content: space-between; padding-top: 16px; border-top: 1px solid #E2E8F0; font-size: 0.75rem; color: #94A3B8; }
+    @media print {
+      body { background: #ffffff !important; padding: 0 !important; }
+      .no-print { display: none !important; }
+      .page-container { border: none !important; box-shadow: none !important; padding: 10px !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="action-bar no-print">
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    <button class="btn-close" onclick="window.close()">Close Window</button>
+  </div>
+
+  <div class="page-container">
+    <div class="header">
+      <div>
+        <div class="brand">Fortline CRM</div>
+        <div class="brand-sub">Commercial Sales & Services Invoice</div>
+      </div>
+      <div style="text-align:right">
+        <div class="inv-num">${inv.invoiceNumber}</div>
+        <div><span class="status-badge">${inv.status}</span></div>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <div>
+        <div class="meta-label">Billed To (Client / Customer)</div>
+        <div class="meta-client">${inv.clientName}</div>
+        ${inv.customerEmail ? `<div class="meta-detail">✉ ${inv.customerEmail}</div>` : ''}
+        ${inv.customerPhone ? `<div class="meta-detail">📞 ${inv.customerPhone}</div>` : ''}
+        ${inv.customerAddress ? `<div class="meta-detail">📍 ${inv.customerAddress}</div>` : ''}
+      </div>
+      <div class="meta-right">
+        <div class="meta-label">Invoice Details</div>
+        <div class="meta-detail"><strong>Issue Date:</strong> ${new Date(inv.issueDate || inv.createdAt).toLocaleDateString()}</div>
+        <div class="meta-detail"><strong>Due Date:</strong> ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : 'Upon Receipt'}</div>
+        <div class="meta-detail"><strong>Payment Terms:</strong> ${inv.paymentTerms || 'Net 30'}</div>
+        ${inv.createdBy?.fullName ? `<div class="meta-detail"><strong>Sales Rep:</strong> ${inv.createdBy.fullName}</div>` : ''}
+        ${inv.dealTitle ? `<div class="meta-detail"><strong>Deal Reference:</strong> ${inv.dealTitle}</div>` : ''}
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(item => `
+          <tr>
+            <td>${item.description || '—'}</td>
+            <td>${item.quantity}</td>
+            <td>Rs. ${Number(item.unitPrice || 0).toLocaleString()}</td>
+            <td>Rs. ${Number(item.total || 0).toLocaleString()}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+
+    <div class="totals">
+      <div class="totals-box">
+        <div class="totals-row"><span>Subtotal:</span><span>Rs. ${Number(inv.subtotal || inv.amount).toLocaleString()}</span></div>
+        ${inv.tax > 0 ? `<div class="totals-row"><span>Tax (${inv.taxRate || 0}%):</span><span>+Rs. ${Number(inv.tax).toLocaleString()}</span></div>` : ''}
+        ${inv.discount > 0 ? `<div class="totals-row"><span>Discount:</span><span>-Rs. ${Number(inv.discount).toLocaleString()}</span></div>` : ''}
+        <div class="totals-final"><span>Total Amount Due:</span><span>Rs. ${Number(inv.amount).toLocaleString()}</span></div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px;">
+      ${inv.notes ? `
+      <div class="notes-box" style="flex: 1;">
+        <div class="notes-label">Notes &amp; Payment Instructions</div>
+        <div class="notes-text">${inv.notes}</div>
+      </div>` : '<div style="flex:1;"></div>'}
+      ${qrSvgString ? `
+      <div class="qr-box">
+        ${qrSvgString}
+        <div class="qr-caption">Scan to Verify</div>
+      </div>` : ''}
+    </div>
+
+    <div class="footer">
+      <span>Generated by Fortline CRM &middot; Commercial Sales Management</span>
+      <span>Date: ${new Date().toLocaleDateString()}</span>
+    </div>
+  </div>
+
+  <script>
+    setTimeout(function() {
+      try {
+        window.focus();
+        window.print();
+      } catch(e) { console.error(e); }
+    }, 400);
+  <\/script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=800');
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } else {
+      alert('Please allow popups for this website to print/download invoice PDF.');
+    }
   };
 
   // KPIs
@@ -279,11 +526,17 @@ export default function SalesInvoicesView() {
         </button>
       </div>
 
+      {feedback && (
+        <div style={{ background: '#ECFDF5', color: '#065F46', padding: '10px 16px', borderRadius: '8px', border: '1px solid #A7F3D0', fontWeight: 600, fontSize: '0.85rem', marginBottom: '14px' }}>
+          {feedback}
+        </div>
+      )}
+
       {/* KPI Cards */}
       <div className="sv-grid-4">
         <div className="sv-target-card" style={{ borderLeft: '4px solid #2563EB' }}>
           <span className="sv-ts-label">Total Invoiced</span>
-          <span className="sv-ts-value">${totalInvoiced.toLocaleString()}</span>
+          <span className="sv-ts-value">Rs. {totalInvoiced.toLocaleString()}</span>
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>{invoices.length} invoices generated</span>
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #F59E0B' }}>
@@ -298,9 +551,9 @@ export default function SalesInvoicesView() {
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #14B8A6' }}>
           <span className="sv-ts-label">Paid / Collected</span>
-          <span className="sv-ts-value" style={{ color: '#0D9488' }}>${paidAmount.toLocaleString()}</span>
+          <span className="sv-ts-value" style={{ color: '#0D9488' }}>Rs. {paidAmount.toLocaleString()}</span>
           <span style={{ fontSize: '0.78rem', color: overdueAmount > 0 ? '#DC2626' : '#64748B' }}>
-            {overdueAmount > 0 ? `Overdue: $${overdueAmount.toLocaleString()}` : `${paidInvoices.length} settled`}
+            {overdueAmount > 0 ? `Overdue: Rs. ${overdueAmount.toLocaleString()}` : `${paidInvoices.length} settled`}
           </span>
         </div>
       </div>
@@ -326,7 +579,7 @@ export default function SalesInvoicesView() {
 
       {/* Invoices List Table */}
       {loading ? (
-        <div className="sv-loading">Loading invoices from MongoDB...</div>
+        <div className="sv-loading">Loading Invoices...</div>
       ) : (
         <div className="sv-table-wrap">
           <table className="sv-table">
@@ -353,6 +606,8 @@ export default function SalesInvoicesView() {
               ) : (
                 invoices.map(inv => {
                   const style = INVOICE_STATUS_STYLES[inv.status] || { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' };
+                  const canEditOrDelete = inv.status !== 'Approved' && inv.status !== 'Paid';
+
                   return (
                     <tr key={inv._id}>
                       <td className="sv-name">
@@ -376,7 +631,7 @@ export default function SalesInvoicesView() {
                           {inv.items?.length || 1} line item(s)
                         </span>
                       </td>
-                      <td className="sv-amount">${Number(inv.amount || 0).toLocaleString()}</td>
+                      <td className="sv-amount">Rs. {Number(inv.amount || 0).toLocaleString()}</td>
                       <td>{new Date(inv.issueDate || inv.createdAt).toLocaleDateString()}</td>
                       <td>{inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : '—'}</td>
                       <td>
@@ -389,14 +644,43 @@ export default function SalesInvoicesView() {
                           </div>
                         )}
                       </td>
-                      <td style={{ textAlign: 'center' }}>
-                        <button 
-                          className="sv-btn-action-icon" 
-                          onClick={() => openPreview(inv)}
-                          title="View & Preview Tax Invoice"
-                        >
-                          <Eye size={15} />
-                        </button>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                          <button 
+                            className="sv-btn-action-icon" 
+                            onClick={() => openPreview(inv)}
+                            title="View & Preview Tax Invoice"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          <button
+                            className="sv-btn-action-icon"
+                            onClick={() => handleDownloadPDF(inv)}
+                            title="Download / Print PDF"
+                            style={{ color: '#2563EB' }}
+                          >
+                            <Download size={14} />
+                          </button>
+                          {canEditOrDelete && (
+                            <>
+                              <button
+                                className="sv-btn-action-icon"
+                                onClick={() => openEdit(inv)}
+                                title="Edit Invoice"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                className="sv-btn-action-icon"
+                                onClick={() => setDeleteTarget(inv)}
+                                title="Delete Invoice"
+                                style={{ color: '#EF4444' }}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -407,40 +691,42 @@ export default function SalesInvoicesView() {
         </div>
       )}
 
-      {/* CREATE INVOICE MODAL */}
-      {showCreateModal && (
-        <div className="sv-modal-overlay" onClick={() => setShowCreateModal(false)}>
+      {/* CREATE / EDIT INVOICE MODAL */}
+      {showModal && (
+        <div className="sv-modal-overlay" onClick={() => setShowModal(false)}>
           <div className="sv-modal" style={{ maxWidth: '820px' }} onClick={e => e.stopPropagation()}>
             <div className="sv-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileText size={20} color="#2563EB" />
-                <h3 style={{ margin: 0 }}>Create Sales Invoice</h3>
+                <h3 style={{ margin: 0 }}>{editInvoice ? `Edit Invoice (${editInvoice.invoiceNumber})` : 'Create Sales Invoice'}</h3>
               </div>
-              <button onClick={() => setShowCreateModal(false)}><X size={18} /></button>
+              <button onClick={() => setShowModal(false)}><X size={18} /></button>
             </div>
 
             {error && <div className="sv-error">{error}</div>}
 
             <div className="sv-form" style={{ maxHeight: '72vh', overflowY: 'auto', paddingRight: '4px' }}>
               
-              {/* 1. SELECT COMPLETED SALE / WON DEAL */}
-              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#1E293B', marginBottom: '6px' }}>
-                  Select Completed / Won Deal (Auto-Populate Data)
-                </label>
-                <select 
-                  value={form.dealId} 
-                  onChange={handleSelectWonDeal}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
-                >
-                  <option value="">-- Choose Won Deal (Or Enter Details Manually) --</option>
-                  {eligibleWonSales.deals.map(deal => (
-                    <option key={deal._id} value={deal._id}>
-                      {deal.title} — {deal.clientName || 'Client'} (${Number(deal.value || 0).toLocaleString()})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* 1. SELECT COMPLETED SALE / WON DEAL (Only for new) */}
+              {!editInvoice && (
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', marginBottom: '14px' }}>
+                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#1E293B', marginBottom: '6px' }}>
+                    Select Completed / Won Deal (Auto-Populate Data)
+                  </label>
+                  <select 
+                    value={form.dealId} 
+                    onChange={handleSelectWonDeal}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
+                  >
+                    <option value="">-- Choose Won Deal (Or Enter Details Manually) --</option>
+                    {eligibleWonSales.deals.map(deal => (
+                      <option key={deal._id} value={deal._id}>
+                        {deal.title} — {deal.clientName || 'Client'} (Rs. {Number(deal.value || 0).toLocaleString()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* 2. CUSTOMER DETAILS */}
               <div className="sv-grid-2">
@@ -449,63 +735,82 @@ export default function SalesInvoicesView() {
                   <input
                     value={form.clientName}
                     onChange={e => setForm(p => ({ ...p, clientName: e.target.value }))}
-                    placeholder="e.g. Acme Corporation"
+                    placeholder="Company or individual"
                     required
                   />
                 </div>
+                <div className="sv-field">
+                  <label>Sale Reference / Deal Title</label>
+                  <input
+                    value={form.saleReference}
+                    onChange={e => setForm(p => ({ ...p, saleReference: e.target.value }))}
+                    placeholder="e.g. Enterprise License Deal"
+                  />
+                </div>
+              </div>
+
+              <div className="sv-grid-3">
                 <div className="sv-field">
                   <label>Customer Email</label>
                   <input
                     type="email"
                     value={form.customerEmail}
                     onChange={e => setForm(p => ({ ...p, customerEmail: e.target.value }))}
-                    placeholder="billing@acme.com"
+                    placeholder="finance@client.com"
                   />
                 </div>
-              </div>
-
-              <div className="sv-grid-2">
                 <div className="sv-field">
                   <label>Customer Phone</label>
                   <input
                     value={form.customerPhone}
                     onChange={e => setForm(p => ({ ...p, customerPhone: e.target.value }))}
-                    placeholder="+1 (555) 019-2834"
+                    placeholder="+92 300 0000000"
                   />
                 </div>
                 <div className="sv-field">
-                  <label>Deal / Sale Reference</label>
+                  <label>Billing Address</label>
                   <input
-                    value={form.dealTitle}
-                    onChange={e => setForm(p => ({ ...p, dealTitle: e.target.value }))}
-                    placeholder="e.g. Enterprise CRM Implementation"
+                    value={form.customerAddress}
+                    onChange={e => setForm(p => ({ ...p, customerAddress: e.target.value }))}
+                    placeholder="City, Country"
                   />
                 </div>
               </div>
 
-              {/* 3. LINE ITEMS SECTION */}
-              <div style={{ margin: '16px 0 10px 0' }}>
+              {/* 3. LINE ITEMS */}
+              <div style={{ margin: '14px 0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>
-                    Products / Services & Line Items *
+                    Invoice Line Items ({form.items.length})
                   </label>
-                  <button 
-                    type="button" 
+                  <button
+                    type="button"
                     onClick={handleAddItem}
-                    style={{ background: '#EFF6FF', color: '#2563EB', border: '1px solid #BFDBFE', borderRadius: '6px', padding: '4px 10px', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563EB',
+                      fontSize: '0.8rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
                   >
-                    <Plus size={13} /> Add Line Item
+                    <Plus size={14} /> Add Item
                   </button>
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {form.items.map((item, idx) => (
-                    <div key={idx} className="sv-line-item-row">
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1.5fr 1.5fr 36px', gap: '8px', alignItems: 'center' }}>
                       <input
-                        placeholder="Description of item / deliverable"
+                        placeholder="Item Description"
                         value={item.description}
                         onChange={e => handleItemChange(idx, 'description', e.target.value)}
                         style={{ padding: '8px 10px', fontSize: '0.825rem', border: '1px solid #CBD5E1', borderRadius: '6px' }}
+                        required
                       />
                       <input
                         type="number"
@@ -518,13 +823,13 @@ export default function SalesInvoicesView() {
                       <input
                         type="number"
                         min="0"
-                        placeholder="Unit Price ($)"
+                        placeholder="Unit Price (PKR)"
                         value={item.unitPrice}
                         onChange={e => handleItemChange(idx, 'unitPrice', e.target.value)}
                         style={{ padding: '8px 10px', fontSize: '0.825rem', border: '1px solid #CBD5E1', borderRadius: '6px' }}
                       />
                       <div style={{ padding: '8px 10px', fontWeight: 700, color: '#0F172A', fontSize: '0.85rem', textAlign: 'right' }}>
-                        ${Number(item.total || 0).toLocaleString()}
+                        Rs. {Number(item.total || 0).toLocaleString()}
                       </div>
                       <button 
                         type="button" 
@@ -545,7 +850,7 @@ export default function SalesInvoicesView() {
                   <div>
                     <label style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '4px' }}>Subtotal</label>
                     <div style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A' }}>
-                      ${Number(form.subtotal || 0).toLocaleString()}
+                      Rs. {Number(form.subtotal || 0).toLocaleString()}
                     </div>
                   </div>
                   <div>
@@ -560,7 +865,7 @@ export default function SalesInvoicesView() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '4px' }}>Discount ($)</label>
+                    <label style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '4px' }}>Discount (PKR)</label>
                     <input
                       type="number"
                       min="0"
@@ -574,7 +879,7 @@ export default function SalesInvoicesView() {
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #CBD5E1', paddingTop: '10px' }}>
                   <span style={{ fontSize: '0.95rem', fontWeight: 700, color: '#0F172A' }}>Final Total Amount Due:</span>
                   <span style={{ fontSize: '1.25rem', fontWeight: 800, color: '#2563EB' }}>
-                    ${Number(form.amount || 0).toLocaleString()}
+                    Rs. {Number(form.amount || 0).toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -626,7 +931,7 @@ export default function SalesInvoicesView() {
 
               {/* ACTIONS */}
               <div className="sv-modal-actions" style={{ justifyContent: 'space-between' }}>
-                <button type="button" className="sv-btn-cancel" onClick={() => setShowCreateModal(false)}>
+                <button type="button" className="sv-btn-cancel" onClick={() => setShowModal(false)}>
                   Cancel
                 </button>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -645,11 +950,37 @@ export default function SalesInvoicesView() {
                     disabled={saving}
                     onClick={() => handleSaveInvoice(true)}
                   >
-                    <Send size={15} /> {saving ? 'Submitting...' : 'Submit to Sales Manager'}
+                    <Send size={15} /> {saving ? 'Saving...' : (editInvoice ? 'Update & Submit' : 'Submit to Sales Manager')}
                   </button>
                 </div>
               </div>
 
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DELETE INVOICE MODAL */}
+      {deleteTarget && (
+        <div className="sv-modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="sv-modal" style={{ maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Trash2 size={18} color="#EF4444" />
+                <h3 style={{ margin: 0 }}>Delete Invoice</h3>
+              </div>
+              <button onClick={() => setDeleteTarget(null)}><X size={18} /></button>
+            </div>
+            <div className="sv-form">
+              <p style={{ fontSize: '0.9rem', color: '#334155', margin: '0 0 16px' }}>
+                Are you sure you want to delete invoice <strong>{deleteTarget.invoiceNumber}</strong> for <strong>{deleteTarget.clientName}</strong>? This action cannot be undone.
+              </p>
+              <div className="sv-modal-actions">
+                <button className="sv-btn-cancel" onClick={() => setDeleteTarget(null)}>Cancel</button>
+                <button className="sv-btn-primary" onClick={handleDeleteInvoice} disabled={deleting} style={{ background: '#EF4444' }}>
+                  <Trash2 size={14} /> {deleting ? 'Deleting...' : 'Delete Invoice'}
+                </button>
+              </div>
             </div>
           </div>
         </div>
@@ -664,7 +995,21 @@ export default function SalesInvoicesView() {
                 <FileText size={20} color="#2563EB" />
                 <h3 style={{ margin: 0 }}>Invoice Preview ({selectedInvoice.invoiceNumber})</h3>
               </div>
-              <button onClick={() => setShowPreviewModal(false)}><X size={18} /></button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => handleDownloadPDF(selectedInvoice)}
+                  title="Download / Print PDF"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 14px', borderRadius: '7px',
+                    background: '#1E3A5F', color: '#fff', border: 'none',
+                    fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer'
+                  }}
+                >
+                  <Download size={14} /> Download PDF
+                </button>
+                <button onClick={() => setShowPreviewModal(false)}><X size={18} /></button>
+              </div>
             </div>
 
             <div style={{ maxHeight: '76vh', overflowY: 'auto', padding: '4px' }}>
@@ -698,7 +1043,7 @@ export default function SalesInvoicesView() {
               <div className="sv-invoice-preview-card">
                 <div className="sv-inv-top-bar">
                   <div>
-                    <div className="sv-inv-brand-title">NexusCRM / FlowBridge</div>
+                    <div className="sv-inv-brand-title">Fortline CRM</div>
                     <div style={{ fontSize: '0.825rem', color: '#64748B', marginTop: '4px' }}>
                       Commercial Sales & Services Invoice
                     </div>
@@ -765,8 +1110,8 @@ export default function SalesInvoicesView() {
                       <tr key={i}>
                         <td style={{ fontWeight: 500 }}>{item.description}</td>
                         <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right' }}>${Number(item.unitPrice || 0).toLocaleString()}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 600 }}>${Number(item.total || 0).toLocaleString()}</td>
+                        <td style={{ textAlign: 'right' }}>Rs. {Number(item.unitPrice || 0).toLocaleString()}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>Rs. {Number(item.total || 0).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -776,43 +1121,81 @@ export default function SalesInvoicesView() {
                 <div className="sv-inv-summary-box">
                   <div className="sv-inv-summary-row">
                     <span>Subtotal:</span>
-                    <span>${Number(selectedInvoice.subtotal || selectedInvoice.amount).toLocaleString()}</span>
+                    <span>Rs. {Number(selectedInvoice.subtotal || selectedInvoice.amount).toLocaleString()}</span>
                   </div>
                   {selectedInvoice.tax > 0 && (
                     <div className="sv-inv-summary-row">
                       <span>Tax ({selectedInvoice.taxRate || 0}%):</span>
-                      <span>+${Number(selectedInvoice.tax).toLocaleString()}</span>
+                      <span>+Rs. {Number(selectedInvoice.tax).toLocaleString()}</span>
                     </div>
                   )}
                   {selectedInvoice.discount > 0 && (
                     <div className="sv-inv-summary-row">
                       <span>Discount:</span>
-                      <span>-${Number(selectedInvoice.discount).toLocaleString()}</span>
+                      <span>-Rs. {Number(selectedInvoice.discount).toLocaleString()}</span>
                     </div>
                   )}
                   <div className="sv-inv-summary-total">
                     <span>Total Due:</span>
-                    <span>${Number(selectedInvoice.amount).toLocaleString()}</span>
+                    <span>Rs. {Number(selectedInvoice.amount).toLocaleString()}</span>
                   </div>
                 </div>
 
-                {/* Notes */}
-                {selectedInvoice.notes && (
-                  <div style={{ marginTop: '20px', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Notes & Payment Instructions
+                {/* QR Code & Notes Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginTop: '18px', flexWrap: 'wrap' }}>
+                  {selectedInvoice.notes ? (
+                    <div style={{ flex: 1, minWidth: '220px', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        Notes & Payment Instructions
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#334155' }}>
+                        {selectedInvoice.notes}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#334155' }}>
-                      {selectedInvoice.notes}
-                    </div>
+                  ) : <div style={{ flex: 1 }}></div>}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 14px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                    <QRCodeSVG
+                      value={`INVOICE: ${selectedInvoice.invoiceNumber}\nCUSTOMER: ${selectedInvoice.clientName}\nAMOUNT: PKR ${Number(selectedInvoice.amount || 0).toLocaleString()}\nREFERENCE: ${selectedInvoice.dealTitle || selectedInvoice.saleReference || 'Direct'}\nDATE: ${new Date(selectedInvoice.issueDate || selectedInvoice.createdAt).toLocaleDateString()}`}
+                      size={84}
+                      level="M"
+                    />
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748B', marginTop: '5px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Scan to Verify
+                    </span>
                   </div>
-                )}
+                </div>
               </div>
 
-              <div className="sv-modal-actions" style={{ marginTop: '16px' }}>
+              <div className="sv-modal-actions" style={{ marginTop: '16px', justifyContent: 'space-between' }}>
                 <button type="button" className="sv-btn-cancel" onClick={() => setShowPreviewModal(false)}>
                   Close
                 </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadPDF(selectedInvoice)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '8px 16px', borderRadius: '8px',
+                      background: '#1E3A5F', color: '#fff', border: 'none',
+                      fontWeight: 600, cursor: 'pointer'
+                    }}
+                  >
+                    <Download size={15} /> Download PDF
+                  </button>
+                  {selectedInvoice.status !== 'Approved' && selectedInvoice.status !== 'Paid' && (
+                    <button
+                      type="button"
+                      className="sv-btn-primary"
+                      onClick={() => {
+                        setShowPreviewModal(false);
+                        openEdit(selectedInvoice);
+                      }}
+                    >
+                      <Edit2 size={14} /> Edit Invoice
+                    </button>
+                  )}
+                </div>
               </div>
 
             </div>

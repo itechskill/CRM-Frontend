@@ -81,7 +81,7 @@ export default function AccountantSidebar({ activeTab, setActiveTab, currentRole
             </div>
             {!collapsed && (
               <div className="acc-brand-info">
-                <span className="acc-brand-name">NexusCRM</span>
+                <span className="acc-brand-name">Fortline CRM</span>
                 <span className="acc-brand-subtitle">FINANCE PORTAL</span>
               </div>
             )}

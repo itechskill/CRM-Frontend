@@ -346,17 +346,17 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
           <div className="hero-card-main-val">
             <div className="hero-val-group">
               <span className="hero-val-label">Sales Achieved</span>
-              <span className="hero-val-num">${Number(salesPerf.salesAchieved || 0).toLocaleString()}</span>
+              <span className="hero-val-num">Rs. {Number(salesPerf.salesAchieved || 0).toLocaleString()}</span>
             </div>
             <div className="hero-val-divider" />
             <div className="hero-val-group">
               <span className="hero-val-label">Target Quota</span>
-              <span className="hero-val-num light">${Number(salesPerf.monthlyTarget || 0).toLocaleString()}</span>
+              <span className="hero-val-num light">Rs. {Number(salesPerf.monthlyTarget || 0).toLocaleString()}</span>
             </div>
             <div className="hero-val-divider" />
             <div className="hero-val-group">
               <span className="hero-val-label">Remaining</span>
-              <span className="hero-val-num rem">${Number(salesPerf.remainingTarget || 0).toLocaleString()}</span>
+              <span className="hero-val-num rem">Rs. {Number(salesPerf.remainingTarget || 0).toLocaleString()}</span>
             </div>
           </div>
 
@@ -378,7 +378,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
             <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_deals')}>
               <span className="pill-title">Won Deals</span>
               <span className="pill-value" style={{ color: '#059669' }}>{salesPerf.wonDealsCount || 0}</span>
-              <span className="pill-sub">${Number(salesPerf.wonDealsValue || 0).toLocaleString()} volume</span>
+              <span className="pill-sub">Rs. {Number(salesPerf.wonDealsValue || 0).toLocaleString()} volume</span>
             </div>
             <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_quotations')}>
               <span className="pill-title">Quotations</span>
@@ -406,30 +406,30 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
               </div>
             </div>
             <div className="hero-badge-pct green">
-              <span>${Number(finPerf.netRevenue || 0).toLocaleString()}</span>
+              <span>Rs. {Number(finPerf.netRevenue || 0).toLocaleString()}</span>
               <span className="hero-badge-sub">Net Revenue</span>
             </div>
           </div>
 
           <div className="hero-card-main-val">
             <div className="hero-val-group">
-              <span className="hero-val-label">Total Receivables</span>
-              <span className="hero-val-num" style={{ color: '#0284C7' }}>
-                ${Number(finPerf.receivables || 0).toLocaleString()}
+              <span className="hero-val-label">Overdue Amount</span>
+              <span className="hero-val-num" style={{ color: finPerf.overdueAmount > 0 ? '#DC2626' : '#059669' }}>
+                Rs. {Number(finPerf.overdueAmount || 0).toLocaleString()}
               </span>
             </div>
             <div className="hero-val-divider" />
             <div className="hero-val-group">
-              <span className="hero-val-label">Overdue Amount</span>
-              <span className="hero-val-num" style={{ color: finPerf.overdueAmount > 0 ? '#DC2626' : '#059669' }}>
-                ${Number(finPerf.overdueAmount || 0).toLocaleString()}
+              <span className="hero-val-label">Total Receivables</span>
+              <span className="hero-val-num" style={{ color: '#0284C7' }}>
+                Rs. {Number(finPerf.receivables || 0).toLocaleString()}
               </span>
             </div>
             <div className="hero-val-divider" />
             <div className="hero-val-group">
               <span className="hero-val-label">Salary Target</span>
               <span className="hero-val-num light">
-                ${Number(finPerf.salaryTarget || 0).toLocaleString()}
+                Rs. {Number(finPerf.salaryTarget || 0).toLocaleString()}
               </span>
             </div>
           </div>
@@ -457,14 +457,14 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
             <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_invoices')}>
               <span className="pill-title">Settled Invoices</span>
               <span className="pill-value" style={{ color: '#059669' }}>
-                ${Number(finPerf.paidInvoicesAmount || 0).toLocaleString()}
+                Rs. {Number(finPerf.paidInvoicesAmount || 0).toLocaleString()}
               </span>
               <span className="pill-sub positive">Collected</span>
             </div>
             <div className="hero-pill-item">
               <span className="pill-title">Liabilities</span>
               <span className="pill-value" style={{ color: '#64748B' }}>
-                ${Number(finPerf.liability || 0).toLocaleString()}
+                Rs. {Number(finPerf.liability || 0).toLocaleString()}
               </span>
               <span className="pill-sub">Cancellations/Returns</span>
             </div>
@@ -565,104 +565,106 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
         </div>
       </div>
 
-      {/* ── BOTTOM SECTION: ASSIGNED PROJECTS & PENDING TASKS (Required at bottom) ── */}
-      <div className="employee-bottom-grid">
-        {/* ASSIGNED PROJECTS */}
-        <div className="employee-widget-card assigned-projects-widget">
-          <div className="widget-header">
-            <div className="widget-title-area">
-              <FolderKanban size={18} color="#2563EB" />
-              <h3>Assigned Projects</h3>
-            </div>
-            <button className="widget-action-link" onClick={() => onNavigateTab?.('projects')}>
-              All Projects <ArrowUpRight size={14} />
-            </button>
-          </div>
-
-          <div className="projects-scroll-list">
-            {projectsList.length === 0 ? (
-              <div className="sv-empty" style={{ padding: '28px 0' }}>
-                No assigned projects at this time.
+      {/* ── BOTTOM SECTION: ASSIGNED PROJECTS & PENDING TASKS (Hidden for Sales Team Members) ── */}
+      {!isSalesDept && (
+        <div className="employee-bottom-grid">
+          {/* ASSIGNED PROJECTS */}
+          <div className="employee-widget-card assigned-projects-widget">
+            <div className="widget-header">
+              <div className="widget-title-area">
+                <FolderKanban size={18} color="#2563EB" />
+                <h3>Assigned Projects</h3>
               </div>
-            ) : (
-              projectsList.slice(0, 5).map((project) => (
-                <div key={project._id} className="project-item-card">
-                  <div className="project-item-left">
-                    <div className="project-icon-box">
-                      <Briefcase size={16} color="#2563EB" />
-                    </div>
-                    <div className="project-item-info">
-                      <h4 className="project-title">{project.name}</h4>
-                      <div className="project-meta">
-                        <span className="project-client">{project.client || 'Internal Client'}</span>
-                        <span className="project-date">Due {project.deadline ? new Date(project.deadline).toLocaleDateString() : 'Ongoing'}</span>
+              <button className="widget-action-link" onClick={() => onNavigateTab?.('projects')}>
+                All Projects <ArrowUpRight size={14} />
+              </button>
+            </div>
+
+            <div className="projects-scroll-list">
+              {projectsList.length === 0 ? (
+                <div className="sv-empty" style={{ padding: '28px 0' }}>
+                  No assigned projects at this time.
+                </div>
+              ) : (
+                projectsList.slice(0, 5).map((project) => (
+                  <div key={project._id} className="project-item-card">
+                    <div className="project-item-left">
+                      <div className="project-icon-box">
+                        <Briefcase size={16} color="#2563EB" />
+                      </div>
+                      <div className="project-item-info">
+                        <h4 className="project-title">{project.name}</h4>
+                        <div className="project-meta">
+                          <span className="project-client">{project.client || 'Internal Client'}</span>
+                          <span className="project-date">Due {project.deadline ? new Date(project.deadline).toLocaleDateString() : 'Ongoing'}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                  <div className="project-item-right">
-                    <span className={`priority-badge ${(project.priority || 'medium').toLowerCase()}`}>
-                      {project.priority || 'Medium'}
-                    </span>
-                    <span className="project-status-pill">
-                      {project.status || 'Active'}
-                    </span>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* PENDING TASKS */}
-        <div className="employee-widget-card pending-tasks-widget">
-          <div className="widget-header">
-            <div className="widget-title-area">
-              <CheckSquare size={18} color="#D97706" />
-              <h3>Pending Tasks ({pendingTasks.length})</h3>
-            </div>
-            <button className="widget-action-link" onClick={() => onNavigateTab?.('tasks')}>
-              Task Board <ArrowUpRight size={14} />
-            </button>
-          </div>
-
-          <div className="tasks-list">
-            {pendingTasks.length === 0 ? (
-              <div className="sv-empty" style={{ padding: '28px 0' }}>
-                <CheckCircle2 size={32} color="#10B981" style={{ marginBottom: '8px' }} />
-                <p>All caught up! No pending tasks.</p>
-              </div>
-            ) : (
-              pendingTasks.slice(0, 6).map((task) => (
-                <div key={task.id} className="task-item-card">
-                  <div className="task-left">
-                    <input
-                      type="checkbox"
-                      checked={task.status === 'Completed'}
-                      onChange={() => handleToggleTaskStatus(task.id)}
-                      className="task-checkbox"
-                    />
-                    <div className="task-info">
-                      <span className="task-title">{task.title}</span>
-                      <div className="task-meta-row">
-                        <span className="task-project-tag">{task.project}</span>
-                        <span className="task-due-date">Due: {task.dueDate}</span>
-                      </div>
+                    <div className="project-item-right">
+                      <span className={`priority-badge ${(project.priority || 'medium').toLowerCase()}`}>
+                        {project.priority || 'Medium'}
+                      </span>
+                      <span className="project-status-pill">
+                        {project.status || 'Active'}
+                      </span>
                     </div>
                   </div>
-                  <div className="task-right">
-                    <span className={`priority-badge ${(task.priority || 'medium').toLowerCase()}`}>
-                      {task.priority || 'Medium'}
-                    </span>
-                    <span className="status-pill in-progress">
-                      {task.status || 'In Progress'}
-                    </span>
-                  </div>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* PENDING TASKS */}
+          <div className="employee-widget-card pending-tasks-widget">
+            <div className="widget-header">
+              <div className="widget-title-area">
+                <CheckSquare size={18} color="#D97706" />
+                <h3>Pending Tasks ({pendingTasks.length})</h3>
+              </div>
+              <button className="widget-action-link" onClick={() => onNavigateTab?.('tasks')}>
+                Task Board <ArrowUpRight size={14} />
+              </button>
+            </div>
+
+            <div className="tasks-list">
+              {pendingTasks.length === 0 ? (
+                <div className="sv-empty" style={{ padding: '28px 0' }}>
+                  <CheckCircle2 size={32} color="#10B981" style={{ marginBottom: '8px' }} />
+                  <p>All caught up! No pending tasks.</p>
                 </div>
-              ))
-            )}
+              ) : (
+                pendingTasks.slice(0, 6).map((task) => (
+                  <div key={task.id} className="task-item-card">
+                    <div className="task-left">
+                      <input
+                        type="checkbox"
+                        checked={task.status === 'Completed'}
+                        onChange={() => handleToggleTaskStatus(task.id)}
+                        className="task-checkbox"
+                      />
+                      <div className="task-info">
+                        <span className="task-title">{task.title}</span>
+                        <div className="task-meta-row">
+                          <span className="task-project-tag">{task.project}</span>
+                          <span className="task-due-date">Due: {task.dueDate}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="task-right">
+                      <span className={`priority-badge ${(task.priority || 'medium').toLowerCase()}`}>
+                        {task.priority || 'Medium'}
+                      </span>
+                      <span className="status-pill in-progress">
+                        {task.status || 'In Progress'}
+                      </span>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

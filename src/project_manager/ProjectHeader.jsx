@@ -25,7 +25,7 @@ export default function ProjectHeader({ activeTab, onOpenNewProjectModal, onMenu
 
       {/* Breadcrumb */}
       <div className="project-breadcrumb">
-        <span>FlowBridge</span>
+        <span>Fortline CRM</span>
         <ChevronRight size={14} />
         <span className="active-crumb">{getTabTitle()}</span>
       </div>

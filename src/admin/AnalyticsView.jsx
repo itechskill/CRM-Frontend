@@ -4,10 +4,10 @@ import './AnalyticsView.css';
 
 export default function AnalyticsView() {
   const topPerformers = [
-    { name: 'Sarah Jenkins', deals: 42, revenue: '$284,000', quota: '124%' },
-    { name: 'Emma Field', deals: 38, revenue: '$245,000', quota: '115%' },
-    { name: 'Daniel Torres', deals: 31, revenue: '$198,000', quota: '102%' },
-    { name: 'Joshua Reed', deals: 29, revenue: '$175,000', quota: '94%' },
+    { name: 'Sarah Jenkins', deals: 42, revenue: 'Rs. 284,000', quota: '124%' },
+    { name: 'Emma Field', deals: 38, revenue: 'Rs. 245,000', quota: '115%' },
+    { name: 'Daniel Torres', deals: 31, revenue: 'Rs. 198,000', quota: '102%' },
+    { name: 'Joshua Reed', deals: 29, revenue: 'Rs. 175,000', quota: '94%' },
   ];
 
   return (
@@ -25,7 +25,7 @@ export default function AnalyticsView() {
             </div>
             <div>
               <div style={{ fontSize: '0.8rem', color: '#64748B' }}>Average Deal Size</div>
-              <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>$24,850</div>
+              <div style={{ fontSize: '1.4rem', fontWeight: 800 }}>Rs. 24,850</div>
             </div>
           </div>
           <span style={{ fontSize: '0.75rem', color: '#16A34A', fontWeight: 600 }}>+8.4% growth vs Q1</span>

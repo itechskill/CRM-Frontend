@@ -144,7 +144,7 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Total Invoiced</span>
             <div className="acc-kpi-icon blue"><FileText size={18} /></div>
           </div>
-          <div className="acc-kpi-value">${totalIssued.toLocaleString()}</div>
+          <div className="acc-kpi-value">Rs. {totalIssued.toLocaleString()}</div>
           <div className="acc-kpi-subtitle">{invoices.length} Invoices generated</div>
         </div>
 
@@ -153,7 +153,7 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Collected / Paid</span>
             <div className="acc-kpi-icon emerald"><CheckCircle size={18} /></div>
           </div>
-          <div className="acc-kpi-value">${totalPaid.toLocaleString()}</div>
+          <div className="acc-kpi-value">Rs. {totalPaid.toLocaleString()}</div>
           <div className="acc-kpi-subtitle up">
             {Math.round((totalPaid / (totalIssued || 1)) * 100)}% payment collection rate
           </div>
@@ -164,7 +164,7 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Pending Payment</span>
             <div className="acc-kpi-icon amber"><Clock size={18} /></div>
           </div>
-          <div className="acc-kpi-value">${totalPending.toLocaleString()}</div>
+          <div className="acc-kpi-value">Rs. {totalPending.toLocaleString()}</div>
           <div className="acc-kpi-subtitle">
             {invoices.filter(i => i.status === 'Pending').length} pending invoices
           </div>
@@ -175,7 +175,7 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Overdue Receivables</span>
             <div className="acc-kpi-icon red"><AlertTriangle size={18} /></div>
           </div>
-          <div className="acc-kpi-value">${totalOverdue.toLocaleString()}</div>
+          <div className="acc-kpi-value">Rs. {totalOverdue.toLocaleString()}</div>
           <div className="acc-kpi-subtitle down">
             Requires payment reminder
           </div>
@@ -214,7 +214,7 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
                   </div>
                   <div style={{ fontSize: '0.85rem', color: '#475569', marginTop: '2px' }}>{deal.title}</div>
                   <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#15803D', marginTop: '6px' }}>
-                    ${(deal.value || 0).toLocaleString()}
+                    Rs. {(deal.value || 0).toLocaleString()}
                   </div>
                 </div>
                 <button
@@ -274,7 +274,7 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
                 <th>Client</th>
                 <th>Issue Date</th>
                 <th>Due Date</th>
-                <th>Amount ($)</th>
+                <th>Amount (Rs.)</th>
                 <th>Tax (10%)</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'right' }}>Actions</th>
@@ -290,8 +290,8 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
                   </td>
                   <td>{inv.issueDate}</td>
                   <td>{inv.dueDate}</td>
-                  <td style={{ fontWeight: 700, color: '#0F172A' }}>${inv.amount.toLocaleString()}</td>
-                  <td style={{ color: '#64748B' }}>${inv.tax.toLocaleString()}</td>
+                  <td style={{ fontWeight: 700, color: '#0F172A' }}>Rs. {inv.amount.toLocaleString()}</td>
+                  <td style={{ color: '#64748B' }}>Rs. {inv.tax.toLocaleString()}</td>
                   <td>
                     <span className={`acc-badge ${inv.status.toLowerCase()}`}>
                       {inv.status}
@@ -353,7 +353,7 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
                       <option value="">-- Choose Won Deal --</option>
                       {wonDeals.map(d => (
                         <option key={d._id} value={d._id}>
-                          {d.clientName} - {d.title} (${(d.value || 0).toLocaleString()})
+                          {d.clientName} - {d.title} (Rs. {(d.value || 0).toLocaleString()})
                         </option>
                       ))}
                     </select>
@@ -383,7 +383,7 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="acc-form-group">
-                    <label>Invoice Amount ($)</label>
+                    <label>Invoice Amount (Rs.)</label>
                     <input
                       type="number"
                       required
@@ -449,7 +449,7 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
                   <div><strong>Services:</strong> {selectedInvoice.items}</div>
                   <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px solid #CBD5E1', display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1rem', color: '#0F172A' }}>
                     <span>Total Payable:</span>
-                    <span>${(selectedInvoice.amount + selectedInvoice.tax).toLocaleString()}</span>
+                    <span>Rs. {(selectedInvoice.amount + selectedInvoice.tax).toLocaleString()}</span>
                   </div>
                 </div>
               </div>

@@ -115,7 +115,7 @@ export default function NewProjectModal({ isOpen, onClose, onAddProject }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div className="form-group">
-                <label>Spent Budget (e.g. $34K)</label>
+                <label>Spent Budget (e.g. Rs. 34K)</label>
                 <input 
                   className="form-input" 
                   placeholder="34" 
@@ -124,7 +124,7 @@ export default function NewProjectModal({ isOpen, onClose, onAddProject }) {
                 />
               </div>
               <div className="form-group">
-                <label>Total Budget (e.g. $42K)</label>
+                <label>Total Budget (e.g. Rs. 42K)</label>
                 <input 
                   className="form-input" 
                   placeholder="42" 

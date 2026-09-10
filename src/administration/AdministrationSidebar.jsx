@@ -68,7 +68,7 @@ export default function AdministrationSidebar({ activeTab, setActiveTab, current
             </div>
             {!collapsed && (
               <div className="admin-side-brand-info">
-                <span className="admin-side-brand-name">NexusCRM</span>
+                <span className="admin-side-brand-name">Fortline CRM</span>
                 <span className="admin-side-brand-subtitle">ADMINISTRATION</span>
               </div>
             )}

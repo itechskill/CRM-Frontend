@@ -42,12 +42,13 @@ export default function SettingsView() {
 
             <div className="form-group">
               <label>Support Email</label>
-              <input className="form-input" defaultValue="support@nexuscrm.io" />
+              <input className="form-input" defaultValue="support@fortlinecrm.io" />
             </div>
 
             <div className="form-group">
               <label>Default Currency</label>
-              <select className="form-select" defaultValue="USD">
+              <select className="form-select" defaultValue="PKR">
+                <option value="PKR">PKR (Rs.) - Pakistani Rupee</option>
                 <option value="USD">USD ($) - US Dollar</option>
                 <option value="EUR">EUR (€) - Euro</option>
                 <option value="GBP">GBP (£) - British Pound</option>

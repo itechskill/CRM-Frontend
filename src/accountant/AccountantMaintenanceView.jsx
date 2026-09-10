@@ -223,7 +223,7 @@ export default function AccountantMaintenanceView({ isModalOpen, onCloseModal })
   });
 
   const fmtCurrency = (val) =>
-    `$${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
+    `Rs. ${Number(val || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`;
 
   const fmtDate = (d) => {
     if (!d) return '—';
@@ -513,7 +513,7 @@ export default function AccountantMaintenanceView({ isModalOpen, onCloseModal })
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="acc-form-group">
-                    <label>Amount ($) *</label>
+                    <label>Amount (Rs.) *</label>
                     <input
                       type="number"
                       step="0.01"
@@ -610,7 +610,7 @@ export default function AccountantMaintenanceView({ isModalOpen, onCloseModal })
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                   <div className="acc-form-group">
-                    <label>Amount ($) *</label>
+                    <label>Amount (Rs.) *</label>
                     <input
                       type="number"
                       step="0.01"

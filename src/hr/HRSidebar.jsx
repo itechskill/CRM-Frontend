@@ -79,7 +79,7 @@ export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwit
             </div>
             {!collapsed && (
               <div className="hr-brand-info">
-                <span className="hr-brand-name">NexusCRM</span>
+                <span className="hr-brand-name">Fortline CRM</span>
                 <span className="hr-brand-subtitle">HR PORTAL</span>
               </div>
             )}

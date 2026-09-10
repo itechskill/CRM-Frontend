@@ -174,7 +174,7 @@ export default function MarketingLeadsView({ isModalOpen, onCloseModal }) {
             <span className="mkt-kpi-title">Avg Cost Per Lead (CPL)</span>
             <div className="mkt-kpi-icon blue"><Award size={18} /></div>
           </div>
-          <div className="mkt-kpi-value">$24.50</div>
+          <div className="mkt-kpi-value">Rs. 24.50</div>
           <div className="mkt-kpi-subtitle">Efficient acquisition cost</div>
         </div>
       </div>

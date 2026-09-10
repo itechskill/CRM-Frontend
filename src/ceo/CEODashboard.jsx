@@ -125,8 +125,8 @@ export default function CEODashboard({ onNavigateTab, currentUser }) {
 
 
   const kpis = [
-    { title: 'Collected Revenue', value: summary ? `$${(summary.collectedRevenue || 0).toLocaleString()}` : '$0', change: summary ? `Invoiced: $${(summary.totalInvoiced || 0).toLocaleString()}` : 'Live', icon: DollarSign, iconClass: 'icon-blue' },
-    { title: 'Won Sales Deals', value: summary ? `${summary.wonDealsCount || 0}` : '0', change: summary ? `Pipeline: $${(summary.pipelineValue || 0).toLocaleString()}` : 'Live', icon: Award, iconClass: 'icon-purple' },
+    { title: 'Collected Revenue', value: summary ? `Rs. ${(summary.collectedRevenue || 0).toLocaleString()}` : 'Rs. 0', change: summary ? `Invoiced: Rs. ${(summary.totalInvoiced || 0).toLocaleString()}` : 'Live', icon: DollarSign, iconClass: 'icon-blue' },
+    { title: 'Won Sales Deals', value: summary ? `${summary.wonDealsCount || 0}` : '0', change: summary ? `Pipeline: Rs. ${(summary.pipelineValue || 0).toLocaleString()}` : 'Live', icon: Award, iconClass: 'icon-purple' },
     { title: 'Total Active Headcount', value: summary ? `${summary.totalEmployees || 0}` : '0', change: summary ? `Users: ${summary.totalUsers || 0}` : 'Live', icon: Users, iconClass: 'icon-green' },
     { title: 'Active Projects', value: summary ? `${summary.activeProjects || 0}` : '0', change: summary ? `Completed Tasks: ${summary.completedTasks || 0}` : 'Live', icon: TrendingUp, iconClass: 'icon-amber' },
   ];

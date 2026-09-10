@@ -186,7 +186,7 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
             <Zap size={24} color="#FFFFFF" />
           </div>
           <h1 className="auth-title">Create Account</h1>
-          <p className="auth-subtitle">Apply for a NexusCRM enterprise portal account</p>
+          <p className="auth-subtitle">Apply for a Fortline CRM enterprise portal account</p>
         </div>
 
         {errorMessage && (

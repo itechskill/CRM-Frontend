@@ -67,7 +67,7 @@ export default function ReportsView() {
           justifyContent: 'center',
           boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
         }}>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>$21.7K</div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>Rs. 21.7K</div>
           <div style={{ fontSize: '0.875rem', color: '#64748B', fontWeight: 500, marginTop: '4px' }}>Avg Deal Size</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '4px', color: '#10B981', fontSize: '0.825rem', fontWeight: 600, marginTop: '8px' }}>
             <TrendingUp size={14} />

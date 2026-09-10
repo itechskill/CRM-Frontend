@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../../utils/api';
-import { Plus, Search, DollarSign, TrendingUp, CheckCircle, Edit2, X, Save, FileText, ArrowRight } from 'lucide-react';
+import { Plus, Search, DollarSign, TrendingUp, CheckCircle, Edit2, X, Save, FileText, Eye, Trash2, Calendar, Target, ArrowRight, CheckCircle2 } from 'lucide-react';
 import './SalesViews.css';
 
 const STAGE_COLORS = {
@@ -16,13 +16,17 @@ const STAGE_COLORS = {
 const EMPTY_DEAL = {
   title: '',
   clientName: '',
+  company: '',
+  contactPerson: '',
   value: '',
   stage: 'Qualification',
   probability: 50,
-  closingDate: ''
+  closingDate: '',
+  requirements: '',
+  notes: ''
 };
 
-export default function SalesDealsView({ onNavigateInvoices }) {
+export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotations }) {
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stageFilter, setStageFilter] = useState('all');
@@ -33,12 +37,11 @@ export default function SalesDealsView({ onNavigateInvoices }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Invoice creation modal from won deal
-  const [invoiceModalDeal, setInvoiceModalDeal] = useState(null);
-  const [invoiceDueDate, setInvoiceDueDate] = useState('');
-  const [invoiceDescription, setInvoiceDescription] = useState('');
-  const [invoiceSaving, setInvoiceSaving] = useState(false);
-  const [invoiceMsg, setInvoiceMsg] = useState({ type: '', text: '' });
+  const [viewDeal, setViewDeal] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [feedback, setFeedback] = useState('');
+  const [creatingQuote, setCreatingQuote] = useState(false);
 
   const fetchDeals = useCallback(async () => {
     setLoading(true);
@@ -72,10 +75,14 @@ export default function SalesDealsView({ onNavigateInvoices }) {
     setForm({
       title: deal.title || '',
       clientName: deal.clientName || '',
+      company: deal.company || '',
+      contactPerson: deal.contactPerson || '',
       value: deal.value || '',
       stage: deal.stage || 'Qualification',
       probability: deal.probability !== undefined ? deal.probability : 50,
-      closingDate: deal.closingDate ? new Date(deal.closingDate).toISOString().split('T')[0] : ''
+      closingDate: deal.closingDate ? new Date(deal.closingDate).toISOString().split('T')[0] : '',
+      requirements: deal.requirements || '',
+      notes: deal.notes || ''
     });
     setEditDeal(deal);
     setError('');
@@ -93,8 +100,8 @@ export default function SalesDealsView({ onNavigateInvoices }) {
     try {
       const payload = {
         ...form,
-        value: Number(form.value) || 0,
-        probability: Number(form.probability) || 50,
+        value: form.value ? Number(form.value) : 0,
+        probability: Number(form.probability),
         closingDate: form.closingDate || null
       };
       const url = editDeal ? `/api/sales-employee/deals/${editDeal._id}` : '/api/sales-employee/deals';
@@ -107,99 +114,119 @@ export default function SalesDealsView({ onNavigateInvoices }) {
         setError(data.message || 'Failed to save deal.');
       }
     } catch (e) {
-      setError('Server error saving deal.');
+      setError('Server error.');
     } finally {
       setSaving(false);
     }
   };
 
-  const openInvoiceModal = (deal) => {
-    setInvoiceModalDeal(deal);
-    const in30Days = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    setInvoiceDueDate(in30Days);
-    setInvoiceDescription(`Invoice for completed deal: ${deal.title}`);
-    setInvoiceMsg({ type: '', text: '' });
-  };
-
-  const handleGenerateInvoice = async (e) => {
-    e.preventDefault();
-    if (!invoiceModalDeal) return;
-    setInvoiceSaving(true);
-    setInvoiceMsg({ type: '', text: '' });
+  const handleCreateQuotation = async (deal) => {
+    setCreatingQuote(true);
     try {
-      const payload = {
-        clientName: invoiceModalDeal.clientName,
-        dealId: invoiceModalDeal._id,
-        dealTitle: invoiceModalDeal.title,
-        amount: Number(invoiceModalDeal.value) || 0,
-        dueDate: invoiceDueDate,
-        description: invoiceDescription,
-        status: 'Pending Review'
+      const quotePayload = {
+        clientName: deal.clientName,
+        dealId: deal._id,
+        productSummary: deal.requirements || deal.title || 'Quotation per Customer Requirement',
+        totalAmount: deal.value ? Number(deal.value) : 0,
+        netAmount: deal.value ? Number(deal.value) : 0,
+        status: 'Draft',
+        notes: `Created from Deal: ${deal.title}. ${deal.notes || ''}`
       };
-      const { response, data } = await apiRequest('/api/sales-employee/invoices', {
+      const { response, data } = await apiRequest('/api/sales-employee/quotations', {
         method: 'POST',
-        body: JSON.stringify(payload)
+        body: JSON.stringify(quotePayload)
       });
       if (response.ok && data.success) {
-        setInvoiceMsg({ type: 'success', text: `Invoice generated & submitted to Sales Manager for review.` });
-        setTimeout(() => {
-          setInvoiceModalDeal(null);
-          if (onNavigateInvoices) onNavigateInvoices();
-        }, 1500);
+        // Update deal stage to Proposal
+        await apiRequest(`/api/sales-employee/deals/${deal._id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ stage: 'Proposal' })
+        });
+        setFeedback(`Quotation "${data.data.orderReference || data.data.quotationNumber || 'created'}" generated from Deal!`);
+        setViewDeal(null);
+        fetchDeals();
+        setTimeout(() => setFeedback(''), 4000);
       } else {
-        setInvoiceMsg({ type: 'error', text: data.message || 'Failed to generate invoice.' });
+        setFeedback(data.message || 'Failed to create quotation.');
       }
     } catch (e) {
-      setInvoiceMsg({ type: 'error', text: 'Server error generating invoice.' });
+      setFeedback('Error generating quotation.');
     } finally {
-      setInvoiceSaving(false);
+      setCreatingQuote(false);
     }
   };
 
-  const stagesList = ['all', 'Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Closed Lost'];
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/deals/${deleteTarget._id}`, { method: 'DELETE' });
+      if (response.ok && data.success) {
+        setFeedback(`Deal "${deleteTarget.title}" deleted.`);
+        setDeleteTarget(null);
+        fetchDeals();
+        setTimeout(() => setFeedback(''), 3000);
+      } else {
+        setFeedback(data.message || 'Failed to delete deal.');
+      }
+    } catch (e) {
+      setFeedback('Server error.');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
-  const totalDealsValue = deals.reduce((sum, d) => sum + (d.value || 0), 0);
+  // Pipeline Metrics
+  const totalValue = deals.reduce((sum, d) => sum + (d.value || 0), 0);
   const wonDeals = deals.filter(d => ['Won', 'Closed Won'].includes(d.stage));
   const wonValue = wonDeals.reduce((sum, d) => sum + (d.value || 0), 0);
+  const activePipeline = deals.filter(d => !['Won', 'Closed Won', 'Closed Lost'].includes(d.stage));
+  const activeValue = activePipeline.reduce((sum, d) => sum + (d.value || 0), 0);
+
+  const stages = ['all', 'Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Closed Lost'];
 
   return (
     <div className="sv-container">
-      {/* Header */}
       <div className="sv-header">
         <div>
-          <h2 className="sv-title"><TrendingUp size={20} color="#2563EB" /> Deals Pipeline & Won Transactions</h2>
-          <p className="sv-subtitle">Manage your personal sales deals from prospecting to won transactions and invoice generation</p>
+          <h2 className="sv-title"><TrendingUp size={20} /> Deals & Requirements</h2>
+          <p className="sv-subtitle">Manage customer requirements and move deals through the pipeline to Quotation</p>
         </div>
         <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Deal</button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="sv-grid-3">
-        <div className="sv-target-card" style={{ borderLeft: '4px solid #2563EB' }}>
-          <span className="sv-ts-label">Total Deals in Pipeline</span>
-          <span className="sv-ts-value">{deals.length}</span>
-          <span style={{ fontSize: '0.8rem', color: '#64748B' }}>Value: ${totalDealsValue.toLocaleString()}</span>
+      {feedback && (
+        <div style={{ background: '#ECFDF5', color: '#065F46', padding: '10px 16px', borderRadius: '8px', border: '1px solid #A7F3D0', fontWeight: 600, fontSize: '0.85rem', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <CheckCircle2 size={16} color="#059669" /> {feedback}
         </div>
-        <div className="sv-target-card" style={{ borderLeft: '4px solid #10B981' }}>
-          <span className="sv-ts-label">Won Transactions</span>
-          <span className="sv-ts-value" style={{ color: '#059669' }}>{wonDeals.length}</span>
-          <span style={{ fontSize: '0.8rem', color: '#059669', fontWeight: 600 }}>Won Revenue: ${wonValue.toLocaleString()}</span>
+      )}
+
+      {/* KPI Stats */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '16px' }}>
+        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Active Pipeline</div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>Rs. {activeValue.toLocaleString()}</div>
+          <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '4px' }}>{activePipeline.length} open deals</div>
         </div>
-        <div className="sv-target-card" style={{ borderLeft: '4px solid #8B5CF6' }}>
-          <span className="sv-ts-label">Eligible for Invoicing</span>
-          <span className="sv-ts-value">{wonDeals.length} Won Deals</span>
-          <span style={{ fontSize: '0.8rem', color: '#64748B' }}>Click "Generate Invoice" below</span>
+        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Won Deals Value</div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>Rs. {wonValue.toLocaleString()}</div>
+          <div style={{ fontSize: '0.8rem', color: '#059669', marginTop: '4px' }}>{wonDeals.length} won deals</div>
+        </div>
+        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Deals Tracked</div>
+          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1E293B', marginTop: '4px' }}>{deals.length}</div>
+          <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '4px' }}>Rs. {totalValue.toLocaleString()} total</div>
         </div>
       </div>
 
-      {/* Filters */}
       <div className="sv-filters">
         <div className="sv-search-box">
           <Search size={15} />
-          <input placeholder="Search deals by title or client..." value={search} onChange={e => setSearch(e.target.value)} />
+          <input placeholder="Search deals, clients, requirements..." value={search} onChange={e => setSearch(e.target.value)} />
         </div>
         <div className="sv-status-tabs">
-          {stagesList.map(s => (
+          {stages.map(s => (
             <button key={s} className={`sv-tab ${stageFilter === s ? 'active' : ''}`} onClick={() => setStageFilter(s)}>
               {s === 'all' ? 'All Stages' : s}
             </button>
@@ -207,119 +234,175 @@ export default function SalesDealsView({ onNavigateInvoices }) {
         </div>
       </div>
 
-      {/* Deals Table */}
-      {loading ? (
-        <div className="sv-loading">Loading sales deals from MongoDB...</div>
-      ) : (
+      {loading ? <div className="sv-loading">Loading deals...</div> : (
         <div className="sv-table-wrap">
           <table className="sv-table">
             <thead>
               <tr>
                 <th>Deal Title</th>
-                <th>Client Name</th>
-                <th>Deal Value</th>
+                <th>Client / Company</th>
+                <th>Value (PKR)</th>
                 <th>Stage</th>
-                <th>Win Probability</th>
-                <th>Closing Date</th>
+                <th>Probability</th>
+                <th>Target Close</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
               {deals.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="sv-empty">No deals found. Create a new deal to start tracking!</td>
-                </tr>
-              ) : (
-                deals.map(deal => {
-                  const style = STAGE_COLORS[deal.stage] || { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' };
-                  const isWon = ['Won', 'Closed Won'].includes(deal.stage);
-                  return (
-                    <tr key={deal._id}>
-                      <td className="sv-name">{deal.title}</td>
-                      <td>{deal.clientName}</td>
-                      <td className="sv-amount">${Number(deal.value || 0).toLocaleString()}</td>
-                      <td>
-                        <span className="sv-badge" style={{ backgroundColor: style.bg, color: style.color, border: `1px solid ${style.border}` }}>
-                          {deal.stage}
-                        </span>
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <div style={{ width: '60px', height: '6px', background: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
-                            <div style={{ width: `${deal.probability || 0}%`, height: '100%', background: isWon ? '#10B981' : '#2563EB' }} />
-                          </div>
-                          <span>{deal.probability || 0}%</span>
+                <tr><td colSpan={7} className="sv-empty">No deals found. Create a deal to start tracking customer requirements!</td></tr>
+              ) : deals.map(d => {
+                const colors = STAGE_COLORS[d.stage] || { bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
+                return (
+                  <tr key={d._id}>
+                    <td className="sv-name" style={{ fontWeight: 700, color: '#1E293B' }}>{d.title}</td>
+                    <td>{d.clientName || d.company || '—'}</td>
+                    <td style={{ fontWeight: 800, color: '#059669' }}>
+                      Rs. {Number(d.value || 0).toLocaleString()}
+                    </td>
+                    <td>
+                      <span className="sv-badge" style={{ background: colors.bg, color: colors.color, border: `1px solid ${colors.border}` }}>
+                        {d.stage}
+                      </span>
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <div style={{ width: '45px', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
+                          <div style={{ width: `${d.probability || 0}%`, height: '100%', background: '#2563EB', borderRadius: '3px' }} />
                         </div>
-                      </td>
-                      <td>{deal.closingDate ? new Date(deal.closingDate).toLocaleDateString() : '—'}</td>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <button className="sv-edit-btn" onClick={() => openEdit(deal)} title="Edit Deal">
-                            <Edit2 size={14} />
-                          </button>
-                          {isWon && (
-                            <button
-                              onClick={() => openInvoiceModal(deal)}
-                              className="sv-btn-primary"
-                              style={{ padding: '4px 10px', fontSize: '0.75rem', background: '#059669' }}
-                              title="Create Invoice for this Won Deal"
-                            >
-                              <FileText size={13} /> Invoice
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{d.probability || 0}%</span>
+                      </div>
+                    </td>
+                    <td>{d.closingDate ? new Date(d.closingDate).toLocaleDateString() : '—'}</td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <button
+                          className="sv-btn-action-icon"
+                          style={{ color: '#2563EB', background: '#EFF6FF' }}
+                          onClick={() => handleCreateQuotation(d)}
+                          disabled={creatingQuote}
+                          title="Generate Quotation"
+                        >
+                          <ArrowRight size={14} />
+                        </button>
+                        <button className="sv-btn-action-icon" onClick={() => setViewDeal(d)} title="View Deal"><Eye size={14} /></button>
+                        <button className="sv-btn-action-icon" onClick={() => openEdit(d)} title="Edit Deal"><Edit2 size={14} /></button>
+                        <button className="sv-btn-action-icon" onClick={() => setDeleteTarget(d)} title="Delete Deal" style={{ color: '#EF4444' }}><Trash2 size={14} /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
 
-      {/* Deal Create / Edit Modal */}
+      {/* VIEW MODAL */}
+      {viewDeal && (
+        <div className="sv-modal-overlay" onClick={() => setViewDeal(null)}>
+          <div className="sv-modal" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TrendingUp size={18} color="#2563EB" />
+                <h3 style={{ margin: 0 }}>Deal: {viewDeal.title}</h3>
+              </div>
+              <button onClick={() => setViewDeal(null)}><X size={18} /></button>
+            </div>
+            <div style={{ padding: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                <div>
+                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A' }}>{viewDeal.clientName}</div>
+                  {viewDeal.company && <div style={{ fontSize: '0.85rem', color: '#64748B' }}>{viewDeal.company}</div>}
+                </div>
+                <span className="sv-badge" style={{ background: (STAGE_COLORS[viewDeal.stage]?.bg || '#F1F5F9'), color: (STAGE_COLORS[viewDeal.stage]?.color || '#475569'), border: `1px solid ${STAGE_COLORS[viewDeal.stage]?.border || '#E2E8F0'}`, fontSize: '0.85rem', padding: '4px 12px' }}>
+                  {viewDeal.stage}
+                </span>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '4px' }}>Deal Value (PKR)</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669' }}>Rs. {Number(viewDeal.value || 0).toLocaleString()}</div>
+                </div>
+                <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '4px' }}>Probability & Target Date</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#334155' }}>
+                    {viewDeal.probability || 0}% | {viewDeal.closingDate ? new Date(viewDeal.closingDate).toLocaleDateString() : 'No date'}
+                  </div>
+                </div>
+              </div>
+
+              {viewDeal.requirements && (
+                <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '4px' }}>Customer Requirements / Specifications</div>
+                  <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.5 }}>{viewDeal.requirements}</div>
+                </div>
+              )}
+
+              {viewDeal.notes && (
+                <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '4px' }}>Notes</div>
+                  <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.5 }}>{viewDeal.notes}</div>
+                </div>
+              )}
+
+              <div className="sv-modal-actions" style={{ marginTop: '16px' }}>
+                <button className="sv-btn-cancel" onClick={() => setViewDeal(null)}>Close</button>
+                <button
+                  className="sv-btn-primary"
+                  style={{ background: '#2563EB' }}
+                  onClick={() => handleCreateQuotation(viewDeal)}
+                  disabled={creatingQuote}
+                >
+                  <ArrowRight size={14} /> {creatingQuote ? 'Generating...' : 'Create Quotation'}
+                </button>
+                <button className="sv-btn-primary" onClick={() => { setViewDeal(null); openEdit(viewDeal); }}>
+                  <Edit2 size={14} /> Edit Deal
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE / EDIT MODAL */}
       {showModal && (
         <div className="sv-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="sv-modal" onClick={e => e.stopPropagation()}>
+          <div className="sv-modal" style={{ maxWidth: '600px' }} onClick={e => e.stopPropagation()}>
             <div className="sv-modal-header">
-              <h3>{editDeal ? 'Edit Sales Deal' : 'New Sales Deal'}</h3>
+              <h3>{editDeal ? 'Edit Deal' : 'New Deal'}</h3>
               <button onClick={() => setShowModal(false)}><X size={18} /></button>
             </div>
             {error && <div className="sv-error">{error}</div>}
             <form onSubmit={handleSaveDeal} className="sv-form">
-              <div className="sv-field">
-                <label>Deal Title *</label>
-                <input
-                  value={form.title}
-                  onChange={e => setForm(p => ({ ...p, title: e.target.value }))}
-                  placeholder="e.g. Enterprise Cloud License"
-                  required
-                />
-              </div>
               <div className="sv-grid-2">
                 <div className="sv-field">
-                  <label>Client Name *</label>
-                  <input
-                    value={form.clientName}
-                    onChange={e => setForm(p => ({ ...p, clientName: e.target.value }))}
-                    placeholder="Company or contact name"
-                    required
-                  />
+                  <label>Deal Title *</label>
+                  <input value={form.title} onChange={e => setForm(p => ({ ...p, title: e.target.value }))} placeholder="e.g. Annual Equipment Supply" required />
                 </div>
                 <div className="sv-field">
-                  <label>Deal Value ($) *</label>
-                  <input
-                    type="number"
-                    value={form.value}
-                    onChange={e => setForm(p => ({ ...p, value: e.target.value }))}
-                    placeholder="e.g. 50000"
-                    required
-                    min="0"
-                  />
+                  <label>Client / Customer Name *</label>
+                  <input value={form.clientName} onChange={e => setForm(p => ({ ...p, clientName: e.target.value }))} placeholder="Client name" required />
                 </div>
               </div>
+
+              <div className="sv-grid-2">
+                <div className="sv-field">
+                  <label>Company</label>
+                  <input value={form.company} onChange={e => setForm(p => ({ ...p, company: e.target.value }))} placeholder="Company / Organization" />
+                </div>
+                <div className="sv-field">
+                  <label>Contact Person</label>
+                  <input value={form.contactPerson} onChange={e => setForm(p => ({ ...p, contactPerson: e.target.value }))} placeholder="Key contact" />
+                </div>
+              </div>
+
               <div className="sv-grid-3">
+                <div className="sv-field">
+                  <label>Deal Value (PKR)</label>
+                  <input type="number" value={form.value} onChange={e => setForm(p => ({ ...p, value: e.target.value }))} placeholder="0" />
+                </div>
                 <div className="sv-field">
                   <label>Stage</label>
                   <select value={form.stage} onChange={e => setForm(p => ({ ...p, stage: e.target.value }))}>
@@ -330,23 +413,25 @@ export default function SalesDealsView({ onNavigateInvoices }) {
                 </div>
                 <div className="sv-field">
                   <label>Probability (%)</label>
-                  <input
-                    type="number"
-                    value={form.probability}
-                    onChange={e => setForm(p => ({ ...p, probability: e.target.value }))}
-                    min="0"
-                    max="100"
-                  />
-                </div>
-                <div className="sv-field">
-                  <label>Expected Closing Date</label>
-                  <input
-                    type="date"
-                    value={form.closingDate}
-                    onChange={e => setForm(p => ({ ...p, closingDate: e.target.value }))}
-                  />
+                  <input type="number" min="0" max="100" value={form.probability} onChange={e => setForm(p => ({ ...p, probability: e.target.value }))} />
                 </div>
               </div>
+
+              <div className="sv-field">
+                <label>Target Closing Date</label>
+                <input type="date" value={form.closingDate} onChange={e => setForm(p => ({ ...p, closingDate: e.target.value }))} />
+              </div>
+
+              <div className="sv-field">
+                <label>Customer Requirements & Scope</label>
+                <textarea rows={2} value={form.requirements} onChange={e => setForm(p => ({ ...p, requirements: e.target.value }))} placeholder="Product specifications, quantity, timeline requirements..." />
+              </div>
+
+              <div className="sv-field">
+                <label>Notes</label>
+                <textarea rows={2} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Internal deal notes..." />
+              </div>
+
               <div className="sv-modal-actions">
                 <button type="button" className="sv-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="sv-btn-primary" disabled={saving}>
@@ -358,55 +443,28 @@ export default function SalesDealsView({ onNavigateInvoices }) {
         </div>
       )}
 
-      {/* Generate Invoice Modal for Won Deal */}
-      {invoiceModalDeal && (
-        <div className="sv-modal-overlay" onClick={() => setInvoiceModalDeal(null)}>
-          <div className="sv-modal" onClick={e => e.stopPropagation()}>
+      {/* DELETE MODAL */}
+      {deleteTarget && (
+        <div className="sv-modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="sv-modal" style={{ maxWidth: '440px' }} onClick={e => e.stopPropagation()}>
             <div className="sv-modal-header">
-              <h3><FileText size={18} color="#059669" /> Generate Invoice for Won Deal</h3>
-              <button onClick={() => setInvoiceModalDeal(null)}><X size={18} /></button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Trash2 size={18} color="#EF4444" />
+                <h3 style={{ margin: 0 }}>Delete Deal</h3>
+              </div>
+              <button onClick={() => setDeleteTarget(null)}><X size={18} /></button>
             </div>
-            {invoiceMsg.text && (
-              <div className={invoiceMsg.type === 'success' ? 'sv-target-card' : 'sv-error'} style={invoiceMsg.type === 'success' ? { background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '12px' } : {}}>
-                {invoiceMsg.text}
-              </div>
-            )}
-            <form onSubmit={handleGenerateInvoice} className="sv-form">
-              <div className="sv-grid-2">
-                <div className="sv-field">
-                  <label>Client</label>
-                  <input value={invoiceModalDeal.clientName} disabled style={{ background: '#F1F5F9' }} />
-                </div>
-                <div className="sv-field">
-                  <label>Deal Amount ($)</label>
-                  <input value={`$${Number(invoiceModalDeal.value || 0).toLocaleString()}`} disabled style={{ background: '#F1F5F9', fontWeight: 'bold' }} />
-                </div>
-              </div>
-              <div className="sv-field">
-                <label>Payment Due Date *</label>
-                <input
-                  type="date"
-                  value={invoiceDueDate}
-                  onChange={e => setInvoiceDueDate(e.target.value)}
-                  required
-                />
-              </div>
-              <div className="sv-field">
-                <label>Invoice Description / Terms</label>
-                <textarea
-                  rows={3}
-                  value={invoiceDescription}
-                  onChange={e => setInvoiceDescription(e.target.value)}
-                  placeholder="Terms, payment methods, delivery details..."
-                />
-              </div>
+            <div className="sv-form">
+              <p style={{ fontSize: '0.9rem', color: '#334155', margin: '0 0 16px' }}>
+                Are you sure you want to permanently delete deal <strong>{deleteTarget.title}</strong>?
+              </p>
               <div className="sv-modal-actions">
-                <button type="button" className="sv-btn-cancel" onClick={() => setInvoiceModalDeal(null)}>Cancel</button>
-                <button type="submit" className="sv-btn-primary" style={{ background: '#059669' }} disabled={invoiceSaving}>
-                  <CheckCircle size={15} /> {invoiceSaving ? 'Creating...' : 'Issue Invoice to Finance'}
+                <button className="sv-btn-cancel" onClick={() => setDeleteTarget(null)}>Cancel</button>
+                <button className="sv-btn-primary" onClick={handleDelete} disabled={deleting} style={{ background: '#EF4444' }}>
+                  <Trash2 size={14} /> {deleting ? 'Deleting...' : 'Delete Deal'}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
       )}

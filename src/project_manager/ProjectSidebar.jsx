@@ -76,8 +76,8 @@ export default function ProjectSidebar({ activeTab, setActiveTab, currentRole, u
           <Zap size={22} fill="white" />
         </div>
         <div className="project-brand-info">
-          <span className="project-brand-name">FlowBridge</span>
-          <span className="project-brand-subtitle">Project Manager CRM</span>
+          <span className="project-brand-name">Fortline CRM</span>
+          <span className="project-brand-subtitle">Project Manager Portal</span>
         </div>
       </div>
 

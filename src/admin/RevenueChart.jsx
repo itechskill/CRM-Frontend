@@ -30,7 +30,7 @@ export default function RevenueChart() {
   const [period, setPeriod] = useState('2026');
 
   const formatYAxis = (tickItem) => {
-    return `$${tickItem / 1000}k`;
+    return `Rs. ${tickItem / 1000}k`;
   };
 
   const CustomTooltip = ({ active, payload, label }) => {
@@ -47,10 +47,10 @@ export default function RevenueChart() {
         }}>
           <p style={{ fontWeight: 700, marginBottom: '6px', color: '#94A3B8' }}>{label} Performance</p>
           <p style={{ color: '#3B82F6', fontWeight: 600 }}>
-            This Year: ${payload[0]?.value?.toLocaleString()}
+            This Year: Rs. {payload[0]?.value?.toLocaleString()}
           </p>
           <p style={{ color: '#14B8A6', fontWeight: 600, marginTop: '2px' }}>
-            Last Year: ${payload[1]?.value?.toLocaleString()}
+            Last Year: Rs. {payload[1]?.value?.toLocaleString()}
           </p>
         </div>
       );

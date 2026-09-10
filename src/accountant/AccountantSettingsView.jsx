@@ -4,7 +4,7 @@ import './AccountantViews.css';
 
 export default function AccountantSettingsView() {
   const [taxRate, setTaxRate] = useState('10');
-  const [currency, setCurrency] = useState('USD ($)');
+  const [currency, setCurrency] = useState('PKR (Rs.)');
   const [fiscalStart, setFiscalStart] = useState('January 1');
   const [autoReminder, setAutoReminder] = useState(true);
 
@@ -36,6 +36,7 @@ export default function AccountantSettingsView() {
           <div className="acc-form-group">
             <label>Base Accounting Currency</label>
             <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              <option value="PKR (Rs.)">PKR - Pakistani Rupee (Rs.)</option>
               <option value="USD ($)">USD - US Dollar ($)</option>
               <option value="EUR (€)">EUR - Euro (€)</option>
               <option value="GBP (£)">GBP - British Pound (£)</option>

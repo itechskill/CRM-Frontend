@@ -12,7 +12,7 @@ const initialClientsData = [
     industry: 'Technology',
     contactName: 'Eric Vance',
     contactEmail: 'e.vance@proxima.io',
-    revenueYtd: '$148,000',
+    revenueYtd: 'Rs. 148,000',
     dealsCount: 4,
     status: 'Active'
   },
@@ -25,7 +25,7 @@ const initialClientsData = [
     industry: 'Construction',
     contactName: 'Rachel Okafor',
     contactEmail: 'r.okafor@buildco.com',
-    revenueYtd: '$112,000',
+    revenueYtd: 'Rs. 112,000',
     dealsCount: 2,
     status: 'Active'
   },
@@ -38,7 +38,7 @@ const initialClientsData = [
     industry: 'Finance & VC',
     contactName: 'David Miller',
     contactEmail: 'd.miller@starlight.io',
-    revenueYtd: '$210,000',
+    revenueYtd: 'Rs. 210,000',
     dealsCount: 7,
     status: 'Active'
   },
@@ -51,7 +51,7 @@ const initialClientsData = [
     industry: 'Logistics',
     contactName: 'Sophia Martinez',
     contactEmail: 's.martinez@nexusdyn.com',
-    revenueYtd: '$85,000',
+    revenueYtd: 'Rs. 85,000',
     dealsCount: 1,
     status: 'At Risk'
   },
@@ -64,7 +64,7 @@ const initialClientsData = [
     industry: 'Cloud Services',
     contactName: 'James Reed',
     contactEmail: 'j.reed@apexsoft.io',
-    revenueYtd: '$320,000',
+    revenueYtd: 'Rs. 320,000',
     dealsCount: 5,
     status: 'Active'
   }
@@ -179,7 +179,7 @@ export default function ClientsView({ clientsList = initialClientsData, onOpenAd
       industry: c.industry || 'Technology',
       contactName: c.contactName || c.name || 'Primary Contact',
       contactEmail: c.contactEmail || 'contact@client.com',
-      revenueYtd: c.revenueYtd || '$0',
+      revenueYtd: c.revenueYtd || 'Rs. 0',
       dealsCount: c.dealsCount || 1,
       country: c.country || 'USA',
       status: c.status || 'Active'
@@ -278,7 +278,7 @@ export default function ClientsView({ clientsList = initialClientsData, onOpenAd
           justifyContent: 'center',
           boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
         }}>
-          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>$3.2M</div>
+          <div style={{ fontSize: '2rem', fontWeight: 800, color: '#0F172A', lineHeight: 1.1 }}>Rs. 3.2M</div>
           <div style={{ fontSize: '0.9rem', fontWeight: 700, color: '#0F172A', marginTop: '6px' }}>Total ARR</div>
           <div style={{ fontSize: '0.78rem', color: '#16A34A', fontWeight: 600, marginTop: '2px' }}>↑ 18% YoY</div>
         </div>

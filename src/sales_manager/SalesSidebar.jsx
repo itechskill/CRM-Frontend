@@ -21,7 +21,10 @@ import {
   LogOut,
   Calculator,
   Megaphone,
-  Crown
+  Crown,
+  ShoppingCart,
+  CreditCard,
+  Activity
 } from 'lucide-react';
 import './SalesSidebar.css';
 
@@ -52,19 +55,20 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
     { id: 'leads', label: 'Leads', icon: Target, badge: counts.leads > 0 ? String(counts.leads) : undefined },
+    { id: 'orders', label: 'Sales Orders', icon: ShoppingCart },
+    { id: 'payments', label: 'Payments & Collections', icon: CreditCard },
+    { id: 'activities', label: 'Team Activities', icon: Activity },
+    { id: 'invoices', label: 'Invoices & Billing', icon: Calculator },
     { id: 'contacts', label: 'Contacts', icon: Users },
     { id: 'meetings', label: 'Meetings', icon: Calendar, badge: counts.meetings > 0 ? String(counts.meetings) : undefined },
-    { id: 'proposals', label: 'Proposals', icon: FileText, badge: counts.proposals > 0 ? String(counts.proposals) : undefined },
-    { id: 'invoices', label: 'Invoices & Billing', icon: Calculator },
-    { id: 'clients', label: 'Clients', icon: Briefcase },
-    { id: 'reports', label: 'Reports', icon: BarChart3 },
+    { id: 'clients', label: 'Clients', icon: Users },
+    { id: 'team', label: 'Sales Team', icon: UserCheck }
   ];
 
   const systemNav = [
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'settings', label: 'Settings', icon: Settings },
-    { id: 'notifications', label: 'Notifications', icon: Bell, badge: counts.notifications > 0 ? String(counts.notifications) : undefined },
-    { id: 'help', label: 'Help & Support', icon: HelpCircle },
+    { id: 'notifications', label: 'Notifications', icon: Bell, badge: counts.notifications > 0 ? String(counts.notifications) : undefined }
   ];
 
   const userInitials = currentUser?.fullName
@@ -81,8 +85,8 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
           <Zap size={22} fill="white" color="white" />
         </div>
         <div className="sales-brand-info">
-          <span className="sales-brand-name">FlowBridge</span>
-          <span className="sales-brand-subtitle">Sales Manager CRM</span>
+          <span className="sales-brand-name">Fortline CRM</span>
+          <span className="sales-brand-subtitle">Sales Manager Portal</span>
         </div>
       </div>
 

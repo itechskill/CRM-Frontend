@@ -49,13 +49,27 @@ export default function SalesTeamsView() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState('');
 
+  // Invite Member Modal State
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [inviteForm, setInviteForm] = useState({
+    fullName: '',
+    email: '',
+    password: '',
+    phone: '',
+    position: 'Sales Representative',
+    target: ''
+  });
+  const [inviting, setInviting] = useState(false);
+  const [inviteError, setInviteError] = useState('');
+  const [inviteSuccess, setInviteSuccess] = useState('');
+
   // Target Assignment Modal State
   const [targetMember, setTargetMember] = useState(null);
   const [targetForm, setTargetForm] = useState({
     period: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }),
     periodType: 'Monthly',
     targetAmount: '',
-    currency: 'USD',
+    currency: 'PKR',
     notes: ''
   });
   const [savingTarget, setSavingTarget] = useState(false);
@@ -79,6 +93,52 @@ export default function SalesTeamsView() {
   useEffect(() => {
     fetchTeam();
   }, []);
+
+  const handleInviteSubmit = async (e) => {
+    e.preventDefault();
+    if (!inviteForm.fullName.trim() || !inviteForm.email.trim() || !inviteForm.password.trim()) {
+      setInviteError('Full Name, Email, and Password are required.');
+      return;
+    }
+    setInviting(true);
+    setInviteError('');
+    setInviteSuccess('');
+    try {
+      const { response, data } = await apiRequest('/api/sales-manager/invite-member', {
+        method: 'POST',
+        body: JSON.stringify({
+          fullName: inviteForm.fullName,
+          email: inviteForm.email,
+          password: inviteForm.password,
+          phone: inviteForm.phone,
+          position: inviteForm.position,
+          target: inviteForm.target ? Number(inviteForm.target) : 0
+        })
+      });
+      if (response.ok && data.success) {
+        setInviteSuccess(data.message || 'Invitation submitted to System Admin for approval!');
+        setTimeout(() => {
+          setShowInviteModal(false);
+          setInviteForm({
+            fullName: '',
+            email: '',
+            password: '',
+            phone: '',
+            position: 'Sales Representative',
+            target: ''
+          });
+          setInviteSuccess('');
+          fetchTeam();
+        }, 2000);
+      } else {
+        setInviteError(data.message || 'Failed to submit invitation.');
+      }
+    } catch (err) {
+      setInviteError('Server error submitting invitation.');
+    } finally {
+      setInviting(false);
+    }
+  };
 
   const openEditModal = (member) => {
     setEditingMember(member);
@@ -146,7 +206,7 @@ export default function SalesTeamsView() {
       period: new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }),
       periodType: 'Monthly',
       targetAmount: member.stats?.targetAmount || '',
-      currency: 'USD',
+      currency: 'PKR',
       notes: ''
     });
     setTargetError('');
@@ -223,14 +283,28 @@ export default function SalesTeamsView() {
             <h2 className="teams-title">Sales Representatives & Team Management</h2>
             <p className="teams-sub">Manage organization sales members, track real-time target attainments, and review full CRM records</p>
           </div>
-          <div className="teams-search-wrap">
-            <Search size={15} color="#94A3B8" />
-            <input
-              type="text"
-              placeholder="Search team members by name, email, role..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div className="teams-search-wrap">
+              <Search size={15} color="#94A3B8" />
+              <input
+                type="text"
+                placeholder="Search team members by name, email, role..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <button
+              type="button"
+              className="sv-btn-primary"
+              onClick={() => {
+                setShowInviteModal(true);
+                setInviteError('');
+                setInviteSuccess('');
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}
+            >
+              <Plus size={16} /> Invite Member
+            </button>
           </div>
         </div>
       </div>
@@ -238,7 +312,7 @@ export default function SalesTeamsView() {
       {loading ? (
         <div className="teams-loading-box">
           <div className="teams-spinner" />
-          <span>Loading Sales Team Members from MongoDB...</span>
+          <span>Loading Team Data...</span>
         </div>
       ) : filteredMembers.length === 0 ? (
         <div className="teams-empty-box">
@@ -281,7 +355,7 @@ export default function SalesTeamsView() {
                     <div className="rep-name-row">
                       <h3 className="rep-name-lg">{rep.fullName}</h3>
                       <span className={`rep-status-badge ${rep.status === 'active' ? 'active' : 'inactive'}`}>
-                        {rep.status || 'Active'}
+                        {rep.status === 'active' ? 'Active' : (rep.status === 'inactive' ? 'Inactive' : (rep.status || 'Active'))}
                       </span>
                     </div>
                     <span className="rep-role-lg">{rep.position || 'Sales Representative'} · {rep.department || 'Sales'}</span>
@@ -298,11 +372,11 @@ export default function SalesTeamsView() {
                     <div className="quota-fill" style={{ width: `${Math.min(100, stats.targetAchievementPct)}%` }} />
                   </div>
                   <div className="quota-sub">
-                    ${Number(stats.achievedAmount || 0).toLocaleString()} achieved / ${stats.targetAmount > 0 ? Number(stats.targetAmount).toLocaleString() : 'No Target Set'}
+                    Rs. {Number(stats.achievedAmount || 0).toLocaleString()} achieved / {stats.targetAmount > 0 ? `Rs. ${Number(stats.targetAmount).toLocaleString()}` : 'No Target Set'}
                   </div>
                 </div>
 
-                {/* Dynamic CRM Stats: Leads, Quotations, Orders, Receivables */}
+                {/* Row 1: Counts (Leads, Quotations, Orders) */}
                 <div className="rep-stats-row">
                   <div className="rep-stat-box">
                     <span className="stat-num">{stats.totalLeads}</span>
@@ -316,8 +390,16 @@ export default function SalesTeamsView() {
                     <span className="stat-num">{stats.totalOrders}</span>
                     <span className="stat-lbl">Orders</span>
                   </div>
-                  <div className="rep-stat-box">
-                    <span className="stat-num" style={{ color: '#0284C7' }}>${Number(stats.receivables || 0).toLocaleString()}</span>
+                </div>
+
+                {/* Row 2: Financials (Overdue & Receivables) */}
+                <div className="rep-financials-row">
+                  <div className="rep-stat-box overdue-box">
+                    <span className="stat-num overdue-val">Rs. {Number(stats.overdueAmount || 0).toLocaleString()}</span>
+                    <span className="stat-lbl">Overdue</span>
+                  </div>
+                  <div className="rep-stat-box receivables-box">
+                    <span className="stat-num receivables-val">Rs. {Number(stats.receivables || 0).toLocaleString()}</span>
                     <span className="stat-lbl">Receivables</span>
                   </div>
                 </div>
@@ -424,12 +506,12 @@ export default function SalesTeamsView() {
 
               <div className="sv-grid-2">
                 <div className="sv-field">
-                  <label>Salary Target / Base ($)</label>
+                  <label>Salary Target / Base (PKR / Rs.)</label>
                   <input
                     type="number"
                     value={editForm.salaryTarget}
                     onChange={(e) => setEditForm((p) => ({ ...p, salaryTarget: e.target.value }))}
-                    placeholder="e.g. 6500"
+                    placeholder="e.g. 65000"
                   />
                 </div>
                 <div className="sv-field">
@@ -523,12 +605,12 @@ export default function SalesTeamsView() {
                   />
                 </div>
                 <div className="sv-field">
-                  <label>Target Amount ($) *</label>
+                  <label>Target Amount (PKR) *</label>
                   <input
                     type="number"
                     value={targetForm.targetAmount}
                     onChange={(e) => setTargetForm((p) => ({ ...p, targetAmount: e.target.value }))}
-                    placeholder="e.g. 50000"
+                    placeholder="e.g. 500000"
                     required
                     min="1"
                   />
@@ -549,6 +631,101 @@ export default function SalesTeamsView() {
                 </button>
                 <button type="submit" className="sv-btn-primary" disabled={savingTarget}>
                   <CheckCircle size={15} /> {savingTarget ? 'Assigning...' : 'Assign Target in MongoDB'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── INVITE NEW SALES TEAM MEMBER MODAL ── */}
+      {showInviteModal && (
+        <div className="sv-modal-overlay" onClick={() => setShowInviteModal(false)}>
+          <div className="sv-modal" style={{ maxWidth: '580px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <h3><Plus size={18} color="#2563EB" /> Invite New Sales Team Member</h3>
+              <button onClick={() => setShowInviteModal(false)}><X size={18} /></button>
+            </div>
+            {inviteError && <div className="sv-error">{inviteError}</div>}
+            {inviteSuccess && (
+              <div style={{ background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0', padding: '12px 14px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '12px' }}>
+                ✓ {inviteSuccess}
+              </div>
+            )}
+            <p style={{ fontSize: '0.825rem', color: '#64748B', margin: '0 0 14px 0', lineHeight: 1.4 }}>
+              Fill in the new employee details. The registration request will be submitted to the <strong>System Admin</strong> for approval. The account remains pending until approved.
+            </p>
+            <form onSubmit={handleInviteSubmit} className="sv-form">
+              <div className="sv-grid-2">
+                <div className="sv-field">
+                  <label>Full Name *</label>
+                  <input
+                    placeholder="e.g. Tariq Mehmood"
+                    value={inviteForm.fullName}
+                    onChange={(e) => setInviteForm((p) => ({ ...p, fullName: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="sv-field">
+                  <label>Email Address (Login ID) *</label>
+                  <input
+                    type="email"
+                    placeholder="e.g. tariq@company.com"
+                    value={inviteForm.email}
+                    onChange={(e) => setInviteForm((p) => ({ ...p, email: e.target.value }))}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="sv-grid-2">
+                <div className="sv-field">
+                  <label>Initial Password *</label>
+                  <input
+                    type="password"
+                    placeholder="Min 6 characters"
+                    value={inviteForm.password}
+                    onChange={(e) => setInviteForm((p) => ({ ...p, password: e.target.value }))}
+                    required
+                    minLength={6}
+                  />
+                </div>
+                <div className="sv-field">
+                  <label>Phone Number</label>
+                  <input
+                    placeholder="+92 300 1234567"
+                    value={inviteForm.phone}
+                    onChange={(e) => setInviteForm((p) => ({ ...p, phone: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="sv-grid-2">
+                <div className="sv-field">
+                  <label>Role / Position</label>
+                  <input
+                    placeholder="Sales Representative"
+                    value={inviteForm.position}
+                    onChange={(e) => setInviteForm((p) => ({ ...p, position: e.target.value }))}
+                  />
+                </div>
+                <div className="sv-field">
+                  <label>Monthly Target (PKR)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 500000"
+                    value={inviteForm.target}
+                    onChange={(e) => setInviteForm((p) => ({ ...p, target: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              <div className="sv-modal-actions">
+                <button type="button" className="sv-btn-cancel" onClick={() => setShowInviteModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="sv-btn-primary" disabled={inviting}>
+                  <Plus size={15} /> {inviting ? 'Submitting to Admin...' : 'Submit to Admin for Approval'}
                 </button>
               </div>
             </form>

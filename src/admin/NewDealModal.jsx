@@ -68,7 +68,7 @@ export default function NewDealModal({ isOpen, onClose, onAddDeal }) {
             </div>
 
             <div className="form-group">
-              <label>Estimated Value ($ USD)</label>
+              <label>Estimated Value (PKR / Rs.)</label>
               <input 
                 type="number"
                 className="form-input" 

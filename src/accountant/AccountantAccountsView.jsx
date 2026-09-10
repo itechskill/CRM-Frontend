@@ -21,16 +21,16 @@ const bankAccounts = [
 ];
 
 const chartOfAccounts = [
-  { code: '1000', name: 'Cash & Cash Equivalents', category: 'Asset', subCategory: 'Current Asset', balance: '$597,800.00', status: 'Active' },
-  { code: '1200', name: 'Accounts Receivable (A/R)', category: 'Asset', subCategory: 'Current Asset', balance: '$38,400.00', status: 'Active' },
-  { code: '1500', name: 'Computer Hardware & Office Tech', category: 'Asset', subCategory: 'Non-Current Asset', balance: '$120,500.00', status: 'Active' },
-  { code: '2000', name: 'Accounts Payable (A/P)', category: 'Liability', subCategory: 'Current Liability', balance: '$18,200.00', status: 'Active' },
-  { code: '2200', name: 'Accrued Payroll Liabilities', category: 'Liability', subCategory: 'Current Liability', balance: '$54,600.00', status: 'Active' },
-  { code: '3000', name: 'Common Share Capital', category: 'Equity', subCategory: 'Equity', balance: '$250,000.00', status: 'Active' },
-  { code: '3500', name: 'Retained Earnings', category: 'Equity', subCategory: 'Equity', balance: '$433,900.00', status: 'Active' },
-  { code: '4000', name: 'Software Services Revenue', category: 'Revenue', subCategory: 'Operating Revenue', balance: '$557,000.00', status: 'Active' },
-  { code: '5000', name: 'Salaries & Benefits Expense', category: 'Expense', subCategory: 'Operating Expense', balance: '$185,400.00', status: 'Active' },
-  { code: '5200', name: 'Cloud Infrastructure Expense', category: 'Expense', subCategory: 'Operating Expense', balance: '$48,500.00', status: 'Active' },
+  { code: '1000', name: 'Cash & Cash Equivalents', category: 'Asset', subCategory: 'Current Asset', balance: 'Rs. 597,800.00', status: 'Active' },
+  { code: '1200', name: 'Accounts Receivable (A/R)', category: 'Asset', subCategory: 'Current Asset', balance: 'Rs. 38,400.00', status: 'Active' },
+  { code: '1500', name: 'Computer Hardware & Office Tech', category: 'Asset', subCategory: 'Non-Current Asset', balance: 'Rs. 120,500.00', status: 'Active' },
+  { code: '2000', name: 'Accounts Payable (A/P)', category: 'Liability', subCategory: 'Current Liability', balance: 'Rs. 18,200.00', status: 'Active' },
+  { code: '2200', name: 'Accrued Payroll Liabilities', category: 'Liability', subCategory: 'Current Liability', balance: 'Rs. 54,600.00', status: 'Active' },
+  { code: '3000', name: 'Common Share Capital', category: 'Equity', subCategory: 'Equity', balance: 'Rs. 250,000.00', status: 'Active' },
+  { code: '3500', name: 'Retained Earnings', category: 'Equity', subCategory: 'Equity', balance: 'Rs. 433,900.00', status: 'Active' },
+  { code: '4000', name: 'Software Services Revenue', category: 'Revenue', subCategory: 'Operating Revenue', balance: 'Rs. 557,000.00', status: 'Active' },
+  { code: '5000', name: 'Salaries & Benefits Expense', category: 'Expense', subCategory: 'Operating Expense', balance: 'Rs. 185,400.00', status: 'Active' },
+  { code: '5200', name: 'Cloud Infrastructure Expense', category: 'Expense', subCategory: 'Operating Expense', balance: 'Rs. 48,500.00', status: 'Active' },
 ];
 
 export default function AccountantAccountsView({ isModalOpen, onCloseModal }) {
@@ -53,7 +53,7 @@ export default function AccountantAccountsView({ isModalOpen, onCloseModal }) {
       name,
       category,
       subCategory: `${category} Account`,
-      balance: `$${parseFloat(balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
+      balance: `Rs. ${parseFloat(balance || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}`,
       status: 'Active'
     };
 
@@ -96,7 +96,7 @@ export default function AccountantAccountsView({ isModalOpen, onCloseModal }) {
               <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748B' }}>{b.accountNumber} • {b.type}</p>
             </div>
             <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', letterSpacing: '-0.02em' }}>
-              ${b.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
+              Rs. {b.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}
             </div>
           </div>
         ))}
@@ -222,7 +222,7 @@ export default function AccountantAccountsView({ isModalOpen, onCloseModal }) {
                 </div>
 
                 <div className="acc-form-group">
-                  <label>Starting Balance ($)</label>
+                  <label>Starting Balance (Rs.)</label>
                   <input
                     type="number"
                     placeholder="0.00"

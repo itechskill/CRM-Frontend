@@ -54,9 +54,9 @@ const WORKFLOW_STEPS = [
 ];
 
 const PRICING_PLANS = [
-  { name: 'Starter', priceMonthly: 19, priceYearly: 15, desc: 'Ideal for small teams getting started.', popular: false, features: ['Up to 5 Users', 'Lead Management', 'Basic Reports', 'Email Support'] },
-  { name: 'Professional', priceMonthly: 49, priceYearly: 39, desc: 'Perfect for growing businesses.', popular: true, features: ['Up to 20 Users', 'Sales & Marketing', 'Advanced Reports', 'Priority Support'] },
-  { name: 'Business', priceMonthly: 99, priceYearly: 79, desc: 'For teams that need more power.', popular: false, features: ['Up to 50 Users', 'All Features', 'Custom Reports', '24/7 Support'] },
+  { name: 'Starter', priceMonthly: 4999, priceYearly: 3999, desc: 'Ideal for small teams getting started.', popular: false, features: ['Up to 5 Users', 'Lead Management', 'Basic Reports', 'Email Support'] },
+  { name: 'Professional', priceMonthly: 12999, priceYearly: 9999, desc: 'Perfect for growing businesses.', popular: true, features: ['Up to 20 Users', 'Sales & Marketing', 'Advanced Reports', 'Priority Support'] },
+  { name: 'Business', priceMonthly: 24999, priceYearly: 19999, desc: 'For teams that need more power.', popular: false, features: ['Up to 50 Users', 'All Features', 'Custom Reports', '24/7 Support'] },
   { name: 'Enterprise', priceMonthly: 'Custom', priceYearly: 'Custom', desc: 'Tailored for large organizations.', popular: false, features: ['Unlimited Users', 'Custom Features', 'Dedicated Support', 'Onboarding & Training'] }
 ];
 
@@ -64,7 +64,7 @@ const PRICING_FAQS = [
   { q: 'Can I switch or upgrade plans later?', a: 'Yes! You can upgrade, downgrade, or switch billing cycles at any time from your Admin billing portal.' },
   { q: 'Is there a free trial available?', a: 'All plans come with a 14-day free trial. No credit card is required to sign up and get started.' },
   { q: 'Are all 9 department portals included?', a: 'Yes! Even our Starter plan gives your team access to the specific role-based dashboards needed for your business.' },
-  { q: 'How does data security and backup work?', a: 'NexusCRM uses enterprise-grade JWT authentication, role-based access control, and automated daily MongoDB backups.' }
+  { q: 'How does data security and backup work?', a: 'Fortline CRM uses enterprise-grade JWT authentication, role-based access control, and automated daily MongoDB backups.' }
 ];
 
 /* ─── Hero Browser Mockup Graphic ────────────────────────────────────────────── */
@@ -88,8 +88,8 @@ function HeroDashboardMockup() {
         <div className="ref-mockup-body">
           <div className="ref-mockup-sidebar">
             <div className="ref-sidebar-logo">
-              <div className="ref-logo-icon">N</div>
-              <span>NexusCRM</span>
+              <div className="ref-logo-icon">F</div>
+              <span>Fortline CRM</span>
             </div>
             <div className="ref-sidebar-menu">
               <div className="ref-sidebar-item active"><BarChart3 size={14} /> <span>Dashboard</span></div>
@@ -126,7 +126,7 @@ function HeroDashboardMockup() {
               <div className="ref-kpi-card">
                 <div>
                   <span className="ref-kpi-label">Revenue</span>
-                  <span className="ref-kpi-val">$98,765</span>
+                  <span className="ref-kpi-val">Rs. 98,765</span>
                   <span className="ref-kpi-badge purple">+15.3%</span>
                 </div>
                 <div className="ref-kpi-icon purple"><DollarSign size={16} /></div>
@@ -203,7 +203,7 @@ function HeroDashboardMockup() {
       <div className="ref-float-toast">
         <CheckCircle size={16} color="#16A34A" />
         <div>
-          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0F172A' }}>Deal Closed! — $75,000</div>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#0F172A' }}>Deal Closed! — Rs. 75,000</div>
           <div style={{ fontSize: '0.64rem', color: '#64748B' }}>Acme Corp · Sales Manager</div>
         </div>
       </div>
@@ -496,8 +496,8 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
       <nav className={`pw-nav ${scrolled ? 'scrolled' : ''}`}>
         <div className="pw-nav-inner">
           <div className="pw-nav-logo" onClick={() => setCurrentPage('home')}>
-            <div className="pw-logo-icon">N</div>
-            <span className="pw-logo-text">NexusCRM</span>
+            <div className="pw-logo-icon">F</div>
+            <span className="pw-logo-text">Fortline CRM</span>
           </div>
 
           <ul className="pw-nav-links">
@@ -602,7 +602,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                   <span className="pw-blue-accent">Grow Smarter.</span>
                 </h1>
                 <p className="pw-hero-description">
-                  NexusCRM connects Sales, Marketing, HR, Accounting, Project Management, and executive leadership in one unified, role-based platform — with real-time data flowing between every department.
+                  Fortline CRM connects Sales, Marketing, HR, Accounting, Project Management, and executive leadership in one unified, role-based platform — with real-time data flowing between every department.
                 </p>
                 <div className="pw-hero-btn-row">
                   <button className="pw-btn-hero-solid" onClick={onNavigateToRegister}>
@@ -677,7 +677,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
           <section className="pw-section pw-bg-white">
             <div className="pw-container">
               <div className="pw-section-heading-center">
-                <h2>How <span className="pw-text-blue">NexusCRM</span> Works</h2>
+                <h2>How <span className="pw-text-blue">Fortline CRM</span> Works</h2>
                 <p style={{ color: '#64748B', maxWidth: '600px', margin: '8px auto 0' }}>
                   Real-time connected CRM workflow spanning all major departments.
                 </p>
@@ -718,7 +718,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
               <span className="pw-page-badge"><Layers size={14} /> Platform Capabilities</span>
               <h1 className="pw-page-title">Powerful Features to Move Your Business Forward</h1>
               <p className="pw-page-subtitle">
-                Discover the end-to-end features built into NexusCRM. Every module is deeply connected to eliminate silos and drive maximum growth.
+                Discover the end-to-end features built into Fortline CRM. Every module is deeply connected to eliminate silos and drive maximum growth.
               </p>
             </div>
           </div>
@@ -762,7 +762,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
               <span className="pw-page-badge"><Users size={14} /> Department Solutions</span>
               <h1 className="pw-page-title">Solutions for Every Department</h1>
               <p className="pw-page-subtitle">
-                NexusCRM provides role-tailored portals for every member of your organization, ensuring everyone has the exact tools they need.
+                Fortline CRM provides role-tailored portals for every member of your organization, ensuring everyone has the exact tools they need.
               </p>
             </div>
           </div>
@@ -796,7 +796,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
           <div className="pw-page-header">
             <div className="pw-container">
               <span className="pw-page-badge"><Activity size={14} /> Connected Ecosystem</span>
-              <h1 className="pw-page-title">How NexusCRM Works</h1>
+              <h1 className="pw-page-title">How Fortline CRM Works</h1>
               <p className="pw-page-subtitle">
                 A seamless data lifecycle from lead generation to deal closing, invoice payment, and executive business analytics.
               </p>
@@ -821,7 +821,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
               <div style={{ marginTop: '48px', padding: '32px', background: '#F8FAFC', borderRadius: '16px', border: '1px solid #E2E8F0' }}>
                 <h3 style={{ fontSize: '1.2rem', fontWeight: 800, color: '#0F172A', marginBottom: '8px' }}>Connected HR, Project, and Employee Workflows</h3>
                 <p style={{ color: '#475569', lineHeight: 1.6 }}>
-                  Beyond Sales and Accounting, NexusCRM automatically synchronizes HR employee records, project manager deliverables, and employee task updates in real time — keeping your entire company aligned without redundant data entry.
+                  Beyond Sales and Accounting, Fortline CRM automatically synchronizes HR employee records, project manager deliverables, and employee task updates in real time — keeping your entire company aligned without redundant data entry.
                 </p>
               </div>
             </div>
@@ -865,7 +865,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
               <div className="pw-pricing-4grid">
                 {PRICING_PLANS.map(p => {
                   const priceVal = billingCycle === 'yearly' ? p.priceYearly : p.priceMonthly;
-                  const priceDisplay = typeof priceVal === 'number' ? `$${priceVal}` : priceVal;
+                  const priceDisplay = typeof priceVal === 'number' ? `Rs. ${priceVal.toLocaleString()}` : priceVal;
                   return (
                     <div key={p.name} className={`pw-price-box ${p.popular ? 'popular' : ''}`}>
                       {p.popular && <div className="pw-pop-tag">Popular</div>}
@@ -1000,7 +1000,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
           <div className="pw-page-header">
             <div className="pw-container">
               <span className="pw-page-badge"><Building2 size={14} /> Company Profile</span>
-              <h1 className="pw-page-title">About NexusCRM</h1>
+              <h1 className="pw-page-title">About Fortline CRM</h1>
               <p className="pw-page-subtitle">
                 Connecting departments, empowering teams, and unifying modern business operations on one intelligent platform.
               </p>
@@ -1045,7 +1045,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
 
                 <div className="pw-about-highlight-box">
                   <div className="pw-badge-blue">Connected Architecture</div>
-                  <h3>Why Choose NexusCRM?</h3>
+                  <h3>Why Choose Fortline CRM?</h3>
                   <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '16px' }}>
                     <li style={{ display: 'flex', gap: '8px', fontSize: '0.9rem', color: '#334155' }}><CheckCircle size={16} color="#2563EB" /> Centralized MongoDB Database</li>
                     <li style={{ display: 'flex', gap: '8px', fontSize: '0.9rem', color: '#334155' }}><CheckCircle size={16} color="#2563EB" /> 9 Purpose-Built Department Portals</li>
@@ -1084,7 +1084,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
                       <Phone size={18} color="#2563EB" /> <span>+92 300 1234567</span>
                     </div>
                     <div className="pw-contact-item">
-                      <Mail size={18} color="#2563EB" /> <span>info@nexuscrm.com</span>
+                      <Mail size={18} color="#2563EB" /> <span>info@fortlinecrm.com</span>
                     </div>
                     <div className="pw-contact-item">
                       <MapPin size={18} color="#2563EB" /> <span>123 Business Street, Lahore, Pakistan</span>
@@ -1195,7 +1195,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
             <div className="pw-container">
               <span className="pw-page-badge"><Play size={14} /> Live Demonstration</span>
               <h1 className="pw-page-title">Request a Demo</h1>
-              <p className="pw-page-subtitle">Experience a personalized walkthrough of NexusCRM tailored to your team's exact requirements.</p>
+              <p className="pw-page-subtitle">Experience a personalized walkthrough of Fortline CRM tailored to your team's exact requirements.</p>
             </div>
           </div>
 
@@ -1295,8 +1295,8 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
           <div className="pw-footer-grid">
             <div className="pw-footer-col">
               <div className="pw-footer-logo">
-                <div className="pw-logo-icon">N</div>
-                <span>NexusCRM</span>
+                <div className="pw-logo-icon">F</div>
+                <span>Fortline CRM</span>
               </div>
               <p className="pw-footer-desc">
                 All-in-one CRM solution to help your business grow smarter and faster.
@@ -1336,7 +1336,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
               <h4>Contact Us</h4>
               <ul className="pw-footer-ul pw-contact-ul">
                 <li><Phone size={14} /> +92 300 1234567</li>
-                <li><Mail size={14} /> info@nexuscrm.com</li>
+                <li><Mail size={14} /> info@fortlinecrm.com</li>
                 <li><MapPin size={14} /> 123 Business Street, Lahore, Pakistan</li>
               </ul>
             </div>
@@ -1344,7 +1344,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
             <div className="pw-footer-col">
               <h4>Newsletter</h4>
               <p className="pw-newsletter-text">Subscribe to get updates and latest news.</p>
-              <form className="pw-newsletter-form" onSubmit={(e) => { e.preventDefault(); alert('Thank you for subscribing to NexusCRM newsletter!'); }}>
+              <form className="pw-newsletter-form" onSubmit={(e) => { e.preventDefault(); alert('Thank you for subscribing to Fortline CRM newsletter!'); }}>
                 <input type="email" placeholder="Enter your email" required />
                 <button type="submit">Subscribe</button>
               </form>
@@ -1352,7 +1352,7 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
           </div>
 
           <div className="pw-footer-bottom">
-            <span>© 2026 NexusCRM. All rights reserved.</span>
+            <span>© 2026 Fortline CRM. All rights reserved.</span>
             <div className="pw-footer-legal-links">
               <span>Privacy Policy</span>
               <span>Terms of Service</span>

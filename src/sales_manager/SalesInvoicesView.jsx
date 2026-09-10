@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOMServer from 'react-dom/server';
+import { QRCodeSVG } from 'qrcode.react';
 import { apiRequest } from '../utils/api';
 import {
   FileText,
@@ -18,9 +20,35 @@ import {
   Layers,
   Clock,
   Send,
-  Filter
+  Filter,
+  Download
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
+
+/* ── Inject print-only styles once ── */
+const PRINT_STYLE_ID = 'invoice-pdf-print-style';
+if (!document.getElementById(PRINT_STYLE_ID)) {
+  const style = document.createElement('style');
+  style.id = PRINT_STYLE_ID;
+  style.textContent = `
+    @media print {
+      body > *:not(#invoice-print-root) { display: none !important; }
+      #invoice-print-root {
+        display: block !important;
+        position: fixed !important;
+        inset: 0 !important;
+        z-index: 99999 !important;
+        background: #fff !important;
+        padding: 32px !important;
+        font-family: 'Inter', sans-serif !important;
+        color: #0F172A !important;
+      }
+      #invoice-print-root .no-print { display: none !important; }
+    }
+    @media screen { #invoice-print-root { display: none; } }
+  `;
+  document.head.appendChild(style);
+}
 
 const INVOICE_STATUS_STYLES = {
   'Draft': { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' },
@@ -50,6 +78,7 @@ export default function SalesInvoicesView() {
   const [rejectionReason, setRejectionReason] = useState('');
   const [deleteModalInvoice, setDeleteModalInvoice] = useState(null);
   const [actionLoading, setActionLoading] = useState(false);
+  const [pdfLoading, setPdfLoading] = useState(false);
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -92,7 +121,185 @@ export default function SalesInvoicesView() {
     return { subtotal, tax, amount };
   };
 
+  // PDF Download — opens formatted invoice in printable popup and triggers print
+  const handleDownloadPDF = (inv) => {
+    const items = inv.items && inv.items.length > 0 ? inv.items : [
+      { description: inv.dealTitle || 'Commercial Sales Services', quantity: 1, unitPrice: inv.amount, total: inv.amount }
+    ];
+    const statusStyle = INVOICE_STATUS_STYLES[inv.status] || { bg: '#F1F5F9', color: '#475569', border: '#CBD5E1' };
+
+    const qrData = `INVOICE: ${inv.invoiceNumber}\nCUSTOMER: ${inv.clientName}\nAMOUNT: PKR ${Number(inv.amount || 0).toLocaleString()}\nREFERENCE: ${inv.dealTitle || inv.saleReference || 'Direct'}\nDATE: ${new Date(inv.issueDate || inv.createdAt).toLocaleDateString()}`;
+    let qrSvgString = '';
+    try {
+      qrSvgString = ReactDOMServer.renderToStaticMarkup(
+        React.createElement(QRCodeSVG, { value: qrData, size: 84, level: 'M' })
+      );
+    } catch (e) {
+      console.error('QR code generation error:', e);
+    }
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Invoice - ${inv.invoiceNumber}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Roboto, Helvetica, Arial, sans-serif; color: #0F172A; background: #F8FAFC; padding: 24px; }
+    .page-container { max-width: 820px; margin: 0 auto; background: #ffffff; border: 1px solid #E2E8F0; border-radius: 12px; padding: 40px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    .action-bar { max-width: 820px; margin: 0 auto 16px; display: flex; justify-content: space-between; align-items: center; }
+    .btn-print { background: #2563EB; color: #ffffff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 700; font-size: 0.9rem; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(37,99,235,0.3); }
+    .btn-print:hover { background: #1D4ED8; }
+    .btn-close { background: #E2E8F0; color: #334155; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+    .btn-close:hover { background: #CBD5E1; }
+    .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; padding-bottom: 20px; border-bottom: 3px solid #1E3A5F; }
+    .brand { font-size: 1.85rem; font-weight: 800; color: #1E3A5F; letter-spacing: -0.5px; }
+    .brand-sub { font-size: 0.85rem; color: #64748B; margin-top: 4px; font-weight: 500; }
+    .inv-num { font-size: 1.5rem; font-weight: 800; color: #2563EB; font-family: monospace; text-align: right; }
+    .status-badge { display: inline-block; padding: 4px 14px; border-radius: 20px; font-size: 0.78rem; font-weight: 700; margin-top: 8px; background: ${statusStyle.bg}; color: ${statusStyle.color}; border: 1px solid ${statusStyle.border}; }
+    .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; margin-bottom: 28px; }
+    .meta-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; color: #94A3B8; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .meta-client { font-size: 1.15rem; font-weight: 700; color: #0F172A; }
+    .meta-detail { font-size: 0.85rem; color: #475569; margin-top: 3px; }
+    .meta-right { text-align: right; }
+    .meta-right .meta-detail { color: #334155; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+    thead tr { background: #1E3A5F; }
+    thead th { padding: 11px 14px; font-size: 0.78rem; font-weight: 700; color: #ffffff; text-align: left; letter-spacing: 0.5px; }
+    thead th:nth-child(2) { text-align: center; width: 70px; }
+    thead th:nth-child(3), thead th:nth-child(4) { text-align: right; width: 140px; }
+    tbody tr:nth-child(even) { background: #F8FAFC; }
+    tbody td { padding: 11px 14px; font-size: 0.875rem; color: #0F172A; border-bottom: 1px solid #F1F5F9; }
+    tbody td:nth-child(2) { text-align: center; color: #475569; }
+    tbody td:nth-child(3) { text-align: right; color: #475569; }
+    tbody td:nth-child(4) { text-align: right; font-weight: 700; }
+    .totals { display: flex; justify-content: flex-end; margin-bottom: 24px; }
+    .totals-box { width: 320px; }
+    .totals-row { display: flex; justify-content: space-between; padding: 7px 0; font-size: 0.875rem; color: #475569; border-bottom: 1px solid #F1F5F9; }
+    .totals-final { display: flex; justify-content: space-between; padding: 12px 0 4px; font-size: 1.2rem; font-weight: 800; color: #0F172A; border-top: 3px solid #1E3A5F; margin-top: 6px; }
+    .totals-final span:last-child { color: #2563EB; }
+    .notes-box { margin-bottom: 0; padding: 14px 16px; background: #F8FAFC; border-radius: 8px; border: 1px solid #E2E8F0; }
+    .notes-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; color: #94A3B8; letter-spacing: 0.8px; margin-bottom: 6px; }
+    .notes-text { font-size: 0.875rem; color: #334155; line-height: 1.5; }
+    .qr-box { text-align: center; border: 1px solid #E2E8F0; padding: 10px 14px; border-radius: 8px; background: #FFF; flex-shrink: 0; }
+    .qr-caption { font-size: 0.65rem; color: #64748B; font-weight: 700; margin-top: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .footer { display: flex; justify-content: space-between; padding-top: 16px; border-top: 1px solid #E2E8F0; font-size: 0.75rem; color: #94A3B8; }
+    @media print {
+      body { background: #ffffff !important; padding: 0 !important; }
+      .no-print { display: none !important; }
+      .page-container { border: none !important; box-shadow: none !important; padding: 10px !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="action-bar no-print">
+    <button class="btn-print" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    <button class="btn-close" onclick="window.close()">Close Window</button>
+  </div>
+
+  <div class="page-container">
+    <div class="header">
+      <div>
+        <div class="brand">Fortline CRM</div>
+        <div class="brand-sub">Commercial Sales & Services Invoice</div>
+      </div>
+      <div style="text-align:right">
+        <div class="inv-num">${inv.invoiceNumber}</div>
+        <div><span class="status-badge">${inv.status}</span></div>
+      </div>
+    </div>
+
+    <div class="meta-grid">
+      <div>
+        <div class="meta-label">Billed To (Client / Customer)</div>
+        <div class="meta-client">${inv.clientName}</div>
+        ${inv.customerEmail ? `<div class="meta-detail">✉ ${inv.customerEmail}</div>` : ''}
+        ${inv.customerPhone ? `<div class="meta-detail">📞 ${inv.customerPhone}</div>` : ''}
+        ${inv.customerAddress ? `<div class="meta-detail">📍 ${inv.customerAddress}</div>` : ''}
+      </div>
+      <div class="meta-right">
+        <div class="meta-label">Invoice Details</div>
+        <div class="meta-detail"><strong>Issue Date:</strong> ${new Date(inv.issueDate || inv.createdAt).toLocaleDateString()}</div>
+        <div class="meta-detail"><strong>Due Date:</strong> ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString() : 'Upon Receipt'}</div>
+        <div class="meta-detail"><strong>Payment Terms:</strong> ${inv.paymentTerms || 'Net 30'}</div>
+        ${inv.createdBy?.fullName ? `<div class="meta-detail"><strong>Sales Rep:</strong> ${inv.createdBy.fullName}</div>` : ''}
+        ${inv.dealTitle ? `<div class="meta-detail"><strong>Deal Reference:</strong> ${inv.dealTitle}</div>` : ''}
+      </div>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>Description</th>
+          <th>Qty</th>
+          <th>Unit Price</th>
+          <th>Total</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${items.map(item => `
+          <tr>
+            <td>${item.description || '—'}</td>
+            <td>${item.quantity}</td>
+            <td>Rs. ${Number(item.unitPrice || 0).toLocaleString()}</td>
+            <td>Rs. ${Number(item.total || 0).toLocaleString()}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+
+    <div class="totals">
+      <div class="totals-box">
+        <div class="totals-row"><span>Subtotal:</span><span>Rs. ${Number(inv.subtotal || inv.amount).toLocaleString()}</span></div>
+        ${inv.tax > 0 ? `<div class="totals-row"><span>Tax (${inv.taxRate || 0}%):</span><span>+Rs. ${Number(inv.tax).toLocaleString()}</span></div>` : ''}
+        ${inv.discount > 0 ? `<div class="totals-row"><span>Discount:</span><span>-Rs. ${Number(inv.discount).toLocaleString()}</span></div>` : ''}
+        <div class="totals-final"><span>Total Amount Due:</span><span>Rs. ${Number(inv.amount).toLocaleString()}</span></div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 24px;">
+      ${inv.notes ? `
+      <div class="notes-box" style="flex: 1;">
+        <div class="notes-label">Notes &amp; Payment Instructions</div>
+        <div class="notes-text">${inv.notes}</div>
+      </div>` : '<div style="flex:1;"></div>'}
+      ${qrSvgString ? `
+      <div class="qr-box">
+        ${qrSvgString}
+        <div class="qr-caption">Scan to Verify</div>
+      </div>` : ''}
+    </div>
+
+    <div class="footer">
+      <span>Generated by Fortline CRM &middot; Commercial Sales Management</span>
+      <span>Date: ${new Date().toLocaleDateString()}</span>
+    </div>
+  </div>
+
+  <script>
+    setTimeout(function() {
+      try {
+        window.focus();
+        window.print();
+      } catch(e) { console.error(e); }
+    }, 400);
+  <\/script>
+</body>
+</html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=800');
+    if (win) {
+      win.document.open();
+      win.document.write(html);
+      win.document.close();
+    } else {
+      alert('Please allow popups for this website to print/download invoice PDF.');
+    }
+  };
+
   // 1. Approve Invoice
+
   const handleApproveInvoice = async (inv) => {
     setActionLoading(true);
     try {
@@ -269,7 +476,7 @@ export default function SalesInvoicesView() {
       <div className="sv-grid-4">
         <div className="sv-target-card" style={{ borderLeft: '4px solid #2563EB' }}>
           <span className="sv-ts-label">Total Team Invoiced</span>
-          <span className="sv-ts-value">${totalTeamInvoiced.toLocaleString()}</span>
+          <span className="sv-ts-value">Rs. {totalTeamInvoiced.toLocaleString()}</span>
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>{invoices.length} invoices across sales team</span>
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #F59E0B' }}>
@@ -324,7 +531,7 @@ export default function SalesInvoicesView() {
 
       {/* Invoices Table */}
       {loading ? (
-        <div className="sv-loading">Loading team invoices from MongoDB...</div>
+        <div className="sv-loading">Loading Invoices...</div>
       ) : (
         <div className="sv-table-wrap">
           <table className="sv-table">
@@ -383,7 +590,7 @@ export default function SalesInvoicesView() {
                           {inv.dealTitle || inv.dealId?.title || inv.saleReference || 'Direct Sale'}
                         </div>
                       </td>
-                      <td className="sv-amount">${Number(inv.amount || 0).toLocaleString()}</td>
+                      <td className="sv-amount">Rs. {Number(inv.amount || 0).toLocaleString()}</td>
                       <td>
                         <span className="sv-badge" style={{ backgroundColor: style.bg, color: style.color, border: `1px solid ${style.border}` }}>
                           {inv.status}
@@ -460,6 +667,9 @@ export default function SalesInvoicesView() {
         </div>
       )}
 
+      {/* Hidden print target */}
+      <div id="invoice-print-root" aria-hidden="true" />
+
       {/* VIEW & REVIEW INVOICE PREVIEW MODAL */}
       {previewInvoice && (
         <div className="sv-modal-overlay" onClick={() => setPreviewInvoice(null)}>
@@ -469,7 +679,22 @@ export default function SalesInvoicesView() {
                 <FileText size={20} color="#2563EB" />
                 <h3 style={{ margin: 0 }}>Review Invoice ({previewInvoice.invoiceNumber})</h3>
               </div>
-              <button onClick={() => setPreviewInvoice(null)}><X size={18} /></button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  onClick={() => handleDownloadPDF(previewInvoice)}
+                  disabled={pdfLoading}
+                  title="Download PDF"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: '6px',
+                    padding: '6px 14px', borderRadius: '7px',
+                    background: '#1E3A5F', color: '#fff', border: 'none',
+                    fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer'
+                  }}
+                >
+                  <Download size={14} /> {pdfLoading ? 'Preparing...' : 'Download PDF'}
+                </button>
+                <button onClick={() => setPreviewInvoice(null)}><X size={18} /></button>
+              </div>
             </div>
 
             <div style={{ maxHeight: '76vh', overflowY: 'auto', padding: '4px' }}>
@@ -498,7 +723,7 @@ export default function SalesInvoicesView() {
               <div className="sv-invoice-preview-card">
                 <div className="sv-inv-top-bar">
                   <div>
-                    <div className="sv-inv-brand-title">NexusCRM / FlowBridge</div>
+                    <div className="sv-inv-brand-title">Fortline CRM</div>
                     <div style={{ fontSize: '0.825rem', color: '#64748B', marginTop: '4px' }}>
                       Commercial Sales Invoice
                     </div>
@@ -565,8 +790,8 @@ export default function SalesInvoicesView() {
                       <tr key={i}>
                         <td style={{ fontWeight: 500 }}>{item.description}</td>
                         <td style={{ textAlign: 'center' }}>{item.quantity}</td>
-                        <td style={{ textAlign: 'right' }}>${Number(item.unitPrice || 0).toLocaleString()}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 600 }}>${Number(item.total || 0).toLocaleString()}</td>
+                        <td style={{ textAlign: 'right' }}>Rs. {Number(item.unitPrice || 0).toLocaleString()}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 600 }}>Rs. {Number(item.total || 0).toLocaleString()}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -576,44 +801,71 @@ export default function SalesInvoicesView() {
                 <div className="sv-inv-summary-box">
                   <div className="sv-inv-summary-row">
                     <span>Subtotal:</span>
-                    <span>${Number(previewInvoice.subtotal || previewInvoice.amount).toLocaleString()}</span>
+                    <span>Rs. {Number(previewInvoice.subtotal || previewInvoice.amount).toLocaleString()}</span>
                   </div>
                   {previewInvoice.tax > 0 && (
                     <div className="sv-inv-summary-row">
                       <span>Tax ({previewInvoice.taxRate || 0}%):</span>
-                      <span>+${Number(previewInvoice.tax).toLocaleString()}</span>
+                      <span>+Rs. {Number(previewInvoice.tax).toLocaleString()}</span>
                     </div>
                   )}
                   {previewInvoice.discount > 0 && (
                     <div className="sv-inv-summary-row">
                       <span>Discount:</span>
-                      <span>-${Number(previewInvoice.discount).toLocaleString()}</span>
+                      <span>-Rs. {Number(previewInvoice.discount).toLocaleString()}</span>
                     </div>
                   )}
                   <div className="sv-inv-summary-total">
                     <span>Total Amount:</span>
-                    <span>${Number(previewInvoice.amount).toLocaleString()}</span>
+                    <span>Rs. {Number(previewInvoice.amount).toLocaleString()}</span>
                   </div>
                 </div>
 
-                {/* Notes */}
-                {previewInvoice.notes && (
-                  <div style={{ marginTop: '20px', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '4px' }}>
-                      Notes & Instructions
+                {/* QR Code & Notes Row */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '16px', marginTop: '18px', flexWrap: 'wrap' }}>
+                  {previewInvoice.notes ? (
+                    <div style={{ flex: 1, minWidth: '220px', padding: '12px', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase', marginBottom: '4px' }}>
+                        Notes & Instructions
+                      </div>
+                      <div style={{ fontSize: '0.85rem', color: '#334155' }}>
+                        {previewInvoice.notes}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '0.85rem', color: '#334155' }}>
-                      {previewInvoice.notes}
-                    </div>
+                  ) : <div style={{ flex: 1 }}></div>}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '10px 14px', background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '8px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+                    <QRCodeSVG
+                      value={`INVOICE: ${previewInvoice.invoiceNumber}\nCUSTOMER: ${previewInvoice.clientName}\nAMOUNT: PKR ${Number(previewInvoice.amount || 0).toLocaleString()}\nREFERENCE: ${previewInvoice.dealTitle || previewInvoice.saleReference || 'Direct'}\nDATE: ${new Date(previewInvoice.issueDate || previewInvoice.createdAt).toLocaleDateString()}`}
+                      size={84}
+                      level="M"
+                    />
+                    <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#64748B', marginTop: '5px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      Scan to Verify
+                    </span>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Manager Actions inside Preview */}
               <div className="sv-modal-actions" style={{ marginTop: '18px', justifyContent: 'space-between' }}>
-                <button type="button" className="sv-btn-cancel" onClick={() => setPreviewInvoice(null)}>
-                  Close
-                </button>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button type="button" className="sv-btn-cancel" onClick={() => setPreviewInvoice(null)}>
+                    Close
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDownloadPDF(previewInvoice)}
+                    disabled={pdfLoading}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '8px 16px', borderRadius: '8px',
+                      background: '#1E3A5F', color: '#fff', border: 'none',
+                      fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer'
+                    }}
+                  >
+                    <Download size={14} /> {pdfLoading ? 'Preparing...' : 'Download PDF'}
+                  </button>
+                </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   {previewInvoice.status !== 'Rejected' && (
                     <button
@@ -625,15 +877,26 @@ export default function SalesInvoicesView() {
                       <XCircle size={15} /> Reject Invoice
                     </button>
                   )}
-                  {previewInvoice.status !== 'Approved' && (
+                  {previewInvoice.status !== 'Approved' && previewInvoice.status !== 'Paid' && (
                     <button
                       type="button"
                       className="sv-btn-primary"
                       onClick={() => handleApproveInvoice(previewInvoice)}
-                      style={{ background: '#059669' }}
+                      disabled={actionLoading}
+                      style={{ background: '#059669', display: 'flex', alignItems: 'center', gap: '6px' }}
                     >
-                      <CheckCircle2 size={15} /> Approve & Sync with Finance
+                      <CheckCircle2 size={15} />
+                      {actionLoading ? 'Approving...' : '✓ Approve & Sync to Finance'}
                     </button>
+                  )}
+                  {(previewInvoice.status === 'Approved' || previewInvoice.status === 'Paid') && (
+                    <div style={{
+                      display: 'flex', alignItems: 'center', gap: '6px',
+                      padding: '8px 16px', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600,
+                      background: '#ECFDF5', color: '#059669', border: '1px solid #A7F3D0'
+                    }}>
+                      <CheckCircle2 size={14} /> Synced with Finance
+                    </div>
                   )}
                 </div>
               </div>
@@ -820,7 +1083,7 @@ export default function SalesInvoicesView() {
                     />
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: '#64748B' }}>Discount ($)</label>
+                    <label style={{ fontSize: '0.75rem', color: '#64748B' }}>Discount (Rs.)</label>
                     <input
                       type="number"
                       min="0"

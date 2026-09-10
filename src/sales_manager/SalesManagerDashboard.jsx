@@ -7,6 +7,7 @@ import {
   Briefcase,
   Target,
   DollarSign,
+  ShoppingCart,
   ArrowUpRight,
   ArrowDownRight,
   ArrowRight,
@@ -73,20 +74,64 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
     return (
       <div className="smd-loading-container">
         <div className="smd-spinner" />
-        <p>Loading real-time sales & performance data from MongoDB...</p>
+        <p>Loading Sales Dashboard...</p>
       </div>
     );
   }
 
   const kpis = [
     {
-      id: 'team',
-      icon: Users,
+      id: 'orders',
+      icon: ShoppingCart,
       bg: '#EFF6FF',
       color: '#2563EB',
+      value: String(stats?.totalOrders || 0),
+      label: 'Total Sales Orders',
+      sub: `${stats?.totalQuotations || 0} quotations generated`,
+      clickable: true,
+      onClick: () => onNavigateTab?.('orders')
+    },
+    {
+      id: 'overdue',
+      icon: AlertTriangle,
+      bg: '#FEF2F2',
+      color: '#DC2626',
+      value: `Rs. ${Number(stats?.overdueInvoiceAmount || 0).toLocaleString()}`,
+      label: 'Total Overdue Amount',
+      sub: 'Past due balances for entire sales team',
+      clickable: true,
+      onClick: () => onNavigateTab?.('invoices')
+    },
+    {
+      id: 'receivables',
+      icon: DollarSign,
+      bg: '#E0F2FE',
+      color: '#0284C7',
+      value: `Rs. ${Number(stats?.totalReceivables || 0).toLocaleString()}`,
+      label: 'Total Receivables Amount',
+      sub: 'All unpaid orders & invoices',
+      clickable: true,
+      onClick: () => onNavigateTab?.('invoices')
+    },
+    {
+      id: 'target',
+      icon: Target,
+      bg: '#FFFBEB',
+      color: '#D97706',
+      value: `${stats?.teamTargetAchievementPct || 0}%`,
+      label: 'Team Target Attainment',
+      sub: `Rs. ${Number(stats?.totalAchievedTarget || stats?.totalMonthlyRevenue || 0).toLocaleString()} achieved`,
+      clickable: true,
+      onClick: () => onNavigateTab?.('team')
+    },
+    {
+      id: 'team',
+      icon: Users,
+      bg: '#F8FAFC',
+      color: '#475569',
       value: String(stats?.totalTeamMembers || 0),
-      label: 'Total Sales Team Members',
-      sub: `${stats?.activeTeamMembers || 0} active members`,
+      label: 'Sales Representatives',
+      sub: `${stats?.activeTeamMembers || 0} active team members`,
       clickable: true,
       onClick: () => onNavigateTab?.('team')
     },
@@ -96,73 +141,19 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
       bg: '#F5F3FF',
       color: '#7C3AED',
       value: String(stats?.totalLeads || 0),
-      label: 'Total Leads',
+      label: 'Total Leads & Prospects',
       sub: `${stats?.convertedLeads || 0} converted (${stats?.leadConversionRate || 0}% rate)`,
       clickable: true,
       onClick: () => onNavigateTab?.('leads')
-    },
-    {
-      id: 'deals',
-      icon: Briefcase,
-      bg: '#ECFDF5',
-      color: '#10B981',
-      value: String(stats?.wonDealsCount || 0),
-      label: 'Won Deals',
-      sub: `$${Number(stats?.wonDealsValue || 0).toLocaleString()} won volume`,
-      clickable: true,
-      onClick: () => onNavigateTab?.('deals')
-    },
-    {
-      id: 'pipeline',
-      icon: DollarSign,
-      bg: '#EFF6FF',
-      color: '#0284C7',
-      value: `$${Number(stats?.totalPipelineValue || 0).toLocaleString()}`,
-      label: 'Active Pipeline Value',
-      sub: `${stats?.totalDeals || 0} active deals in progress`,
-      clickable: true,
-      onClick: () => onNavigateTab?.('pipeline')
-    },
-    {
-      id: 'revenue',
-      icon: DollarSign,
-      bg: '#ECFDF5',
-      color: '#059669',
-      value: `$${Number(stats?.totalMonthlyRevenue || 0).toLocaleString()}`,
-      label: 'Total Sales Revenue',
-      sub: `$${Number(stats?.totalReceivables || 0).toLocaleString()} receivables`,
-      clickable: false
-    },
-    {
-      id: 'target',
-      icon: Target,
-      bg: '#FFFBEB',
-      color: '#D97706',
-      value: `${stats?.teamTargetAchievementPct || 0}%`,
-      label: 'Team Target Attainment',
-      sub: `$${Number(stats?.totalAchievedTarget || 0).toLocaleString()} of $${Number(stats?.totalTargetAmount || 0).toLocaleString()}`,
-      clickable: true,
-      onClick: () => onNavigateTab?.('team')
     }
   ];
-
-  const revenueData = stats?.revenueTrend && stats.revenueTrend.length > 0
-    ? stats.revenueTrend
-    : [
-        { month: 'Mar', actual: 0, target: 100 },
-        { month: 'Apr', actual: 0, target: 100 },
-        { month: 'May', actual: 0, target: 100 },
-        { month: 'Jun', actual: 0, target: 100 },
-        { month: 'Jul', actual: 0, target: 100 },
-        { month: 'Aug', actual: 0, target: 100 }
-      ];
 
   const leadSources = stats?.leadSources && stats.leadSources.length > 0
     ? stats.leadSources
     : [
-        { name: 'Direct', value: stats?.totalLeads || 1 },
-        { name: 'Website', value: 0 }
-      ];
+      { name: 'Direct', value: stats?.totalLeads || 1 },
+      { name: 'Website', value: 0 }
+    ];
 
   const pipelineStages = stats?.pipelineStages || [];
   const recentActivities = stats?.recentActivities || [];
@@ -174,7 +165,7 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
       <div className="smd-top-banner">
         <div>
           <h1 className="smd-title">Sales Manager Executive Portal</h1>
-          <p className="smd-subtitle">Organization sales pipeline, team quotas, performance metrics & live MongoDB analytics — {todayFormatted}</p>
+          <p className="smd-subtitle">Organization sales pipeline, team quotas, performance metrics & live analytics — {todayFormatted}</p>
         </div>
         <div className="smd-actions-row">
           <button className="smd-refresh-btn" onClick={handleRefresh} disabled={refreshing}>
@@ -187,7 +178,7 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
         </div>
       </div>
 
-      {/* ── SECTION 1: TOP KPI CARDS (Featuring "Total Sales Team Members" as #1) ── */}
+      {/* ── SECTION 1: TOP KPI CARDS ── */}
       <div className="smd-kpi-grid">
         {kpis.map((kpi) => {
           const Icon = kpi.icon;
@@ -218,37 +209,8 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
         })}
       </div>
 
-      {/* ── SECTION 2: SALES & TEAM PERFORMANCE CHARTS ── */}
-      <div className="smd-charts-grid">
-        {/* Revenue Performance Trend */}
-        <div className="smd-chart-card">
-          <div className="smd-chart-header">
-            <div>
-              <h3 className="smd-chart-title">Revenue & Quota Trend</h3>
-              <p className="smd-chart-subtitle">Monthly sales revenue calculated from invoices & delivered orders (in $K)</p>
-            </div>
-            <div className="smd-chart-legend">
-              <span className="legend-item"><span className="dot blue" /> Actual Revenue</span>
-              <span className="legend-item"><span className="dot dashed" /> Sales Target</span>
-            </div>
-          </div>
-          <div className="smd-chart-body" style={{ height: 260 }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={revenueData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#F1F5F9" />
-                <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} tickLine={false} />
-                <YAxis stroke="#94A3B8" fontSize={12} tickLine={false} tickFormatter={(val) => `$${val}k`} />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#0F172A', border: 'none', borderRadius: '8px', color: '#FFF' }}
-                  formatter={(val) => [`$${val}k`, '']}
-                />
-                <Line type="monotone" dataKey="actual" stroke="#2563EB" strokeWidth={3} dot={{ r: 4, fill: '#2563EB' }} activeDot={{ r: 6 }} />
-                <Line type="monotone" dataKey="target" stroke="#94A3B8" strokeWidth={2} strokeDasharray="4 4" dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
+      {/* ── SECTION 2: LEAD SOURCES DISTRIBUTION ── */}
+      <div className="smd-charts-grid" style={{ gridTemplateColumns: '1fr' }}>
         {/* Lead Sources Distribution */}
         <div className="smd-chart-card">
           <div className="smd-chart-header">

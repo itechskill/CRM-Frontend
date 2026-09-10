@@ -196,7 +196,7 @@ export default function AddClientModal({ isOpen, onClose, onAddClient }) {
             </div>
 
             <div className="form-group">
-              <label style={labelStyle}>Revenue YTD ($ USD)</label>
+              <label style={labelStyle}>Revenue YTD (PKR / Rs.)</label>
               <input
                 type="number"
                 className="form-input"

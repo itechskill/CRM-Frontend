@@ -49,10 +49,10 @@ const channelShare = [
 ];
 
 const topCampaigns = [
-  { id: 'CMP-2026-01', name: 'Q3 Enterprise SaaS Launch', channel: 'Google Ads', spend: '$12,400', leads: 412, ctr: '5.2%', roi: '380%', status: 'Active' },
-  { id: 'CMP-2026-02', name: 'LinkedIn Executive Retargeting', channel: 'LinkedIn', spend: '$8,200', leads: 264, ctr: '4.1%', roi: '290%', status: 'Active' },
-  { id: 'CMP-2026-03', name: 'Summer Product Webinar Series', channel: 'Webinar', spend: '$3,500', leads: 185, ctr: '6.8%', roi: '450%', status: 'Completed' },
-  { id: 'CMP-2026-04', name: 'SEO & Content Funnel Boost', channel: 'Organic SEO', spend: '$4,400', leads: 320, ctr: '3.9%', roi: '510%', status: 'Active' },
+  { id: 'CMP-2026-01', name: 'Q3 Enterprise SaaS Launch', channel: 'Google Ads', spend: 'Rs. 12,400', leads: 412, ctr: '5.2%', roi: '380%', status: 'Active' },
+  { id: 'CMP-2026-02', name: 'LinkedIn Executive Retargeting', channel: 'LinkedIn', spend: 'Rs. 8,200', leads: 264, ctr: '4.1%', roi: '290%', status: 'Active' },
+  { id: 'CMP-2026-03', name: 'Summer Product Webinar Series', channel: 'Webinar', spend: 'Rs. 3,500', leads: 185, ctr: '6.8%', roi: '450%', status: 'Completed' },
+  { id: 'CMP-2026-04', name: 'SEO & Content Funnel Boost', channel: 'Organic SEO', spend: 'Rs. 4,400', leads: 320, ctr: '3.9%', roi: '510%', status: 'Active' },
 ];
 
 export default function MarketingDashboard({ currentUser, onNavigateTab, onOpenCampaignModal, onOpenLeadModal }) {

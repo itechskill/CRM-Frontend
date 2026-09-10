@@ -81,7 +81,7 @@ export default function MarketingAnalyticsView() {
             <span className="mkt-kpi-title">Customer Acquisition Cost (CAC)</span>
             <div className="mkt-kpi-icon pink"><DollarSign size={18} /></div>
           </div>
-          <div className="mkt-kpi-value">$124.50</div>
+          <div className="mkt-kpi-value">Rs. 124.50</div>
           <div className="mkt-kpi-subtitle up">
             <ArrowUpRight size={14} /> -12% vs previous quarter
           </div>

@@ -3,12 +3,12 @@ import { User, Phone, Mail, Star, ArrowUpRight } from 'lucide-react';
 import './LeadsView.css';
 
 const leadsData = [
-  { id: 1, name: 'Alex Morgan', company: 'Stripe', score: 94, source: 'Website', email: 'alex@stripe.com', status: 'New', estValue: '$28,000' },
-  { id: 2, name: 'Beatrice Vance', company: 'Notion', score: 88, source: 'LinkedIn', email: 'b.vance@notion.so', status: 'Contacted', estValue: '$42,000' },
-  { id: 3, name: 'Carlos Gomez', company: 'Figma', score: 92, source: 'Referral', email: 'carlos@figma.com', status: 'Qualified', estValue: '$65,000' },
-  { id: 4, name: 'Diana Prince', company: 'Vercel', score: 96, source: 'Direct', email: 'diana@vercel.com', status: 'Qualified', estValue: '$90,000' },
-  { id: 5, name: 'Ethan Hunt', company: 'Linear', score: 79, source: 'Webinar', email: 'ethan@linear.app', status: 'Contacted', estValue: '$15,000' },
-  { id: 6, name: 'Fiona Gallagher', company: 'Retool', score: 85, source: 'Website', email: 'fiona@retool.com', status: 'Converted', estValue: '$55,000' },
+  { id: 1, name: 'Alex Morgan', company: 'Stripe', score: 94, source: 'Website', email: 'alex@stripe.com', status: 'New', estValue: 'Rs. 28,000' },
+  { id: 2, name: 'Beatrice Vance', company: 'Notion', score: 88, source: 'LinkedIn', email: 'b.vance@notion.so', status: 'Contacted', estValue: 'Rs. 42,000' },
+  { id: 3, name: 'Carlos Gomez', company: 'Figma', score: 92, source: 'Referral', email: 'carlos@figma.com', status: 'Qualified', estValue: 'Rs. 65,000' },
+  { id: 4, name: 'Diana Prince', company: 'Vercel', score: 96, source: 'Direct', email: 'diana@vercel.com', status: 'Qualified', estValue: 'Rs. 90,000' },
+  { id: 5, name: 'Ethan Hunt', company: 'Linear', score: 79, source: 'Webinar', email: 'ethan@linear.app', status: 'Contacted', estValue: 'Rs. 15,000' },
+  { id: 6, name: 'Fiona Gallagher', company: 'Retool', score: 85, source: 'Website', email: 'fiona@retool.com', status: 'Converted', estValue: 'Rs. 55,000' },
 ];
 
 export default function LeadsView() {

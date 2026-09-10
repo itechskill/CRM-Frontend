@@ -220,6 +220,33 @@
   flex-direction: column;
   gap: 4px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: all 0.2s ease;
+}
+
+.stmp-kpi-clickable {
+  cursor: pointer;
+  position: relative;
+}
+
+.stmp-kpi-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  border-color: #93C5FD;
+}
+
+.stmp-card-click-hint {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #2563EB;
+  background: #EFF6FF;
+  padding: 2px 8px;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+}
+
+.stmp-kpi-clickable:hover .stmp-card-click-hint {
+  background: #2563EB;
+  color: #FFFFFF;
 }
 
 .stmp-kpi-card.highlight {

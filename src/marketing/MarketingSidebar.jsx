@@ -79,7 +79,7 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
             </div>
             {!collapsed && (
               <div className="mkt-brand-info">
-                <span className="mkt-brand-name">NexusCRM</span>
+                <span className="mkt-brand-name">Fortline CRM</span>
                 <span className="mkt-brand-subtitle">MARKETING PORTAL</span>
               </div>
             )}

@@ -52,11 +52,11 @@ const categoryExpenses = [
 ];
 
 const recentInvoices = [
-  { id: 'INV-2026-089', client: 'Proxima Labs', date: 'Aug 18, 2026', amount: '$14,500.00', status: 'Paid', dueDate: 'Aug 30' },
-  { id: 'INV-2026-090', client: 'BuildCo Industries', date: 'Aug 16, 2026', amount: '$22,800.00', status: 'Pending', dueDate: 'Sep 02' },
-  { id: 'INV-2026-091', client: 'Starlight Ventures', date: 'Aug 12, 2026', amount: '$8,400.00', status: 'Overdue', dueDate: 'Aug 15' },
-  { id: 'INV-2026-092', client: 'Apex Software', date: 'Aug 10, 2026', amount: '$19,200.00', status: 'Paid', dueDate: 'Aug 24' },
-  { id: 'INV-2026-093', client: 'TechFlow Inc', date: 'Aug 08, 2026', amount: '$11,600.00', status: 'Paid', dueDate: 'Aug 22' },
+  { id: 'INV-2026-089', client: 'Proxima Labs', date: 'Aug 18, 2026', amount: 'Rs. 14,500.00', status: 'Paid', dueDate: 'Aug 30' },
+  { id: 'INV-2026-090', client: 'BuildCo Industries', date: 'Aug 16, 2026', amount: 'Rs. 22,800.00', status: 'Pending', dueDate: 'Sep 02' },
+  { id: 'INV-2026-091', client: 'Starlight Ventures', date: 'Aug 12, 2026', amount: 'Rs. 8,400.00', status: 'Overdue', dueDate: 'Aug 15' },
+  { id: 'INV-2026-092', client: 'Apex Software', date: 'Aug 10, 2026', amount: 'Rs. 19,200.00', status: 'Paid', dueDate: 'Aug 24' },
+  { id: 'INV-2026-093', client: 'TechFlow Inc', date: 'Aug 08, 2026', amount: 'Rs. 11,600.00', status: 'Paid', dueDate: 'Aug 22' },
 ];
 
 export default function AccountantDashboard({ currentUser, onNavigateTab, onOpenInvoiceModal, onOpenExpenseModal, isModalOpen, onCloseModal }) {
@@ -92,10 +92,10 @@ export default function AccountantDashboard({ currentUser, onNavigateTab, onOpen
         }}>
           <p style={{ fontWeight: 700, marginBottom: '6px', color: '#94A3B8' }}>{label} Cash Flow</p>
           <p style={{ color: '#3B82F6', fontWeight: 600 }}>
-            Revenue: ${payload[0]?.value?.toLocaleString()}
+            Revenue: Rs. {payload[0]?.value?.toLocaleString()}
           </p>
           <p style={{ color: '#EF4444', fontWeight: 600, marginTop: '2px' }}>
-            Expenses: ${payload[1]?.value?.toLocaleString()}
+            Expenses: Rs. {payload[1]?.value?.toLocaleString()}
           </p>
         </div>
       );
@@ -113,15 +113,15 @@ export default function AccountantDashboard({ currentUser, onNavigateTab, onOpen
         </div>
         <div className="acc-welcome-stats">
           <div className="acc-welcome-stat">
-            <span className="acc-welcome-stat-value">$315,000</span>
+            <span className="acc-welcome-stat-value">Rs. 315,000</span>
             <span className="acc-welcome-stat-label">Operating Cash Balance</span>
           </div>
           <div className="acc-welcome-stat">
-            <span className="acc-welcome-stat-value">$142,200</span>
+            <span className="acc-welcome-stat-value">Rs. 142,200</span>
             <span className="acc-welcome-stat-label">Net Profit (YTD)</span>
           </div>
           <div className="acc-welcome-stat">
-            <span className="acc-welcome-stat-value">$38,400</span>
+            <span className="acc-welcome-stat-value">Rs. 38,400</span>
             <span className="acc-welcome-stat-label">Pending Receivables</span>
           </div>
         </div>
@@ -215,7 +215,7 @@ export default function AccountantDashboard({ currentUser, onNavigateTab, onOpen
             <span className="acc-kpi-title">Total Revenue (YTD)</span>
             <div className="acc-kpi-icon emerald"><DollarSign size={18} /></div>
           </div>
-          <div className="acc-kpi-value">$557,000</div>
+          <div className="acc-kpi-value">Rs. 557,000</div>
           <div className="acc-kpi-subtitle up">
             <ArrowUpRight size={14} /> +14.2% vs last fiscal year
           </div>
@@ -226,7 +226,7 @@ export default function AccountantDashboard({ currentUser, onNavigateTab, onOpen
             <span className="acc-kpi-title">Total Expenses (YTD)</span>
             <div className="acc-kpi-icon red"><CreditCard size={18} /></div>
           </div>
-          <div className="acc-kpi-value">$284,800</div>
+          <div className="acc-kpi-value">Rs. 284,800</div>
           <div className="acc-kpi-subtitle down">
             <ArrowDownRight size={14} /> +6.1% operating costs
           </div>
@@ -248,7 +248,7 @@ export default function AccountantDashboard({ currentUser, onNavigateTab, onOpen
             <span className="acc-kpi-title">Overdue Receivables</span>
             <div className="acc-kpi-icon amber"><AlertCircle size={18} /></div>
           </div>
-          <div className="acc-kpi-value">$8,400</div>
+          <div className="acc-kpi-value">Rs. 8,400</div>
           <div className="acc-kpi-subtitle down">
             1 invoice overdue (&gt;15 days)
           </div>
@@ -280,11 +280,11 @@ export default function AccountantDashboard({ currentUser, onNavigateTab, onOpen
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                 <XAxis dataKey="month" stroke="#94A3B8" fontSize={12} tickLine={false} />
-                <YAxis stroke="#94A3B8" fontSize={12} tickLine={false} tickFormatter={(v) => `$${v/1000}k`} />
+                <YAxis stroke="#94A3B8" fontSize={12} tickLine={false} tickFormatter={(v) => `Rs. ${v/1000}k`} />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend verticalAlign="top" align="right" iconType="circle" wrapperStyle={{ fontSize: '0.8rem' }} />
-                <Area type="monotone" dataKey="revenue" name="Revenue ($)" stroke="#2563EB" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" />
-                <Area type="monotone" dataKey="expenses" name="Expenses ($)" stroke="#EF4444" strokeWidth={2} fillOpacity={1} fill="url(#colorExp)" />
+                <Area type="monotone" dataKey="revenue" name="Revenue (Rs.)" stroke="#2563EB" strokeWidth={2.5} fillOpacity={1} fill="url(#colorRev)" />
+                <Area type="monotone" dataKey="expenses" name="Expenses (Rs.)" stroke="#EF4444" strokeWidth={2} fillOpacity={1} fill="url(#colorExp)" />
               </AreaChart>
             </ResponsiveContainer>
           </div>
@@ -303,7 +303,7 @@ export default function AccountantDashboard({ currentUser, onNavigateTab, onOpen
               <div key={idx} style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
                   <span style={{ fontWeight: 600, color: '#334155' }}>{cat.category}</span>
-                  <span style={{ fontWeight: 700, color: '#0F172A' }}>${cat.amount.toLocaleString()} ({cat.percentage})</span>
+                  <span style={{ fontWeight: 700, color: '#0F172A' }}>Rs. {cat.amount.toLocaleString()} ({cat.percentage})</span>
                 </div>
                 <div style={{ height: '8px', backgroundColor: '#F1F5F9', borderRadius: '4px', overflow: 'hidden' }}>
                   <div
