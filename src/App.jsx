@@ -755,6 +755,7 @@ export default function App() {
             <EmployeeHeader
               activeTab={activeTab}
               currentUser={currentUser}
+              onNavigateTab={(tab) => handleSetActiveTab(tab)}
               onOpenNewTaskModal={() => setIsNewTaskModalOpen(true)}
               onMenuToggle={() => setIsSidebarOpen(true)}
             />

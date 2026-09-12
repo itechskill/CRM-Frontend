@@ -4,7 +4,7 @@ import NotificationDropdown from '../components/NotificationDropdown';
 import { getUser } from '../utils/authStorage';
 import './EmployeeHeader.css';
 
-export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuToggle, currentUser }) {
+export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuToggle, currentUser, onNavigateTab }) {
   const [searchQuery, setSearchQuery] = useState('');
 
   const getHeaderInfo = (tab) => {
@@ -96,7 +96,12 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
         <NotificationDropdown />
 
         {/* User Profile Badge */}
-        <div className="header-user-profile-badge">
+        <div
+          className="header-user-profile-badge"
+          onClick={() => onNavigateTab?.('profile')}
+          title="View & Edit Profile"
+          style={{ cursor: onNavigateTab ? 'pointer' : 'default' }}
+        >
           <div className="header-user-avatar">
             {avatarImage ? (
               <img src={avatarImage} alt={displayName} />
