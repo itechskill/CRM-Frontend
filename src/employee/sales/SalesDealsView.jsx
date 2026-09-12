@@ -65,7 +65,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const [loading, setLoading] = useState(true);
   const [stageFilter, setStageFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState('pipeline'); // 'pipeline' | 'table'
+  const [viewMode, setViewMode] = useState('table'); // 'table' (default) | 'pipeline'
   const [showModal, setShowModal] = useState(false);
   const [editDeal, setEditDeal] = useState(null);
   const [form, setForm] = useState(EMPTY_DEAL);
@@ -220,6 +220,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const wonValue = wonDeals.reduce((sum, d) => sum + (d.value || 0), 0);
   const activePipeline = deals.filter(d => !['Won', 'Closed Won', 'Closed Lost'].includes(d.stage));
   const activeValue = activePipeline.reduce((sum, d) => sum + (d.value || 0), 0);
+  const winRate = deals.length > 0 ? Math.round((wonDeals.length / deals.length) * 100) : 0;
 
   const stages = ['all', 'Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Closed Lost'];
   const pipelineStages = ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Won'];
@@ -241,26 +242,6 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
             border: '1px solid #E2E8F0'
           }}>
             <button
-              onClick={() => setViewMode('pipeline')}
-              style={{
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                padding: '6px 12px',
-                borderRadius: '6px',
-                border: 'none',
-                background: viewMode === 'pipeline' ? '#FFFFFF' : 'transparent',
-                color: viewMode === 'pipeline' ? '#2563EB' : '#64748B',
-                fontWeight: 600,
-                fontSize: '0.8rem',
-                cursor: 'pointer',
-                boxShadow: viewMode === 'pipeline' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                transition: 'all 0.2s'
-              }}
-            >
-              <LayoutGrid size={14} /> Pipeline Board
-            </button>
-            <button
               onClick={() => setViewMode('table')}
               style={{
                 display: 'inline-flex',
@@ -280,6 +261,26 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
             >
               <List size={14} /> Data Table
             </button>
+            <button
+              onClick={() => setViewMode('pipeline')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                background: viewMode === 'pipeline' ? '#FFFFFF' : 'transparent',
+                color: viewMode === 'pipeline' ? '#2563EB' : '#64748B',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                boxShadow: viewMode === 'pipeline' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <LayoutGrid size={14} /> Pipeline Board
+            </button>
           </div>
 
           <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Deal</button>
@@ -292,22 +293,58 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
         </div>
       )}
 
-      {/* KPI Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px', marginBottom: '16px' }}>
-        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Active Pipeline</div>
-          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>Rs. {activeValue.toLocaleString()}</div>
-          <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '4px' }}>{activePipeline.length} open deals</div>
+      {/* ── PREMIUM KPI CARDS GRID ── */}
+      <div className="deal-kpi-grid">
+        <div className="deal-kpi-card active-pipeline">
+          <div className="deal-kpi-icon active-pipeline">
+            <TrendingUp size={22} />
+          </div>
+          <div className="deal-kpi-content">
+            <div className="deal-kpi-label">Active Pipeline</div>
+            <div className="deal-kpi-value">Rs. {activeValue.toLocaleString()}</div>
+            <div className="deal-kpi-sub active-pipeline">
+              <ArrowUpRight size={13} /> {activePipeline.length} Open Deals in Funnel
+            </div>
+          </div>
         </div>
-        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Won Deals Value</div>
-          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>Rs. {wonValue.toLocaleString()}</div>
-          <div style={{ fontSize: '0.8rem', color: '#059669', marginTop: '4px' }}>{wonDeals.length} won deals (100% Probability)</div>
+
+        <div className="deal-kpi-card won-deals">
+          <div className="deal-kpi-icon won-deals">
+            <CheckCircle2 size={22} />
+          </div>
+          <div className="deal-kpi-content">
+            <div className="deal-kpi-label">Won Deals Value</div>
+            <div className="deal-kpi-value" style={{ color: '#059669' }}>Rs. {wonValue.toLocaleString()}</div>
+            <div className="deal-kpi-sub won-deals">
+              <CheckCircle size={13} /> {wonDeals.length} Won Deals (100% Won)
+            </div>
+          </div>
         </div>
-        <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
-          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Deals Tracked</div>
-          <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#1E293B', marginTop: '4px' }}>{deals.length}</div>
-          <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '4px' }}>Rs. {totalValue.toLocaleString()} total</div>
+
+        <div className="deal-kpi-card win-rate">
+          <div className="deal-kpi-icon win-rate">
+            <Target size={22} />
+          </div>
+          <div className="deal-kpi-content">
+            <div className="deal-kpi-label">Win Conversion Rate</div>
+            <div className="deal-kpi-value">{winRate}%</div>
+            <div className="deal-kpi-sub win-rate">
+              {wonDeals.length} won of {deals.length} total deals
+            </div>
+          </div>
+        </div>
+
+        <div className="deal-kpi-card total-pipeline">
+          <div className="deal-kpi-icon total-pipeline">
+            <DollarSign size={22} />
+          </div>
+          <div className="deal-kpi-content">
+            <div className="deal-kpi-label">Total Pipeline Tracked</div>
+            <div className="deal-kpi-value">Rs. {totalValue.toLocaleString()}</div>
+            <div className="deal-kpi-sub total-pipeline">
+              {deals.length} total requirements recorded
+            </div>
+          </div>
         </div>
       </div>
 
@@ -339,16 +376,12 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
             const colors = STAGE_COLORS[stageName] || { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
 
             return (
-              <div key={stageName} className="deals-stage-col">
+              <div key={stageName} className="deals-stage-col" style={{ borderTop: `3px solid ${colors.color}` }}>
                 <div className="deals-stage-header">
                   <div className="deals-stage-title-wrap">
                     <span
-                      style={{
-                        width: '8px',
-                        height: '8px',
-                        borderRadius: '50%',
-                        backgroundColor: colors.color
-                      }}
+                      className="deals-stage-dot"
+                      style={{ backgroundColor: colors.color }}
                     />
                     <span className="deals-stage-name">{stageName}</span>
                     <span className="deals-stage-count">{stageDeals.length}</span>
@@ -358,50 +391,61 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
 
                 <div className="deals-card-list">
                   {stageDeals.length === 0 ? (
-                    <div style={{ textAlign: 'center', padding: '24px 10px', color: '#94A3B8', fontSize: '0.8rem' }}>
+                    <div style={{ textAlign: 'center', padding: '32px 10px', color: '#94A3B8', fontSize: '0.8rem' }}>
                       No deals in {stageName}
                     </div>
                   ) : (
                     stageDeals.map((d) => {
                       const isWon = ['Won', 'Closed Won'].includes(d.stage);
                       const prob = isWon ? 100 : (d.probability !== undefined ? d.probability : getStageProbability(d.stage));
+                      const clientLabel = d.clientName || d.company || 'Client';
+                      const clientInitial = clientLabel.charAt(0).toUpperCase() || 'C';
 
                       return (
                         <div
                           key={d._id}
-                          className="deals-card"
+                          className={`deals-card ${isWon ? 'is-won' : ''}`}
+                          style={{ borderLeftColor: isWon ? '#10B981' : colors.color }}
                           onClick={() => setViewDeal(d)}
                         >
                           <div className="deals-card-header">
                             <h4 className="deals-card-title">{d.title}</h4>
-                            <span
-                              className="sv-badge"
-                              style={{
-                                background: colors.bg,
-                                color: colors.color,
-                                border: `1px solid ${colors.border}`,
-                                fontSize: '0.7rem',
-                                padding: '2px 8px'
-                              }}
-                            >
-                              {d.stage}
-                            </span>
+                            {isWon ? (
+                              <span className="deals-won-ribbon">
+                                <CheckCircle2 size={11} /> Won
+                              </span>
+                            ) : (
+                              <span
+                                className="sv-badge"
+                                style={{
+                                  background: colors.bg,
+                                  color: colors.color,
+                                  border: `1px solid ${colors.border}`,
+                                  fontSize: '0.7rem',
+                                  padding: '2px 8px'
+                                }}
+                              >
+                                {d.stage}
+                              </span>
+                            )}
                           </div>
 
                           <div className="deals-card-client">
-                            <Building size={13} color="#64748B" />
-                            <span>{d.clientName || d.company || 'Client'}</span>
+                            <div className="deals-card-client-avatar">{clientInitial}</div>
+                            <span>{clientLabel}</span>
                           </div>
 
-                          <div className="deals-card-value">
-                            Rs. {Number(d.value || 0).toLocaleString()}
+                          <div className="deals-card-value-wrap">
+                            <div className="deals-card-value">
+                              Rs. {Number(d.value || 0).toLocaleString()}
+                            </div>
                           </div>
 
                           {/* Probability Indicator */}
                           <div className="deals-card-prob-wrap">
                             <div className="deals-card-prob-header">
                               <span>Win Probability</span>
-                              <span style={{ color: isWon ? '#059669' : '#2563EB', fontWeight: 700 }}>
+                              <span style={{ color: isWon ? '#059669' : colors.color, fontWeight: 700 }}>
                                 {prob}%
                               </span>
                             </div>
@@ -410,25 +454,31 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                                 className="deals-card-prob-fill"
                                 style={{
                                   width: `${prob}%`,
-                                  background: isWon ? 'linear-gradient(90deg, #10B981 0%, #059669 100%)' : 'linear-gradient(90deg, #60A5FA 0%, #2563EB 100%)'
+                                  background: isWon
+                                    ? 'linear-gradient(90deg, #10B981 0%, #059669 100%)'
+                                    : `linear-gradient(90deg, ${colors.border} 0%, ${colors.color} 100%)`
                                 }}
                               />
                             </div>
                           </div>
 
                           <div className="deals-card-footer">
-                            <span>
-                              {d.closingDate ? `Target: ${new Date(d.closingDate).toLocaleDateString('en-GB')}` : 'Ongoing'}
-                            </span>
+                            <div className="deals-card-date">
+                              <Calendar size={12} color="#94A3B8" />
+                              <span>
+                                {d.closingDate ? new Date(d.closingDate).toLocaleDateString('en-GB') : 'Ongoing'}
+                              </span>
+                            </div>
+
                             <div className="deals-card-actions" onClick={e => e.stopPropagation()}>
                               <button
-                                className="sv-btn-action-icon"
-                                style={{ color: '#2563EB', background: '#EFF6FF' }}
+                                className="deals-btn-quote"
                                 onClick={() => handleCreateQuotation(d)}
                                 disabled={creatingQuote}
-                                title="Generate Quotation"
+                                title="Generate Quotation from this Deal"
                               >
-                                <ArrowRight size={13} />
+                                <FileText size={11} />
+                                <span>Quote</span>
                               </button>
                               <button
                                 className="sv-btn-action-icon"

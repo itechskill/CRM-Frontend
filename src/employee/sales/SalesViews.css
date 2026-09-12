@@ -269,7 +269,7 @@
 }
 
 .sv-modal-lg {
-  max-width: 780px;
+  max-width: 820px;
 }
 
 .sv-modal-header {
@@ -288,18 +288,46 @@
   color: #0F172A;
 }
 
+.sv-modal-close-btn,
 .sv-modal-header button {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   color: #64748B;
   cursor: pointer;
-  padding: 4px;
-  border-radius: 6px;
+  padding: 6px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
 }
 
+.sv-modal-close-btn:hover,
 .sv-modal-header button:hover {
   color: #0F172A;
   background: #F1F5F9;
+  border-color: #E2E8F0;
+}
+
+.sv-btn-secondary {
+  background-color: #F8FAFC;
+  color: #475569;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 9px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sv-btn-secondary:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+  border-color: #94A3B8;
 }
 
 .sv-form {
@@ -1554,13 +1582,159 @@
   }
 }
 
-/* ── DEALS PIPELINE KANBAN & ANIMATED CARDS ── */
+/* ── DEALS & PIPELINE - PREMIUM KPI CARDS & KANBAN CARDS ── */
+.deal-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 16px;
+  margin-bottom: 22px;
+}
+
+.deal-kpi-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.deal-kpi-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: transparent;
+  transition: opacity 0.2s ease;
+}
+
+.deal-kpi-card.active-pipeline::before {
+  background: linear-gradient(90deg, #3B82F6, #1D4ED8);
+}
+
+.deal-kpi-card.won-deals::before {
+  background: linear-gradient(90deg, #10B981, #059669);
+}
+
+.deal-kpi-card.win-rate::before {
+  background: linear-gradient(90deg, #8B5CF6, #6D28D9);
+}
+
+.deal-kpi-card.total-pipeline::before {
+  background: linear-gradient(90deg, #64748B, #1E293B);
+}
+
+.deal-kpi-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 24px -5px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.03);
+  border-color: #CBD5E1;
+}
+
+.deal-kpi-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.25s ease;
+}
+
+.deal-kpi-card:hover .deal-kpi-icon {
+  transform: scale(1.08);
+}
+
+.deal-kpi-icon.active-pipeline {
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #DBEAFE;
+}
+
+.deal-kpi-icon.won-deals {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+}
+
+.deal-kpi-icon.win-rate {
+  background: #F5F3FF;
+  color: #7C3AED;
+  border: 1px solid #DDD6FE;
+}
+
+.deal-kpi-icon.total-pipeline {
+  background: #F8FAFC;
+  color: #334155;
+  border: 1px solid #E2E8F0;
+}
+
+.deal-kpi-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.deal-kpi-label {
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #64748B;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin-bottom: 3px;
+}
+
+.deal-kpi-value {
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.2;
+  margin-bottom: 5px;
+}
+
+.deal-kpi-sub {
+  font-size: 0.76rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.deal-kpi-sub.active-pipeline {
+  background: #EFF6FF;
+  color: #1D4ED8;
+}
+
+.deal-kpi-sub.won-deals {
+  background: #ECFDF5;
+  color: #047857;
+}
+
+.deal-kpi-sub.win-rate {
+  background: #F5F3FF;
+  color: #6D28D9;
+}
+
+.deal-kpi-sub.total-pipeline {
+  background: #F1F5F9;
+  color: #475569;
+}
+
+/* ── DEALS PIPELINE KANBAN BOARD ── */
 .deals-pipeline-board {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 16px;
   align-items: flex-start;
-  margin-top: 8px;
+  margin-top: 10px;
 }
 
 .deals-stage-col {
@@ -1571,7 +1745,13 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  min-height: 420px;
+  min-height: 440px;
+  position: relative;
+  transition: border-color 0.2s ease;
+}
+
+.deals-stage-col:hover {
+  border-color: #CBD5E1;
 }
 
 .deals-stage-header {
@@ -1588,6 +1768,13 @@
   gap: 8px;
 }
 
+.deals-stage-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.8);
+}
+
 .deals-stage-name {
   font-size: 0.85rem;
   font-weight: 700;
@@ -1602,12 +1789,13 @@
   color: #475569;
   font-size: 0.72rem;
   font-weight: 700;
-  padding: 2px 8px;
+  padding: 2px 7px;
   border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
 .deals-stage-val {
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: #059669;
 }
@@ -1618,25 +1806,52 @@
   gap: 12px;
 }
 
+/* ── INDIVIDUAL DEAL CARD ── */
 .deals-card {
   background-color: #FFFFFF !important;
   border: 1px solid #E2E8F0;
+  border-left: 4px solid #3B82F6;
   border-radius: 12px;
-  padding: 15px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+  padding: 15px 16px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
   display: flex;
   flex-direction: column;
   gap: 10px;
   cursor: pointer;
-  transition: transform 0.22s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.22s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.22s;
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
   overflow: hidden;
 }
 
 .deals-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 10px 24px -4px rgba(0, 0, 0, 0.09);
+  box-shadow: 0 12px 24px -4px rgba(15, 23, 42, 0.09), 0 4px 8px -2px rgba(15, 23, 42, 0.04);
   border-color: #93C5FD;
+}
+
+/* Special styling for Won Deal cards */
+.deals-card.is-won {
+  border-left: 4px solid #10B981 !important;
+  background: linear-gradient(180deg, #FFFFFF 0%, #F0FDF4 100%) !important;
+  border-color: #A7F3D0;
+}
+
+.deals-card.is-won:hover {
+  box-shadow: 0 12px 26px -4px rgba(16, 185, 129, 0.16), 0 4px 8px -2px rgba(16, 185, 129, 0.08);
+  border-color: #34D399;
+}
+
+.deals-won-ribbon {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: #047857;
+  background: #ECFDF5;
+  border: 1px solid #A7F3D0;
+  padding: 2px 8px;
+  border-radius: 20px;
 }
 
 .deals-card-header {
@@ -1663,10 +1878,36 @@
   font-weight: 500;
 }
 
+.deals-card-client-avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #F1F5F9;
+  color: #475569;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.deals-card-value-wrap {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 4px 0;
+}
+
 .deals-card-value {
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 800;
   color: #059669;
+  letter-spacing: -0.01em;
+}
+
+.deals-card.is-won .deals-card-value {
+  color: #047857;
 }
 
 .deals-card-prob-wrap {
@@ -1702,16 +1943,43 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 8px;
+  padding-top: 10px;
   border-top: 1px solid #F1F5F9;
-  font-size: 0.75rem;
-  color: #94A3B8;
+  font-size: 0.74rem;
+  color: #64748B;
+}
+
+.deals-card-date {
+  display: flex;
+  align-items: center;
+  gap: 5px;
 }
 
 .deals-card-actions {
   display: flex;
   align-items: center;
   gap: 4px;
+}
+
+.deals-btn-quote {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.deals-btn-quote:hover {
+  background: #2563EB;
+  color: #FFFFFF;
+  border-color: #2563EB;
 }
 
 /* ─────────────────────────────────────────────────────────────
