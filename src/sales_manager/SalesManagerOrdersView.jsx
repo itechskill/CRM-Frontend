@@ -64,11 +64,13 @@ export default function SalesManagerOrdersView() {
   const [sortBy, setSortBy] = useState('date-desc');
   const [viewOrder, setViewOrder] = useState(null);
 
-  // Stock check & delivery workflow states
+  // Stock check, delivery & proforma workflow states
   const [stockCheckResult, setStockCheckResult] = useState(null);
   const [checkingStock, setCheckingStock] = useState(false);
   const [deliveryPreFill, setDeliveryPreFill] = useState(null);
   const [creatingDN, setCreatingDN] = useState(false);
+  const [proformaPreFill, setProformaPreFill] = useState(null);
+  const [creatingPI, setCreatingPI] = useState(false);
   const [feedback, setFeedback] = useState('');
 
   const fetchData = useCallback(async () => {
@@ -176,6 +178,66 @@ export default function SalesManagerOrdersView() {
       alert('Error creating Delivery Note.');
     } finally {
       setCreatingDN(false);
+    }
+  };
+
+  const handleOpenProformaModal = (order) => {
+    const items = (order.items && order.items.length > 0)
+      ? order.items.map(it => ({
+          description: it.description || it.productName || '',
+          quantity: Number(it.quantity || it.requiredQty) || 1,
+          unitPrice: Number(it.unitPrice) || 0,
+          total: (Number(it.quantity || it.requiredQty) || 1) * (Number(it.unitPrice) || 0)
+        }))
+      : [{ description: order.productSummary || 'Standard Products', quantity: 1, unitPrice: Number(order.netAmount || order.totalAmount) || 0, total: Number(order.netAmount || order.totalAmount) || 0 }];
+
+    let subtotal = 0;
+    items.forEach(it => { subtotal += it.total; });
+    const disc = Number(order.discount) || 0;
+    const tx = Number(order.tax) || 0;
+
+    setProformaPreFill({
+      salesOrderId: order._id,
+      salesOrderNumber: order.orderReference || order.orderNumber || '',
+      clientName: order.clientName || order.customerName || '',
+      clientEmail: order.clientEmail || '',
+      clientPhone: order.clientPhone || '',
+      clientAddress: order.clientAddress || '',
+      items: items,
+      totalAmount: subtotal,
+      discount: disc,
+      tax: tx,
+      netAmount: Math.max(0, subtotal - disc + tx),
+      status: 'Issued',
+      issueDate: new Date().toISOString().split('T')[0],
+      dueDate: '',
+      paymentTerms: 'Advance 100%',
+      deliveryTerms: 'Ex-Works / Standard Dispatch',
+      notes: `Optional Proforma Invoice generated from Sales Order ${order.orderReference || order.orderNumber}`
+    });
+  };
+
+  const handleSaveProformaFromOrder = async (e) => {
+    e.preventDefault();
+    if (!proformaPreFill) return;
+    setCreatingPI(true);
+    try {
+      const { response, data } = await apiRequest('/api/sales-employee/proforma-invoices', {
+        method: 'POST',
+        body: JSON.stringify(proformaPreFill)
+      });
+      if (response.ok && data.success) {
+        setFeedback(`Proforma Invoice ${data.data?.proformaNumber || ''} created successfully!`);
+        setProformaPreFill(null);
+        fetchData();
+        setTimeout(() => setFeedback(''), 4000);
+      } else {
+        alert(data.message || 'Failed to create Proforma Invoice.');
+      }
+    } catch (err) {
+      alert('Error creating Proforma Invoice.');
+    } finally {
+      setCreatingPI(false);
     }
   };
 
@@ -650,6 +712,25 @@ export default function SalesManagerOrdersView() {
                             <Boxes size={13} /> Stock Check
                           </button>
                           <button
+                            onClick={() => handleOpenProformaModal(o)}
+                            style={{
+                              background: '#EFF6FF',
+                              border: '1px solid #BFDBFE',
+                              borderRadius: '6px',
+                              padding: '6px 10px',
+                              cursor: 'pointer',
+                              color: '#2563EB',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              fontWeight: 600,
+                              fontSize: '0.78rem'
+                            }}
+                            title="Generate Optional Proforma Invoice"
+                          >
+                            <FileSpreadsheet size={13} /> Proforma
+                          </button>
+                          <button
                             onClick={() => setViewOrder(o)}
                             style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 10px', cursor: 'pointer', color: '#334155', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600, fontSize: '0.78rem' }}
                             title="View Order Details"
@@ -776,31 +857,54 @@ export default function SalesManagerOrdersView() {
               </div>
             )}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '20px' }}>
-              <button
-                onClick={() => {
-                  const targetOrder = viewOrder;
-                  setViewOrder(null);
-                  handleCheckStock(targetOrder);
-                }}
-                style={{
-                  background: '#ECFDF5',
-                  color: '#047857',
-                  border: '1px solid #A7F3D0',
-                  borderRadius: '8px',
-                  padding: '9px 18px',
-                  fontWeight: 700,
-                  cursor: 'pointer',
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px'
-                }}
-              >
-                <Boxes size={16} /> Run Stock Check
-              </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginTop: '20px' }}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={() => {
+                    const targetOrder = viewOrder;
+                    setViewOrder(null);
+                    handleCheckStock(targetOrder);
+                  }}
+                  style={{
+                    background: '#ECFDF5',
+                    color: '#047857',
+                    border: '1px solid #A7F3D0',
+                    borderRadius: '8px',
+                    padding: '9px 16px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <Boxes size={16} /> Run Stock Check
+                </button>
+                <button
+                  onClick={() => {
+                    const targetOrder = viewOrder;
+                    setViewOrder(null);
+                    handleOpenProformaModal(targetOrder);
+                  }}
+                  style={{
+                    background: '#EFF6FF',
+                    color: '#2563EB',
+                    border: '1px solid #BFDBFE',
+                    borderRadius: '8px',
+                    padding: '9px 16px',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                >
+                  <FileSpreadsheet size={16} /> Create Proforma
+                </button>
+              </div>
               <button
                 onClick={() => setViewOrder(null)}
-                style={{ background: '#2563EB', color: '#FFF', border: 'none', borderRadius: '8px', padding: '9px 22px', fontWeight: 700, cursor: 'pointer' }}
+                style={{ background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '9px 20px', fontWeight: 700, cursor: 'pointer' }}
               >
                 Close
               </button>
@@ -1115,6 +1219,124 @@ export default function SalesManagerOrdersView() {
                   style={{ background: '#059669', color: '#FFF', border: 'none', borderRadius: '8px', padding: '9px 22px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
                 >
                   <Save size={15} /> {creatingDN ? 'Processing & Deducting Stock...' : 'Confirm & Save Delivery Note'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE OPTIONAL PROFORMA INVOICE MODAL */}
+      {proformaPreFill && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1100, padding: '16px' }} onClick={() => setProformaPreFill(null)}>
+          <div style={{ background: '#FFF', borderRadius: '16px', width: '100%', maxWidth: '720px', padding: '24px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', borderBottom: '1px solid #E2E8F0', paddingBottom: '14px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: '#EFF6FF', color: '#2563EB', padding: '8px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <FileSpreadsheet size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>
+                    Generate Proforma Invoice (Optional)
+                  </h3>
+                  <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.8rem' }}>
+                    Auto-populated from Sales Order <strong>{proformaPreFill.salesOrderNumber}</strong>
+                  </p>
+                </div>
+              </div>
+              <button onClick={() => setProformaPreFill(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94A3B8' }}><X size={18} /></button>
+            </div>
+
+            <form onSubmit={handleSaveProformaFromOrder} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>Customer & Contact Information</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Customer / Client *</label>
+                    <input
+                      value={proformaPreFill.clientName}
+                      onChange={e => setProformaPreFill(p => ({ ...p, clientName: e.target.value }))}
+                      required
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Contact Phone</label>
+                    <input
+                      value={proformaPreFill.clientPhone}
+                      onChange={e => setProformaPreFill(p => ({ ...p, clientPhone: e.target.value }))}
+                      placeholder="+92 300..."
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Payment Terms</label>
+                    <input
+                      value={proformaPreFill.paymentTerms}
+                      onChange={e => setProformaPreFill(p => ({ ...p, paymentTerms: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#475569', marginBottom: '4px' }}>Delivery Terms</label>
+                    <input
+                      value={proformaPreFill.deliveryTerms}
+                      onChange={e => setProformaPreFill(p => ({ ...p, deliveryTerms: e.target.value }))}
+                      style={{ width: '100%', padding: '8px 12px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Items Breakdown */}
+              <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>
+                  Product Scope & Pricing Breakdown (PKR)
+                </div>
+                <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden', background: '#FFF' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                      <tr>
+                        <th style={{ padding: '8px 10px', textAlign: 'left' }}>Item Description</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'center', width: '70px' }}>Qty</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'right', width: '110px' }}>Unit Price</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'right', width: '120px' }}>Total Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {proformaPreFill.items.map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '8px 10px', fontWeight: 600 }}>{item.description}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center' }}>{item.quantity}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right' }}>Rs. {Number(item.unitPrice || 0).toLocaleString()}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                            Rs. {Number(item.total || (item.quantity * item.unitPrice) || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                  <div style={{ background: '#F0FDF4', padding: '8px 14px', borderRadius: '8px', border: '1px solid #BBF7D0', textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#166534', fontWeight: 700, textTransform: 'uppercase' }}>Grand Total: </span>
+                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#059669', marginLeft: '6px' }}>
+                      Rs. {Number(proformaPreFill.netAmount || proformaPreFill.totalAmount || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '8px' }}>
+                <button type="button" style={{ background: '#F1F5F9', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '9px 18px', fontWeight: 600, color: '#475569', cursor: 'pointer' }} onClick={() => setProformaPreFill(null)}>
+                  Cancel
+                </button>
+                <button type="submit" disabled={creatingPI} style={{ background: '#2563EB', color: '#FFF', border: 'none', borderRadius: '8px', padding: '9px 22px', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                  <FileSpreadsheet size={15} /> {creatingPI ? 'Generating Proforma...' : 'Confirm & Issue Proforma Invoice'}
                 </button>
               </div>
             </form>
