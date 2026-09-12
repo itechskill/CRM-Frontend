@@ -21,6 +21,7 @@ export default function SalesHeader({
       case 'meetings': return 'Meetings';
       case 'quotations': return 'Quotations Management';
       case 'orders': return 'Sales Team Orders';
+      case 'proforma_invoices': return 'Proforma Invoices';
       case 'deliveries': return 'Delivery Notes';
       case 'invoices': return 'Invoices & Receivables';
       case 'payments': return 'Customer Payments';

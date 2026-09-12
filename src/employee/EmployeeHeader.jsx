@@ -12,14 +12,21 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
       case 'dashboard':
         return { title: 'Dashboard', subtitle: 'Overview of your work and progress' };
       case 'quotations':
+      case 'my_quotations':
         return { title: 'Quotations', subtitle: 'Manage and generate client sales quotations' };
       case 'orders':
+      case 'my_orders':
         return { title: 'Sales Orders', subtitle: 'Track and process client purchase orders' };
+      case 'proforma_invoices':
+        return { title: 'Proforma Invoices', subtitle: 'Issue optional commercial proforma invoices from Sales Orders' };
       case 'deliveries':
+      case 'delivery_notes':
         return { title: 'Delivery Notes', subtitle: 'Monitor shipments, dispatch notes, and delivery statuses' };
       case 'invoices':
+      case 'my_invoices':
         return { title: 'Invoices & Billing', subtitle: 'Manage invoices, receivables, and tax invoices' };
       case 'payments':
+      case 'my_payments':
         return { title: 'Customer Payments', subtitle: 'Record and track payment receipts and settlement statuses' };
       case 'leave':
         return { title: 'Leave & Attendance', subtitle: 'Submit leave applications and review your attendance history' };

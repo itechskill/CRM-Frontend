@@ -24,7 +24,9 @@ import {
   Crown,
   ShoppingCart,
   CreditCard,
-  Activity
+  Activity,
+  FileSpreadsheet,
+  Truck
 } from 'lucide-react';
 import './SalesSidebar.css';
 
@@ -56,6 +58,8 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
     { id: 'leads', label: 'Leads', icon: Target, badge: counts.leads > 0 ? String(counts.leads) : undefined },
     { id: 'orders', label: 'Sales Orders', icon: ShoppingCart },
+    { id: 'proforma_invoices', label: 'Proforma Invoices', icon: FileSpreadsheet },
+    { id: 'deliveries', label: 'Delivery Notes', icon: Truck },
     { id: 'payments', label: 'Payments & Collections', icon: CreditCard },
     { id: 'activities', label: 'Team Activities', icon: Activity },
     { id: 'invoices', label: 'Invoices & Billing', icon: Calculator },

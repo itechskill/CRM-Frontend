@@ -97,6 +97,7 @@ import EmpSalesQuotationsView from './employee/sales/SalesQuotationsView';
 import EmpSalesCustomerPOsView from './employee/sales/SalesCustomerPOsView';
 import EmpSalesProductFilesView from './employee/sales/SalesProductFilesView';
 import EmpSalesOrdersView from './employee/sales/SalesOrdersView';
+import EmpSalesProformaInvoicesView from './employee/sales/SalesProformaInvoicesView';
 import EmpSalesInvoicesView from './employee/sales/SalesInvoicesView';
 import EmpSalesDeliveryNotesView from './employee/sales/SalesDeliveryNotesView';
 import EmpSalesPaymentsView from './employee/sales/SalesPaymentsView';
@@ -760,7 +761,7 @@ export default function App() {
               onMenuToggle={() => setIsSidebarOpen(true)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'].includes(activeTab)) && (
                 <EmployeeDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
@@ -788,6 +789,7 @@ export default function App() {
               {activeTab === 'customer_pos' && <EmpSalesCustomerPOsView />}
               {activeTab === 'product_files' && <EmpSalesProductFilesView />}
               {activeTab === 'my_orders' && <EmpSalesOrdersView />}
+              {activeTab === 'proforma_invoices' && <EmpSalesProformaInvoicesView onNavigateDeliveryNotes={() => setActiveTab('delivery_notes')} />}
               {activeTab === 'delivery_notes' && <EmpSalesDeliveryNotesView />}
               {activeTab === 'my_invoices' && <EmpSalesInvoicesView />}
               {activeTab === 'my_payments' && <EmpSalesPaymentsView />}
@@ -828,11 +830,13 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leads', 'deals', 'pipeline', 'orders', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => handleSetActiveTab(tab)} />}
+              {(activeTab === 'dashboard' || !['leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => handleSetActiveTab(tab)} />}
               {activeTab === 'leads' && <SalesLeadsView />}
               {activeTab === 'deals' && <SalesDealsView />}
               {activeTab === 'pipeline' && <SalesPipelineView />}
               {activeTab === 'orders' && <SalesManagerOrdersView />}
+              {activeTab === 'proforma_invoices' && <EmpSalesProformaInvoicesView onNavigateDeliveryNotes={() => handleSetActiveTab('deliveries')} />}
+              {activeTab === 'deliveries' && <EmpSalesDeliveryNotesView />}
               {activeTab === 'payments' && <SalesManagerPaymentsView />}
               {activeTab === 'activities' && <SalesManagerActivitiesView />}
               {activeTab === 'invoices' && <SalesMgrInvoicesView />}

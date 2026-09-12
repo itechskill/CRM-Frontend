@@ -107,6 +107,10 @@ export default function SalesOrdersView() {
   const [deliveryPreFill, setDeliveryPreFill] = useState(null);
   const [creatingDN, setCreatingDN] = useState(false);
 
+  // Proforma Invoice workflow states
+  const [proformaPreFill, setProformaPreFill] = useState(null);
+  const [creatingPI, setCreatingPI] = useState(false);
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -145,6 +149,66 @@ export default function SalesOrdersView() {
     }
   };
 
+  const handleOpenProformaModal = (order) => {
+    const items = (order.items && order.items.length > 0)
+      ? order.items.map(it => ({
+          description: it.description || '',
+          quantity: Number(it.quantity) || 1,
+          unitPrice: Number(it.unitPrice) || 0,
+          total: (Number(it.quantity) || 1) * (Number(it.unitPrice) || 0)
+        }))
+      : [{ description: order.productSummary || 'Standard Products', quantity: 1, unitPrice: Number(order.netAmount || order.totalAmount) || 0, total: Number(order.netAmount || order.totalAmount) || 0 }];
+
+    let subtotal = 0;
+    items.forEach(it => { subtotal += it.total; });
+    const disc = Number(order.discount) || 0;
+    const tx = Number(order.tax) || 0;
+
+    setProformaPreFill({
+      salesOrderId: order._id,
+      salesOrderNumber: order.orderReference || order.orderNumber || '',
+      clientName: order.clientName || '',
+      clientEmail: order.clientEmail || '',
+      clientPhone: order.clientPhone || '',
+      clientAddress: order.clientAddress || '',
+      items: items,
+      totalAmount: subtotal,
+      discount: disc,
+      tax: tx,
+      netAmount: Math.max(0, subtotal - disc + tx),
+      status: 'Issued',
+      issueDate: new Date().toISOString().split('T')[0],
+      dueDate: '',
+      paymentTerms: 'Advance 100%',
+      deliveryTerms: 'Ex-Works / Standard Dispatch',
+      notes: `Optional Proforma Invoice generated from Sales Order ${order.orderReference || order.orderNumber}`
+    });
+  };
+
+  const handleSaveProformaFromOrder = async (e) => {
+    e.preventDefault();
+    if (!proformaPreFill) return;
+    setCreatingPI(true);
+    try {
+      const { response, data } = await apiRequest('/api/sales-employee/proforma-invoices', {
+        method: 'POST',
+        body: JSON.stringify(proformaPreFill)
+      });
+      if (response.ok && data.success) {
+        setFeedback(`Proforma Invoice ${data.data?.proformaNumber || ''} created successfully!`);
+        setProformaPreFill(null);
+        fetchOrders();
+        setTimeout(() => setFeedback(''), 4000);
+      } else {
+        alert(data.message || 'Failed to create Proforma Invoice.');
+      }
+    } catch (err) {
+      alert('Error creating Proforma Invoice.');
+    } finally {
+      setCreatingPI(false);
+    }
+  };
+
   const handleCreateDeliveryFromStock = (orderData) => {
     const rawOrder = orderData.rawOrder || orderData;
     const items = orderData.items && orderData.items.length
@@ -165,18 +229,20 @@ export default function SalesOrdersView() {
               unit: 'pcs',
               availability: 'Available'
             }))
-          : [{ product: rawOrder.productSummary || 'Scope Items', description: rawOrder.productSummary || 'Scope Items', demand: 1, quantity: 1, unit: 'pcs', availability: 'Available' }]);
+          : [{ product: rawOrder.productSummary || 'General Delivery Item', description: rawOrder.productSummary || 'General Delivery Item', demand: 1, quantity: 1, unit: 'pcs', availability: 'Available' }]);
 
-    const todayStr = new Date().toISOString().split('T')[0];
-    const deadlineStr = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+    const deadline = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000);
+    const deadlineStr = deadline.toISOString().split('T')[0];
 
     setDeliveryPreFill({
       salesOrderId: rawOrder._id,
       salesOrderNumber: rawOrder.orderReference || rawOrder.orderNumber,
-      clientName: rawOrder.clientName,
-      deliveryAddress: rawOrder.clientAddress || `${rawOrder.clientName} Headquarters`,
-      recipientName: rawOrder.clientName,
+      clientName: rawOrder.clientName || rawOrder.customerName || 'Customer',
+      recipientName: rawOrder.clientName || rawOrder.customerName || 'Customer Recipient',
       recipientPhone: rawOrder.clientPhone || '',
+      deliveryAddress: rawOrder.clientAddress || 'Client Site / Main Warehouse',
       trackingNumber: `TRK-${Math.floor(10000 + Math.random() * 90000)}`,
       carrier: 'Fortline Internal Logistics',
       status: 'Done',
@@ -615,10 +681,18 @@ export default function SalesOrdersView() {
                       </button>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                        <button className="sv-btn-action-icon" onClick={() => setViewOrder(o)} title="View Order Details"><Eye size={14} /></button>
-                        <button className="sv-btn-action-icon" onClick={() => openEdit(o)} title="Edit Order"><Edit2 size={14} /></button>
-                        <button className="sv-btn-action-icon" onClick={() => setDeleteTarget(o)} title="Delete Order" style={{ color: '#EF4444' }}><Trash2 size={14} /></button>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                        <button
+                          className="sv-btn-action-icon"
+                          onClick={() => handleOpenProformaModal(o)}
+                          title="Create Optional Proforma Invoice"
+                          style={{ color: '#2563EB', background: '#EFF6FF' }}
+                        >
+                          <FileSpreadsheet size={13} />
+                        </button>
+                        <button className="sv-btn-action-icon" onClick={() => setViewOrder(o)} title="View Order Details"><Eye size={13} /></button>
+                        <button className="sv-btn-action-icon" onClick={() => openEdit(o)} title="Edit Order"><Edit2 size={13} /></button>
+                        <button className="sv-btn-action-icon" onClick={() => setDeleteTarget(o)} title="Delete Order" style={{ color: '#EF4444' }}><Trash2 size={13} /></button>
                       </div>
                     </td>
                   </tr>
@@ -1056,6 +1130,101 @@ export default function SalesOrdersView() {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CREATE OPTIONAL PROFORMA INVOICE MODAL */}
+      {proformaPreFill && (
+        <div className="sv-modal-overlay" onClick={() => setProformaPreFill(null)}>
+          <div className="sv-modal" style={{ maxWidth: '720px' }} onClick={e => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <FileSpreadsheet size={22} color="#2563EB" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>
+                    Generate Proforma Invoice (Optional)
+                  </h3>
+                  <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.8rem' }}>
+                    Auto-populated from Sales Order <strong>{proformaPreFill.salesOrderNumber}</strong>
+                  </p>
+                </div>
+              </div>
+              <button className="sv-modal-close-btn" onClick={() => setProformaPreFill(null)} title="Close">
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveProformaFromOrder} className="sv-form">
+              <div className="sv-form-section">
+                <div className="sv-form-section-title"><Building size={14} color="#2563EB" /> Customer & Billing Information</div>
+                <div className="sv-grid-2">
+                  <div className="sv-field">
+                    <label>Client / Customer Name *</label>
+                    <input value={proformaPreFill.clientName} onChange={e => setProformaPreFill(p => ({ ...p, clientName: e.target.value }))} required />
+                  </div>
+                  <div className="sv-field">
+                    <label>Contact Phone</label>
+                    <input value={proformaPreFill.clientPhone} onChange={e => setProformaPreFill(p => ({ ...p, clientPhone: e.target.value }))} placeholder="+92 300..." />
+                  </div>
+                </div>
+
+                <div className="sv-grid-2">
+                  <div className="sv-field">
+                    <label>Payment Terms</label>
+                    <input value={proformaPreFill.paymentTerms} onChange={e => setProformaPreFill(p => ({ ...p, paymentTerms: e.target.value }))} />
+                  </div>
+                  <div className="sv-field">
+                    <label>Delivery Terms</label>
+                    <input value={proformaPreFill.deliveryTerms} onChange={e => setProformaPreFill(p => ({ ...p, deliveryTerms: e.target.value }))} />
+                  </div>
+                </div>
+              </div>
+
+              <div className="sv-form-section">
+                <div className="sv-form-section-title"><DollarSign size={14} color="#059669" /> Products & Pricing Breakdown (PKR)</div>
+                <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
+                    <thead style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                      <tr>
+                        <th style={{ padding: '8px 10px', textAlign: 'left' }}>Item Description</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'center', width: '70px' }}>Qty</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'right', width: '110px' }}>Unit Price</th>
+                        <th style={{ padding: '8px 10px', textAlign: 'right', width: '120px' }}>Total Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {proformaPreFill.items.map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '8px 10px', fontWeight: 600 }}>{item.description}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'center' }}>{item.quantity}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right' }}>Rs. {Number(item.unitPrice || 0).toLocaleString()}</td>
+                          <td style={{ padding: '8px 10px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                            Rs. {Number(item.total || (item.quantity * item.unitPrice) || 0).toLocaleString()}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+                  <div style={{ background: '#F8FAFC', padding: '8px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', textAlign: 'right' }}>
+                    <span style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 700, textTransform: 'uppercase' }}>Grand Total: </span>
+                    <span style={{ fontSize: '1.15rem', fontWeight: 800, color: '#059669', marginLeft: '6px' }}>
+                      Rs. {Number(proformaPreFill.netAmount || proformaPreFill.totalAmount || 0).toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="sv-modal-actions">
+                <button type="button" className="sv-btn-cancel" onClick={() => setProformaPreFill(null)}>Cancel</button>
+                <button type="submit" className="sv-btn-primary" disabled={creatingPI} style={{ background: '#2563EB' }}>
+                  <FileSpreadsheet size={15} /> {creatingPI ? 'Generating Proforma...' : 'Confirm & Issue Proforma Invoice'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
