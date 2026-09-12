@@ -820,13 +820,14 @@ export default function App() {
             <SalesHeader
               activeTab={activeTab}
               currentUser={currentUser}
+              onNavigateTab={(tab) => handleSetActiveTab(tab)}
               onOpenNewDealModal={() => setIsNewProjectModalOpen(true)}
               onMenuToggle={() => setIsSidebarOpen(true)}
               searchQuery={portalSearch}
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leads', 'deals', 'pipeline', 'orders', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />}
+              {(activeTab === 'dashboard' || !['leads', 'deals', 'pipeline', 'orders', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => handleSetActiveTab(tab)} />}
               {activeTab === 'leads' && <SalesLeadsView />}
               {activeTab === 'deals' && <SalesDealsView />}
               {activeTab === 'pipeline' && <SalesPipelineView />}
@@ -840,7 +841,7 @@ export default function App() {
               {activeTab === 'team' && <SalesTeamsView />}
               {activeTab === 'settings' && <SalesSettingsView />}
               {activeTab === 'notifications' && <SalesNotificationsView />}
-              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => { setCurrentUser(updated); setUser(updated); }} />}
             </main>
           </div>
         </RoleProtectedRoute>

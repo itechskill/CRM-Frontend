@@ -1,9 +1,18 @@
 import React from 'react';
-import { Search, Plus, Menu } from 'lucide-react';
+import { Search, Plus, Menu, User } from 'lucide-react';
 import NotificationDropdown from '../components/NotificationDropdown';
+import { getUser } from '../utils/authStorage';
 import './SalesHeader.css';
 
-export default function SalesHeader({ activeTab, onOpenNewDealModal, onMenuToggle, searchQuery = '', onSearchChange, currentUser }) {
+export default function SalesHeader({
+  activeTab,
+  onOpenNewDealModal,
+  onMenuToggle,
+  searchQuery = '',
+  onSearchChange,
+  currentUser,
+  onNavigateTab
+}) {
   const getTabLabel = () => {
     switch (activeTab) {
       case 'dashboard': return 'Dashboard';
@@ -23,18 +32,44 @@ export default function SalesHeader({ activeTab, onOpenNewDealModal, onMenuToggl
       case 'reports': return 'Sales Performance Reports';
       case 'settings': return 'Settings';
       case 'notifications': return 'Notifications';
+      case 'profile': return 'My Profile';
       default: return 'Sales Manager';
     }
   };
 
   const getInitials = (name) => {
-    if (!name) return 'SM';
-    const parts = name.trim().split(' ');
+    if (!name) return 'U';
+    const parts = name.trim().split(' ').filter(Boolean);
     if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     return parts[0].slice(0, 2).toUpperCase();
   };
 
-  const displayName = currentUser?.name || 'Fahad';
+  const formatRole = (role, position) => {
+    if (position && typeof position === 'string' && position.trim()) {
+      return position.trim();
+    }
+    if (!role) return 'Sales Manager';
+    const mapping = {
+      sales_manager: 'Sales Manager',
+      sales_rep: 'Sales Representative',
+      employee: 'Sales Representative',
+      admin: 'Administrator',
+      project_manager: 'Project Manager',
+      accountant: 'Accountant',
+      marketing: 'Marketing Specialist',
+      hr: 'HR Manager',
+      hr_manager: 'HR Manager',
+      ceo: 'Chief Executive Officer'
+    };
+    const key = String(role).toLowerCase();
+    if (mapping[key]) return mapping[key];
+    return String(role).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  const user = currentUser || getUser();
+  const displayName = user?.fullName || user?.name || user?.username || 'User';
+  const displayRole = formatRole(user?.role, user?.position);
+  const avatarImage = user?.profileImage || user?.profilePicture || user?.avatar;
 
   return (
     <header className="sales-header">
@@ -51,21 +86,27 @@ export default function SalesHeader({ activeTab, onOpenNewDealModal, onMenuToggl
       <div className="sales-header-actions">
         <NotificationDropdown />
 
-        {/* User Profile Badge */}
-        <div className="header-user-profile-badge manager-badge">
+        {/* User Profile Badge in Top Right Corner */}
+        <div
+          className="header-user-profile-badge manager-badge"
+          onClick={() => onNavigateTab?.('profile')}
+          title="View & Edit Profile"
+          style={{ cursor: onNavigateTab ? 'pointer' : 'default' }}
+        >
           <div className="header-user-avatar manager-avatar">
-            {currentUser?.profilePicture ? (
-              <img src={currentUser.profilePicture} alt={displayName} />
+            {avatarImage ? (
+              <img src={avatarImage} alt={displayName} />
             ) : (
               <span>{getInitials(displayName)}</span>
             )}
           </div>
           <div className="header-user-info">
             <span className="header-user-name">{displayName}</span>
-            <span className="header-user-role">Sales Manager</span>
+            <span className="header-user-role">{displayRole}</span>
           </div>
         </div>
       </div>
     </header>
   );
 }
+

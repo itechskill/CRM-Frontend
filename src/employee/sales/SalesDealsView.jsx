@@ -1,6 +1,27 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../../utils/api';
-import { Plus, Search, DollarSign, TrendingUp, CheckCircle, Edit2, X, Save, FileText, Eye, Trash2, Calendar, Target, ArrowRight, CheckCircle2 } from 'lucide-react';
+import {
+  Plus,
+  Search,
+  DollarSign,
+  TrendingUp,
+  CheckCircle,
+  Edit2,
+  X,
+  Save,
+  FileText,
+  Eye,
+  Trash2,
+  Calendar,
+  Target,
+  ArrowRight,
+  CheckCircle2,
+  LayoutGrid,
+  List,
+  Building,
+  User,
+  ArrowUpRight
+} from 'lucide-react';
 import './SalesViews.css';
 
 const STAGE_COLORS = {
@@ -13,6 +34,19 @@ const STAGE_COLORS = {
   'Closed Lost': { bg: '#FEF2F2', color: '#DC2626', border: '#FECACA' }
 };
 
+const getStageProbability = (stg) => {
+  switch (stg) {
+    case 'Prospecting': return 20;
+    case 'Qualification': return 40;
+    case 'Proposal': return 60;
+    case 'Negotiation': return 80;
+    case 'Won':
+    case 'Closed Won': return 100;
+    case 'Closed Lost': return 0;
+    default: return 50;
+  }
+};
+
 const EMPTY_DEAL = {
   title: '',
   clientName: '',
@@ -20,7 +54,7 @@ const EMPTY_DEAL = {
   contactPerson: '',
   value: '',
   stage: 'Qualification',
-  probability: 50,
+  probability: 40,
   closingDate: '',
   requirements: '',
   notes: ''
@@ -31,6 +65,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const [loading, setLoading] = useState(true);
   const [stageFilter, setStageFilter] = useState('all');
   const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState('pipeline'); // 'pipeline' | 'table'
   const [showModal, setShowModal] = useState(false);
   const [editDeal, setEditDeal] = useState(null);
   const [form, setForm] = useState(EMPTY_DEAL);
@@ -72,6 +107,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   };
 
   const openEdit = (deal) => {
+    const isWon = ['Won', 'Closed Won'].includes(deal.stage);
     setForm({
       title: deal.title || '',
       clientName: deal.clientName || '',
@@ -79,7 +115,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
       contactPerson: deal.contactPerson || '',
       value: deal.value || '',
       stage: deal.stage || 'Qualification',
-      probability: deal.probability !== undefined ? deal.probability : 50,
+      probability: isWon ? 100 : (deal.probability !== undefined ? deal.probability : getStageProbability(deal.stage)),
       closingDate: deal.closingDate ? new Date(deal.closingDate).toISOString().split('T')[0] : '',
       requirements: deal.requirements || '',
       notes: deal.notes || ''
@@ -98,10 +134,12 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
     setSaving(true);
     setError('');
     try {
+      const isWon = ['Won', 'Closed Won'].includes(form.stage);
+      const finalProb = isWon ? 100 : (form.stage === 'Closed Lost' ? 0 : Number(form.probability));
       const payload = {
         ...form,
         value: form.value ? Number(form.value) : 0,
-        probability: Number(form.probability),
+        probability: finalProb,
         closingDate: form.closingDate || null
       };
       const url = editDeal ? `/api/sales-employee/deals/${editDeal._id}` : '/api/sales-employee/deals';
@@ -140,7 +178,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
         // Update deal stage to Proposal
         await apiRequest(`/api/sales-employee/deals/${deal._id}`, {
           method: 'PATCH',
-          body: JSON.stringify({ stage: 'Proposal' })
+          body: JSON.stringify({ stage: 'Proposal', probability: 60 })
         });
         setFeedback(`Quotation "${data.data.orderReference || data.data.quotationNumber || 'created'}" generated from Deal!`);
         setViewDeal(null);
@@ -184,6 +222,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const activeValue = activePipeline.reduce((sum, d) => sum + (d.value || 0), 0);
 
   const stages = ['all', 'Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Closed Lost'];
+  const pipelineStages = ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Won'];
 
   return (
     <div className="sv-container">
@@ -192,7 +231,59 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
           <h2 className="sv-title"><TrendingUp size={20} /> Deals & Requirements</h2>
           <p className="sv-subtitle">Manage customer requirements and move deals through the pipeline to Quotation</p>
         </div>
-        <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Deal</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* View Mode Switcher */}
+          <div style={{
+            display: 'inline-flex',
+            background: '#F1F5F9',
+            borderRadius: '8px',
+            padding: '3px',
+            border: '1px solid #E2E8F0'
+          }}>
+            <button
+              onClick={() => setViewMode('pipeline')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                background: viewMode === 'pipeline' ? '#FFFFFF' : 'transparent',
+                color: viewMode === 'pipeline' ? '#2563EB' : '#64748B',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                boxShadow: viewMode === 'pipeline' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <LayoutGrid size={14} /> Pipeline Board
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                background: viewMode === 'table' ? '#FFFFFF' : 'transparent',
+                color: viewMode === 'table' ? '#2563EB' : '#64748B',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <List size={14} /> Data Table
+            </button>
+          </div>
+
+          <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Deal</button>
+        </div>
       </div>
 
       {feedback && (
@@ -211,7 +302,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
         <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Won Deals Value</div>
           <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>Rs. {wonValue.toLocaleString()}</div>
-          <div style={{ fontSize: '0.8rem', color: '#059669', marginTop: '4px' }}>{wonDeals.length} won deals</div>
+          <div style={{ fontSize: '0.8rem', color: '#059669', marginTop: '4px' }}>{wonDeals.length} won deals (100% Probability)</div>
         </div>
         <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Deals Tracked</div>
@@ -234,7 +325,139 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
         </div>
       </div>
 
-      {loading ? <div className="sv-loading">Loading deals...</div> : (
+      {loading ? (
+        <div className="sv-loading">Loading deals...</div>
+      ) : viewMode === 'pipeline' ? (
+        /* ── PIPELINE KANBAN CARDS VIEW WITH WHITE BACKGROUND & ANIMATIONS ── */
+        <div className="deals-pipeline-board">
+          {(stageFilter === 'all' ? pipelineStages : [stageFilter]).map((stageName) => {
+            const stageDeals = deals.filter(d => {
+              if (stageName === 'Won') return ['Won', 'Closed Won'].includes(d.stage);
+              return d.stage === stageName;
+            });
+            const stageTotal = stageDeals.reduce((sum, d) => sum + (Number(d.value) || 0), 0);
+            const colors = STAGE_COLORS[stageName] || { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' };
+
+            return (
+              <div key={stageName} className="deals-stage-col">
+                <div className="deals-stage-header">
+                  <div className="deals-stage-title-wrap">
+                    <span
+                      style={{
+                        width: '8px',
+                        height: '8px',
+                        borderRadius: '50%',
+                        backgroundColor: colors.color
+                      }}
+                    />
+                    <span className="deals-stage-name">{stageName}</span>
+                    <span className="deals-stage-count">{stageDeals.length}</span>
+                  </div>
+                  <span className="deals-stage-val">Rs. {stageTotal.toLocaleString()}</span>
+                </div>
+
+                <div className="deals-card-list">
+                  {stageDeals.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '24px 10px', color: '#94A3B8', fontSize: '0.8rem' }}>
+                      No deals in {stageName}
+                    </div>
+                  ) : (
+                    stageDeals.map((d) => {
+                      const isWon = ['Won', 'Closed Won'].includes(d.stage);
+                      const prob = isWon ? 100 : (d.probability !== undefined ? d.probability : getStageProbability(d.stage));
+
+                      return (
+                        <div
+                          key={d._id}
+                          className="deals-card"
+                          onClick={() => setViewDeal(d)}
+                        >
+                          <div className="deals-card-header">
+                            <h4 className="deals-card-title">{d.title}</h4>
+                            <span
+                              className="sv-badge"
+                              style={{
+                                background: colors.bg,
+                                color: colors.color,
+                                border: `1px solid ${colors.border}`,
+                                fontSize: '0.7rem',
+                                padding: '2px 8px'
+                              }}
+                            >
+                              {d.stage}
+                            </span>
+                          </div>
+
+                          <div className="deals-card-client">
+                            <Building size={13} color="#64748B" />
+                            <span>{d.clientName || d.company || 'Client'}</span>
+                          </div>
+
+                          <div className="deals-card-value">
+                            Rs. {Number(d.value || 0).toLocaleString()}
+                          </div>
+
+                          {/* Probability Indicator */}
+                          <div className="deals-card-prob-wrap">
+                            <div className="deals-card-prob-header">
+                              <span>Win Probability</span>
+                              <span style={{ color: isWon ? '#059669' : '#2563EB', fontWeight: 700 }}>
+                                {prob}%
+                              </span>
+                            </div>
+                            <div className="deals-card-prob-bar">
+                              <div
+                                className="deals-card-prob-fill"
+                                style={{
+                                  width: `${prob}%`,
+                                  background: isWon ? 'linear-gradient(90deg, #10B981 0%, #059669 100%)' : 'linear-gradient(90deg, #60A5FA 0%, #2563EB 100%)'
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="deals-card-footer">
+                            <span>
+                              {d.closingDate ? `Target: ${new Date(d.closingDate).toLocaleDateString('en-GB')}` : 'Ongoing'}
+                            </span>
+                            <div className="deals-card-actions" onClick={e => e.stopPropagation()}>
+                              <button
+                                className="sv-btn-action-icon"
+                                style={{ color: '#2563EB', background: '#EFF6FF' }}
+                                onClick={() => handleCreateQuotation(d)}
+                                disabled={creatingQuote}
+                                title="Generate Quotation"
+                              >
+                                <ArrowRight size={13} />
+                              </button>
+                              <button
+                                className="sv-btn-action-icon"
+                                onClick={() => openEdit(d)}
+                                title="Edit Deal"
+                              >
+                                <Edit2 size={13} />
+                              </button>
+                              <button
+                                className="sv-btn-action-icon"
+                                onClick={() => setDeleteTarget(d)}
+                                title="Delete Deal"
+                                style={{ color: '#EF4444' }}
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        /* ── DATA TABLE LIST VIEW ── */
         <div className="sv-table-wrap">
           <table className="sv-table">
             <thead>
@@ -253,6 +476,9 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                 <tr><td colSpan={7} className="sv-empty">No deals found. Create a deal to start tracking customer requirements!</td></tr>
               ) : deals.map(d => {
                 const colors = STAGE_COLORS[d.stage] || { bg: '#F1F5F9', color: '#475569', border: '#E2E8F0' };
+                const isWon = ['Won', 'Closed Won'].includes(d.stage);
+                const prob = isWon ? 100 : (d.probability !== undefined ? d.probability : getStageProbability(d.stage));
+
                 return (
                   <tr key={d._id}>
                     <td className="sv-name" style={{ fontWeight: 700, color: '#1E293B' }}>{d.title}</td>
@@ -268,12 +494,12 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <div style={{ width: '45px', height: '6px', background: '#E2E8F0', borderRadius: '3px', overflow: 'hidden' }}>
-                          <div style={{ width: `${d.probability || 0}%`, height: '100%', background: '#2563EB', borderRadius: '3px' }} />
+                          <div style={{ width: `${prob}%`, height: '100%', background: isWon ? '#059669' : '#2563EB', borderRadius: '3px' }} />
                         </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>{d.probability || 0}%</span>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: isWon ? '#059669' : '#1E293B' }}>{prob}%</span>
                       </div>
                     </td>
-                    <td>{d.closingDate ? new Date(d.closingDate).toLocaleDateString() : '—'}</td>
+                    <td>{d.closingDate ? new Date(d.closingDate).toLocaleDateString('en-GB') : '—'}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <button
@@ -405,7 +631,17 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                 </div>
                 <div className="sv-field">
                   <label>Stage</label>
-                  <select value={form.stage} onChange={e => setForm(p => ({ ...p, stage: e.target.value }))}>
+                  <select
+                    value={form.stage}
+                    onChange={e => {
+                      const newStage = e.target.value;
+                      setForm(p => ({
+                        ...p,
+                        stage: newStage,
+                        probability: getStageProbability(newStage)
+                      }));
+                    }}
+                  >
                     {['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Closed Lost'].map(s => (
                       <option key={s}>{s}</option>
                     ))}
@@ -413,7 +649,13 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                 </div>
                 <div className="sv-field">
                   <label>Probability (%)</label>
-                  <input type="number" min="0" max="100" value={form.probability} onChange={e => setForm(p => ({ ...p, probability: e.target.value }))} />
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={form.probability}
+                    onChange={e => setForm(p => ({ ...p, probability: e.target.value }))}
+                  />
                 </div>
               </div>
 

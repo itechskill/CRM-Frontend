@@ -16,7 +16,10 @@ import {
   CheckCircle,
   AlertTriangle,
   Activity,
-  Plus
+  Plus,
+  Search,
+  X,
+  Download
 } from 'lucide-react';
 import {
   LineChart,
@@ -39,6 +42,8 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [breakdownType, setBreakdownType] = useState(null); // 'overdue' | 'receivables'
+  const [breakdownSearch, setBreakdownSearch] = useState('');
 
   const fetchDashboardStats = async () => {
     try {
@@ -100,7 +105,7 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
       label: 'Total Overdue Amount',
       sub: 'Past due balances for entire sales team',
       clickable: true,
-      onClick: () => onNavigateTab?.('invoices')
+      onClick: () => { setBreakdownType('overdue'); setBreakdownSearch(''); }
     },
     {
       id: 'receivables',
@@ -111,7 +116,7 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
       label: 'Total Receivables Amount',
       sub: 'All unpaid orders & invoices',
       clickable: true,
-      onClick: () => onNavigateTab?.('invoices')
+      onClick: () => { setBreakdownType('receivables'); setBreakdownSearch(''); }
     },
     {
       id: 'target',
@@ -366,6 +371,260 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
           </div>
         </div>
       </div>
+
+      {/* ── INTERACTIVE OVERDUE & RECEIVABLES BREAKDOWN MODAL ── */}
+      {breakdownType && (
+        <div className="sv-modal-overlay" onClick={() => setBreakdownType(null)}>
+          <div
+            className="sv-modal"
+            style={{ maxWidth: '960px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="sv-modal-header" style={{ borderBottom: '1px solid #E2E8F0', padding: '16px 20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{
+                  width: '38px',
+                  height: '38px',
+                  borderRadius: '10px',
+                  background: breakdownType === 'overdue' ? '#FEE2E2' : '#E0F2FE',
+                  color: breakdownType === 'overdue' ? '#DC2626' : '#0284C7',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  {breakdownType === 'overdue' ? <AlertTriangle size={20} /> : <DollarSign size={20} />}
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0F172A' }}>
+                    {breakdownType === 'overdue'
+                      ? 'Total Overdue Balances List (Entire Sales Team)'
+                      : 'Total Outstanding Receivables List (Entire Sales Team)'}
+                  </h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748B' }}>
+                    {breakdownType === 'overdue'
+                      ? 'Showing overdue and past-due unpaid balances across all sales representatives'
+                      : 'Showing all active unpaid and outstanding customer balances across all sales representatives'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setBreakdownType(null)}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B', padding: '4px' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            {/* Modal Summary KPI Strip */}
+            {(() => {
+              const rawList = breakdownType === 'overdue' ? (stats?.overdueList || []) : (stats?.receivablesList || []);
+              let list = [...rawList];
+              if (breakdownSearch.trim()) {
+                const term = breakdownSearch.toLowerCase();
+                list = list.filter(it =>
+                  (it.invoiceNumber && it.invoiceNumber.toLowerCase().includes(term)) ||
+                  (it.clientName && it.clientName.toLowerCase().includes(term)) ||
+                  (it.salesRep && it.salesRep.toLowerCase().includes(term)) ||
+                  (it.status && it.status.toLowerCase().includes(term))
+                );
+              }
+              const totalSum = list.reduce((sum, it) => sum + (Number(it.remainingBalance) || 0), 0);
+              const totalOriginalSum = list.reduce((sum, it) => sum + (Number(it.amount) || 0), 0);
+              const totalPaidSum = list.reduce((sum, it) => sum + (Number(it.paidAmount) || 0), 0);
+
+              return (
+                <>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))',
+                    gap: '12px',
+                    padding: '14px 20px',
+                    background: '#F8FAFC',
+                    borderBottom: '1px solid #E2E8F0'
+                  }}>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>
+                        {breakdownType === 'overdue' ? 'Total Overdue Amount' : 'Total Receivables Amount'}
+                      </span>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: breakdownType === 'overdue' ? '#DC2626' : '#0284C7', marginTop: '2px' }}>
+                        Rs. {totalSum.toLocaleString()}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>
+                        {breakdownType === 'overdue' ? 'Overdue Invoices' : 'Outstanding Invoices'}
+                      </span>
+                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>
+                        {list.length} records {list.length !== rawList.length ? `(filtered from ${rawList.length})` : ''}
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>Sales Team Scope</span>
+                      <div style={{ fontSize: '1rem', fontWeight: 700, color: '#334155', marginTop: '4px' }}>
+                        All Sales Representatives ({stats?.totalTeamMembers || 3} members)
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Search Filter Box */}
+                  <div style={{ padding: '12px 20px', borderBottom: '1px solid #F1F5F9', background: '#FFFFFF' }}>
+                    <div className="sv-search-box" style={{ width: '100%', maxWidth: '400px' }}>
+                      <Search size={15} />
+                      <input
+                        placeholder="Search customer, invoice #, sales rep..."
+                        value={breakdownSearch}
+                        onChange={e => setBreakdownSearch(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Itemized Table */}
+                  <div style={{ padding: '0 20px', overflowY: 'auto', flex: 1, maxHeight: '420px' }}>
+                    <table className="sv-table" style={{ marginTop: '8px', width: '100%' }}>
+                      <thead>
+                        <tr>
+                          <th style={{ width: '36px' }}>#</th>
+                          <th>Invoice Ref</th>
+                          <th>Customer / Client</th>
+                          <th>Sales Representative</th>
+                          <th>Due Date</th>
+                          <th style={{ textAlign: 'right' }}>Total Value</th>
+                          <th style={{ textAlign: 'right' }}>Paid Amount</th>
+                          <th style={{ textAlign: 'right' }}>
+                            {breakdownType === 'overdue' ? 'Overdue Balance' : 'Remaining Balance'}
+                          </th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {list.length === 0 ? (
+                          <tr>
+                            <td colSpan={9} style={{ textAlign: 'center', padding: '32px', color: '#64748B' }}>
+                              No matching {breakdownType} records found.
+                            </td>
+                          </tr>
+                        ) : (
+                          list.map((it, idx) => (
+                            <tr key={it._id || idx}>
+                              <td style={{ color: '#94A3B8', fontSize: '0.78rem' }}>{idx + 1}</td>
+                              <td style={{ fontWeight: 700, color: '#0F172A', whiteSpace: 'nowrap' }}>
+                                {it.invoiceNumber || '—'}
+                              </td>
+                              <td style={{ fontWeight: 600, color: '#334155' }}>
+                                {it.clientName || 'Client'}
+                              </td>
+                              <td>
+                                <span style={{
+                                  background: '#F1F5F9',
+                                  color: '#334155',
+                                  padding: '2px 8px',
+                                  borderRadius: '6px',
+                                  fontSize: '0.78rem',
+                                  fontWeight: 600
+                                }}>
+                                  {it.salesRep || 'Sales Team'}
+                                </span>
+                              </td>
+                              <td style={{ color: '#64748B', whiteSpace: 'nowrap', fontSize: '0.8rem' }}>
+                                {it.dueDate ? new Date(it.dueDate).toLocaleDateString('en-GB') : '—'}
+                              </td>
+                              <td style={{ textAlign: 'right', fontWeight: 600, color: '#334155', whiteSpace: 'nowrap' }}>
+                                Rs. {Number(it.amount || 0).toLocaleString()}
+                              </td>
+                              <td style={{ textAlign: 'right', fontWeight: 600, color: '#059669', whiteSpace: 'nowrap' }}>
+                                Rs. {Number(it.paidAmount || 0).toLocaleString()}
+                              </td>
+                              <td style={{
+                                textAlign: 'right',
+                                fontWeight: 800,
+                                color: breakdownType === 'overdue' ? '#DC2626' : '#0284C7',
+                                whiteSpace: 'nowrap'
+                              }}>
+                                Rs. {Number(it.remainingBalance || 0).toLocaleString()}
+                              </td>
+                              <td>
+                                <span
+                                  className="sv-badge"
+                                  style={{
+                                    background: breakdownType === 'overdue' ? '#FEE2E2' : (it.status === 'Paid' ? '#ECFDF5' : '#E0F2FE'),
+                                    color: breakdownType === 'overdue' ? '#DC2626' : (it.status === 'Paid' ? '#059669' : '#0284C7'),
+                                    border: `1px solid ${breakdownType === 'overdue' ? '#FCA5A5' : '#BAE6FD'}`,
+                                    fontSize: '0.75rem',
+                                    padding: '2px 8px'
+                                  }}
+                                >
+                                  {it.status || (breakdownType === 'overdue' ? 'Overdue' : 'Pending')}
+                                </span>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                      {list.length > 0 && (
+                        <tfoot>
+                          <tr style={{ background: '#F8FAFC', fontWeight: 800, borderTop: '2px solid #CBD5E1' }}>
+                            <td colSpan={5} style={{ textAlign: 'right', color: '#0F172A', padding: '10px 14px' }}>
+                              Total Sum ({list.length} Items):
+                            </td>
+                            <td style={{ textAlign: 'right', color: '#334155', padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                              Rs. {totalOriginalSum.toLocaleString()}
+                            </td>
+                            <td style={{ textAlign: 'right', color: '#059669', padding: '10px 14px', whiteSpace: 'nowrap' }}>
+                              Rs. {totalPaidSum.toLocaleString()}
+                            </td>
+                            <td style={{
+                              textAlign: 'right',
+                              color: breakdownType === 'overdue' ? '#DC2626' : '#0284C7',
+                              padding: '10px 14px',
+                              fontSize: '1rem',
+                              whiteSpace: 'nowrap'
+                            }}>
+                              Rs. {totalSum.toLocaleString()}
+                            </td>
+                            <td></td>
+                          </tr>
+                        </tfoot>
+                      )}
+                    </table>
+                  </div>
+
+                  {/* Modal Footer Actions */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '14px 20px',
+                    borderTop: '1px solid #E2E8F0',
+                    background: '#F8FAFC'
+                  }}>
+                    <div style={{ fontSize: '0.82rem', color: '#64748B' }}>
+                      Exact total matches dashboard card: <strong style={{ color: breakdownType === 'overdue' ? '#DC2626' : '#0284C7' }}>Rs. {totalSum.toLocaleString()}</strong>
+                    </div>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button
+                        className="sv-btn-cancel"
+                        onClick={() => setBreakdownType(null)}
+                      >
+                        Close
+                      </button>
+                      <button
+                        className="sv-btn-primary"
+                        onClick={() => {
+                          setBreakdownType(null);
+                          onNavigateTab?.('invoices');
+                        }}
+                      >
+                        Go to Invoices Manager
+                      </button>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

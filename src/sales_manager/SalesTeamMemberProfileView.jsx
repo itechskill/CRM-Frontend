@@ -29,7 +29,8 @@ import {
   FolderKanban,
   CreditCard,
   Printer,
-  Star
+  Star,
+  Search
 } from 'lucide-react';
 import './SalesTeamMemberProfileView.css';
 

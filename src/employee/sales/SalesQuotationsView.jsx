@@ -2,7 +2,34 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../../utils/api';
-import { Plus, FileText, Edit2, X, Save, Eye, Trash2, Search, Calendar, User, Hash, Tag, DollarSign, CheckCircle2, ArrowRight, FileCheck, Layers, Info, Building, Download } from 'lucide-react';
+import {
+  Plus,
+  FileText,
+  Edit2,
+  X,
+  Save,
+  Eye,
+  Trash2,
+  Search,
+  Calendar,
+  User,
+  Hash,
+  Tag,
+  DollarSign,
+  CheckCircle2,
+  ArrowRight,
+  FileCheck,
+  Layers,
+  Info,
+  Building,
+  Download,
+  LayoutGrid,
+  List,
+  Clock,
+  TrendingUp,
+  Sparkles,
+  Package
+} from 'lucide-react';
 import './SalesViews.css';
 
 const STATUS_COLORS = {
@@ -23,7 +50,12 @@ const EMPTY_FORM = {
   productSummary: '',
   clientEmail: '',
   clientPhone: '',
+  items: [
+    { description: '', quantity: 1, unitPrice: 0, total: 0 }
+  ],
   totalAmount: 0,
+  discount: 0,
+  tax: 0,
   netAmount: 0,
   status: 'Quotation',
   creationDate: '',
@@ -36,6 +68,7 @@ export default function SalesQuotationsView() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
   const [showModal, setShowModal] = useState(false);
   const [editQ, setEditQ] = useState(null);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -49,32 +82,51 @@ export default function SalesQuotationsView() {
   const [recordingPO, setRecordingPO] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 20;
+  const itemsPerPage = 12;
 
   const fetchQ = useCallback(async () => {
     setLoading(true);
     try {
-      const params = filter !== 'all' ? `?status=${filter}` : '';
-      const { response, data } = await apiRequest(`/api/sales-employee/quotations${params}`);
+      const { response, data } = await apiRequest('/api/sales-employee/quotations');
       if (response.ok && data.success) {
-        setQuotations(data.data);
+        setQuotations(data.data || []);
       }
     } catch (e) {
       console.error(e);
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, []);
 
   useEffect(() => {
     fetchQ();
   }, [fetchQ]);
 
-  // Comprehensive search matching exact PDF columns
+  // Real KPI calculations
+  const acceptedQuotes = useMemo(() => quotations.filter(q => q.status === 'Accepted'), [quotations]);
+  const acceptedValue = useMemo(() => acceptedQuotes.reduce((sum, q) => sum + (Number(q.netAmount !== undefined ? q.netAmount : (q.totalAmount || 0))), 0), [acceptedQuotes]);
+
+  const pendingQuotes = useMemo(() => quotations.filter(q => ['Quotation', 'Draft', 'Sent', 'Under Review'].includes(q.status)), [quotations]);
+  const pendingValue = useMemo(() => pendingQuotes.reduce((sum, q) => sum + (Number(q.netAmount !== undefined ? q.netAmount : (q.totalAmount || 0))), 0), [pendingQuotes]);
+
+  const totalVolume = useMemo(() => quotations.reduce((sum, q) => sum + (Number(q.netAmount !== undefined ? q.netAmount : (q.totalAmount || 0))), 0), [quotations]);
+  const avgValue = useMemo(() => quotations.length ? Math.round(totalVolume / quotations.length) : 0, [totalVolume, quotations.length]);
+  const conversionRate = useMemo(() => quotations.length ? ((acceptedQuotes.length / quotations.length) * 100).toFixed(1) : '0.0', [acceptedQuotes.length, quotations.length]);
+
+  // Comprehensive search matching exact PDF columns and status filters
   const filteredQuotations = useMemo(() => {
-    if (!searchTerm.trim()) return quotations;
+    let list = quotations;
+    if (filter === 'pending') {
+      list = list.filter(q => ['Quotation', 'Draft', 'Sent', 'Under Review'].includes(q.status));
+    } else if (filter === 'accepted' || filter === 'Accepted') {
+      list = list.filter(q => q.status === 'Accepted');
+    } else if (filter !== 'all') {
+      list = list.filter(q => q.status === filter);
+    }
+
+    if (!searchTerm.trim()) return list;
     const term = searchTerm.toLowerCase();
-    return quotations.filter(q =>
+    return list.filter(q =>
       (q.orderReference && q.orderReference.toLowerCase().includes(term)) ||
       (q.quotationNumber && q.quotationNumber.toLowerCase().includes(term)) ||
       (q.clientName && q.clientName.toLowerCase().includes(term)) ||
@@ -84,23 +136,59 @@ export default function SalesQuotationsView() {
       (q.productSummary && q.productSummary.toLowerCase().includes(term)) ||
       (q.fileNo && q.fileNo.toLowerCase().includes(term))
     );
-  }, [quotations, searchTerm]);
+  }, [quotations, filter, searchTerm]);
 
   const totalPages = Math.ceil(filteredQuotations.length / itemsPerPage) || 1;
   const paginatedQuotations = useMemo(() => {
     const start = (currentPage - 1) * itemsPerPage;
     return filteredQuotations.slice(start, start + itemsPerPage);
-  }, [filteredQuotations, currentPage]);
+  }, [filteredQuotations, currentPage, itemsPerPage]);
 
   const openCreate = () => {
     const today = new Date().toISOString().substring(0, 10);
-    setForm({ ...EMPTY_FORM, creationDate: today });
+    setForm({
+      ...EMPTY_FORM,
+      creationDate: today,
+      discount: 0,
+      tax: 0,
+      totalAmount: 0,
+      netAmount: 0,
+      items: [{ description: '', quantity: 1, unitPrice: 0, total: 0 }]
+    });
     setEditQ(null);
     setError('');
     setShowModal(true);
   };
 
   const openEdit = (q) => {
+    let rawItems = [];
+    if (q.items && q.items.length > 0) {
+      rawItems = q.items.map(it => {
+        const qty = Math.max(1, Number(it.quantity) || 1);
+        const unitP = Number(it.unitPrice) || 0;
+        const lineTotal = Number(it.total !== undefined ? it.total : qty * unitP);
+        return {
+          description: it.description || '',
+          quantity: qty,
+          unitPrice: unitP,
+          total: lineTotal
+        };
+      });
+    } else {
+      const initialTotal = Number(q.totalAmount || q.netAmount || 0);
+      rawItems = [{
+        description: q.productSummary || '',
+        quantity: 1,
+        unitPrice: initialTotal,
+        total: initialTotal
+      }];
+    }
+
+    const calculatedSubtotal = rawItems.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+    const discountVal = Number(q.discount) || 0;
+    const taxVal = Number(q.tax) || 0;
+    const calculatedNet = Math.max(0, calculatedSubtotal - discountVal + taxVal);
+
     setForm({
       orderReference: q.orderReference || q.quotationNumber || '',
       clientName: q.clientName || q.customerName || '',
@@ -109,8 +197,11 @@ export default function SalesQuotationsView() {
       productSummary: q.productSummary || '',
       clientEmail: q.clientEmail || '',
       clientPhone: q.clientPhone || '',
-      totalAmount: q.totalAmount || q.netAmount || 0,
-      netAmount: q.netAmount || q.totalAmount || 0,
+      items: rawItems,
+      totalAmount: calculatedSubtotal,
+      discount: discountVal,
+      tax: taxVal,
+      netAmount: q.netAmount !== undefined ? Number(q.netAmount) : calculatedNet,
       status: q.status || 'Quotation',
       creationDate: q.creationDate ? new Date(q.creationDate).toISOString().substring(0, 10) : '',
       validUntil: q.validUntil ? new Date(q.validUntil).toISOString().substring(0, 10) : '',
@@ -121,19 +212,137 @@ export default function SalesQuotationsView() {
     setShowModal(true);
   };
 
+  const handleItemChange = (index, field, value) => {
+    setForm(prev => {
+      const newItems = prev.items.map((it, idx) => {
+        if (idx !== index) return it;
+        const updated = { ...it };
+
+        if (field === 'description') {
+          updated.description = value;
+        } else if (field === 'quantity') {
+          const parsedQty = value === '' ? '' : Math.max(1, parseInt(value, 10) || 1);
+          updated.quantity = parsedQty;
+          const currentPrice = Number(updated.unitPrice) || 0;
+          updated.total = (typeof parsedQty === 'number' ? parsedQty : 1) * currentPrice;
+        } else if (field === 'unitPrice') {
+          const parsedPrice = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
+          updated.unitPrice = parsedPrice;
+          const currentQty = Math.max(1, parseInt(updated.quantity, 10) || 1);
+          updated.total = currentQty * (typeof parsedPrice === 'number' ? parsedPrice : 0);
+        }
+
+        return updated;
+      });
+
+      const subtotal = newItems.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+      const discountVal = Number(prev.discount) || 0;
+      const taxVal = Number(prev.tax) || 0;
+      const netAmount = Math.max(0, subtotal - discountVal + taxVal);
+      const summary = newItems.map(it => it.description).filter(Boolean).join(', ');
+
+      return {
+        ...prev,
+        items: newItems,
+        totalAmount: subtotal,
+        netAmount: netAmount,
+        productSummary: summary || prev.productSummary
+      };
+    });
+  };
+
+  const handleFinancialChange = (field, value) => {
+    setForm(prev => {
+      const numVal = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
+      const updated = { ...prev, [field]: numVal };
+      const subtotal = Number(updated.totalAmount) || 0;
+      const discountVal = Number(field === 'discount' ? (numVal === '' ? 0 : numVal) : (updated.discount || 0));
+      const taxVal = Number(field === 'tax' ? (numVal === '' ? 0 : numVal) : (updated.tax || 0));
+      const netAmount = Math.max(0, subtotal - discountVal + taxVal);
+      return {
+        ...updated,
+        netAmount
+      };
+    });
+  };
+
+  const handleAddItem = () => {
+    setForm(prev => {
+      const newItems = [...prev.items, { description: '', quantity: 1, unitPrice: 0, total: 0 }];
+      const subtotal = newItems.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+      const discountVal = Number(prev.discount) || 0;
+      const taxVal = Number(prev.tax) || 0;
+      const netAmount = Math.max(0, subtotal - discountVal + taxVal);
+      return {
+        ...prev,
+        items: newItems,
+        totalAmount: subtotal,
+        netAmount
+      };
+    });
+  };
+
+  const handleRemoveItem = (index) => {
+    setForm(prev => {
+      if (prev.items.length <= 1) return prev;
+      const newItems = prev.items.filter((_, idx) => idx !== index);
+      const subtotal = newItems.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+      const discountVal = Number(prev.discount) || 0;
+      const taxVal = Number(prev.tax) || 0;
+      const netAmount = Math.max(0, subtotal - discountVal + taxVal);
+      const summary = newItems.map(it => it.description).filter(Boolean).join(', ');
+
+      return {
+        ...prev,
+        items: newItems,
+        totalAmount: subtotal,
+        netAmount: netAmount,
+        productSummary: summary
+      };
+    });
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
     if (!form.clientName.trim()) {
       setError('Customer / Client name is required.');
       return;
     }
+
+    // Validate items
+    const invalidItem = form.items.find(it => !it.description || !it.description.trim());
+    if (invalidItem) {
+      setError('Please provide a description for all product items.');
+      return;
+    }
+
+    const cleanedItems = form.items.map(it => {
+      const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
+      const unitP = Math.max(0, parseFloat(it.unitPrice) || 0);
+      return {
+        description: it.description.trim(),
+        quantity: qty,
+        unitPrice: unitP,
+        total: qty * unitP
+      };
+    });
+
+    const calculatedSubtotal = cleanedItems.reduce((sum, it) => sum + it.total, 0);
+    const discountVal = Math.max(0, Number(form.discount) || 0);
+    const taxVal = Math.max(0, Number(form.tax) || 0);
+    const calculatedCompleteAmount = Math.max(0, calculatedSubtotal - discountVal + taxVal);
+
     setSaving(true);
     setError('');
     try {
       const payload = {
         ...form,
-        totalAmount: Number(form.totalAmount) || Number(form.netAmount) || 0,
-        netAmount: Number(form.netAmount) || Number(form.totalAmount) || 0,
+        items: cleanedItems,
+        totalAmount: calculatedSubtotal,
+        discount: discountVal,
+        tax: taxVal,
+        netAmount: calculatedCompleteAmount,
+        productSummary: form.productSummary || cleanedItems.map(it => it.description).join(', '),
         creationDate: form.creationDate || null,
         validUntil: form.validUntil || null
       };
@@ -156,12 +365,13 @@ export default function SalesQuotationsView() {
   const handleRecordCustomerPO = async (q) => {
     setRecordingPO(true);
     try {
+      const completeAmt = Number(q.netAmount !== undefined ? q.netAmount : (q.totalAmount || 0));
       const poPayload = {
         customerName: q.clientName || q.customerName,
         quotationId: q._id,
         quotationNumber: q.orderReference || q.quotationNumber,
-        amount: q.netAmount || q.totalAmount || 0,
-        notes: `Customer PO against Quotation: ${q.orderReference || q.quotationNumber}`,
+        amount: completeAmt,
+        notes: `Customer PO against Quotation: ${q.orderReference || q.quotationNumber} (Complete Amount: Rs. ${completeAmt.toLocaleString()} PKR)`,
         status: 'Received'
       };
       const { response, data } = await apiRequest('/api/sales-employee/customer-pos', {
@@ -215,7 +425,11 @@ export default function SalesQuotationsView() {
     const fileNo = q.fileNo || '—';
     const creationDate = q.creationDate ? new Date(q.creationDate).toLocaleDateString('en-GB') : (q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB') : '—');
     const validUntil = q.validUntil ? new Date(q.validUntil).toLocaleDateString('en-GB') : '—';
-    const totalAmount = Number(q.totalAmount || q.netAmount || 0);
+    
+    const subtotal = Number(q.totalAmount || 0);
+    const discount = Number(q.discount || 0);
+    const tax = Number(q.tax || 0);
+    const completeAmount = Number(q.netAmount !== undefined ? q.netAmount : (subtotal - discount + tax));
 
     // Header
     doc.setFillColor(37, 99, 235);
@@ -240,16 +454,21 @@ export default function SalesQuotationsView() {
     doc.line(14, 56, 196, 56);
 
     const items = q.items && q.items.length ? q.items : [
-      { description: q.productSummary || 'Scope of Supply Items', quantity: 1, unitPrice: totalAmount, total: totalAmount }
+      { description: q.productSummary || 'Scope of Supply Items', quantity: 1, unitPrice: subtotal || completeAmount, total: subtotal || completeAmount }
     ];
 
-    const tableRows = items.map((it, idx) => [
-      idx + 1,
-      it.description || it.product || q.productSummary || 'Product Scope',
-      it.quantity || 1,
-      `Rs. ${Number(it.unitPrice || totalAmount).toLocaleString()}`,
-      `Rs. ${Number(it.total || (it.quantity || 1) * (it.unitPrice || totalAmount)).toLocaleString()}`
-    ]);
+    const tableRows = items.map((it, idx) => {
+      const qty = Math.max(1, Number(it.quantity) || 1);
+      const unitP = Number(it.unitPrice !== undefined ? it.unitPrice : (subtotal || completeAmount));
+      const lineTotal = Number(it.total !== undefined ? it.total : qty * unitP);
+      return [
+        idx + 1,
+        it.description || it.product || q.productSummary || 'Product Scope',
+        qty,
+        `Rs. ${unitP.toLocaleString()}`,
+        `Rs. ${lineTotal.toLocaleString()}`
+      ];
+    });
 
     autoTable(doc, {
       startY: 62,
@@ -261,39 +480,123 @@ export default function SalesQuotationsView() {
       alternateRowStyles: { fillColor: [248, 250, 252] }
     });
 
-    const finalY = doc.lastAutoTable ? doc.lastAutoTable.previous.finalY : 120;
+    try {
+      const finalY = (doc.lastAutoTable && doc.lastAutoTable.finalY) ? doc.lastAutoTable.finalY : 120;
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(5, 150, 105);
-    doc.text(`Total Amount (PKR): Rs. ${totalAmount.toLocaleString()}`, 120, finalY + 14);
+      // Financial Calculation Breakdown on PDF
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.text(`Subtotal (Products): Rs. ${subtotal.toLocaleString()} PKR`, 120, finalY + 12);
+      
+      if (discount > 0) {
+        doc.setTextColor(220, 38, 38);
+        doc.text(`Discount (-): - Rs. ${discount.toLocaleString()} PKR`, 120, finalY + 18);
+      }
+      
+      if (tax > 0) {
+        doc.setTextColor(71, 85, 105);
+        doc.text(`Tax / GST (+): + Rs. ${tax.toLocaleString()} PKR`, 120, finalY + (discount > 0 ? 24 : 18));
+      }
 
-    doc.setFontSize(8.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Quotation Status: ${q.status || 'Active'}`, 14, finalY + 14);
+      const netY = finalY + (discount > 0 && tax > 0 ? 30 : (discount > 0 || tax > 0 ? 24 : 18));
+      doc.setFontSize(10.5);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(5, 150, 105);
+      doc.text(`Complete Amount (PKR): Rs. ${completeAmount.toLocaleString()}`, 120, netY);
 
-    if (q.notes) {
-      doc.text(`Terms & Conditions / Notes: ${q.notes}`, 14, finalY + 22);
+      doc.setFontSize(8.5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Quotation Status: ${q.status || 'Active'}`, 14, finalY + 12);
+
+      if (q.notes) {
+        doc.text(`Terms & Conditions / Notes: ${q.notes}`, 14, finalY + 20);
+      }
+
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text('Generated by Fortline CRM · Commercial Sales Management System', 14, 285);
+
+      doc.save(`Quotation_${orderRef}.pdf`);
+    } catch (err) {
+      console.error('Failed to generate Quotation PDF:', err);
     }
-
-    doc.setFontSize(8);
-    doc.setTextColor(148, 163, 184);
-    doc.text('Generated by Fortline CRM · Commercial Sales Management System', 14, 285);
-
-    doc.save(`Quotation_${orderRef}.pdf`);
   };
 
   const statuses = ['all', 'Quotation', 'Draft', 'Sent', 'Under Review', 'Accepted', 'Rejected', 'Expired'];
+
+  // Summary KPI values
+  const filterTabs = [
+    { id: 'all', label: 'All Quotations', count: quotations.length },
+    { id: 'pending', label: 'Pending', count: pendingQuotes.length },
+    { id: 'accepted', label: 'Converted to PO', count: acceptedQuotes.length },
+    { id: 'Draft', label: 'Draft', count: quotations.filter(q => q.status === 'Draft').length },
+    { id: 'Sent', label: 'Sent', count: quotations.filter(q => q.status === 'Sent').length },
+    { id: 'Under Review', label: 'Under Review', count: quotations.filter(q => q.status === 'Under Review').length },
+    { id: 'Rejected', label: 'Rejected', count: quotations.filter(q => q.status === 'Rejected').length }
+  ];
 
   return (
     <div className="sv-container">
       <div className="sv-header">
         <div>
-          <h2 className="sv-title"><FileText size={20} /> Formal Quotations</h2>
-          <p className="sv-subtitle">Complete Quotations log — matching historic file records & connected to Customer PO workflow</p>
+          <h2 className="sv-title"><FileText size={20} color="#2563EB" /> Formal Sales Quotations</h2>
+          <p className="sv-subtitle">Generate, manage, and convert commercial quotations with dynamic product quantities</p>
         </div>
-        <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Quotation</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          {/* View Mode Switcher */}
+          <div style={{
+            display: 'inline-flex',
+            background: '#F1F5F9',
+            borderRadius: '8px',
+            padding: '3px',
+            border: '1px solid #E2E8F0'
+          }}>
+            <button
+              onClick={() => setViewMode('cards')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                background: viewMode === 'cards' ? '#FFFFFF' : 'transparent',
+                color: viewMode === 'cards' ? '#2563EB' : '#64748B',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                boxShadow: viewMode === 'cards' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <LayoutGrid size={14} /> Cards View
+            </button>
+            <button
+              onClick={() => setViewMode('table')}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                padding: '6px 12px',
+                borderRadius: '6px',
+                border: 'none',
+                background: viewMode === 'table' ? '#FFFFFF' : 'transparent',
+                color: viewMode === 'table' ? '#2563EB' : '#64748B',
+                fontWeight: 600,
+                fontSize: '0.8rem',
+                cursor: 'pointer',
+                boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                transition: 'all 0.2s'
+              }}
+            >
+              <List size={14} /> Data Table
+            </button>
+          </div>
+
+          <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Quotation</button>
+        </div>
       </div>
 
       {feedback && (
@@ -302,78 +605,309 @@ export default function SalesQuotationsView() {
         </div>
       )}
 
+      {/* Modern KPI Cards Grid with Real PKR & Conversion Values */}
+      <div className="quote-kpi-grid">
+        <div className="quote-kpi-card">
+          <div className="quote-kpi-icon" style={{ background: '#EFF6FF', color: '#2563EB' }}>
+            <FileText size={22} />
+          </div>
+          <div className="quote-kpi-content">
+            <div className="quote-kpi-label">Total Quotations</div>
+            <div className="quote-kpi-value">{quotations.length}</div>
+            <div className="quote-kpi-sub">Rs. {totalVolume.toLocaleString()} PKR Volume</div>
+          </div>
+        </div>
+
+        <div className="quote-kpi-card">
+          <div className="quote-kpi-icon" style={{ background: '#ECFDF5', color: '#059669' }}>
+            <CheckCircle2 size={22} />
+          </div>
+          <div className="quote-kpi-content">
+            <div className="quote-kpi-label">Converted to PO</div>
+            <div className="quote-kpi-value" style={{ color: '#059669' }}>{acceptedQuotes.length}</div>
+            <div className="quote-kpi-sub">
+              Rs. {acceptedValue.toLocaleString()} PKR · {conversionRate}% Converted
+            </div>
+          </div>
+        </div>
+
+        <div className="quote-kpi-card">
+          <div className="quote-kpi-icon" style={{ background: '#F5F3FF', color: '#7C3AED' }}>
+            <Clock size={22} />
+          </div>
+          <div className="quote-kpi-content">
+            <div className="quote-kpi-label">Pending Quotations</div>
+            <div className="quote-kpi-value" style={{ color: '#7C3AED' }}>{pendingQuotes.length}</div>
+            <div className="quote-kpi-sub">
+              Rs. {pendingValue.toLocaleString()} PKR · Awaiting PO
+            </div>
+          </div>
+        </div>
+
+        <div className="quote-kpi-card">
+          <div className="quote-kpi-icon" style={{ background: '#FFFBEB', color: '#D97706' }}>
+            <DollarSign size={22} />
+          </div>
+          <div className="quote-kpi-content">
+            <div className="quote-kpi-label">Avg Quotation Value</div>
+            <div className="quote-kpi-value" style={{ color: '#0F172A' }}>Rs. {avgValue.toLocaleString()}</div>
+            <div className="quote-kpi-sub">PKR average commercial proposal</div>
+          </div>
+        </div>
+      </div>
+
       <div className="sv-filters">
         <div className="sv-search-box">
           <Search size={15} />
-          <input placeholder="Search Order Reference, Customer, Sale Person, Product Summary, File-No#..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
+          <input
+            placeholder="Search quotations by ref#, customer, salesperson, product, file#..."
+            value={searchTerm}
+            onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }}
+          />
         </div>
         <div className="sv-status-tabs">
-          {statuses.map(s => (
-            <button key={s} className={`sv-tab ${filter === s ? 'active' : ''}`} onClick={() => { setFilter(s); setCurrentPage(1); }}>
-              {s === 'all' ? 'All' : s}
+          {filterTabs.map(tab => (
+            <button
+              key={tab.id}
+              className={`sv-tab ${filter === tab.id ? 'active' : ''}`}
+              onClick={() => { setFilter(tab.id); setCurrentPage(1); }}
+            >
+              {tab.label} <span style={{ opacity: 0.75, fontSize: '0.72rem', marginLeft: '4px' }}>({tab.count})</span>
             </button>
           ))}
         </div>
       </div>
 
-      {loading ? <div className="sv-loading">Loading quotations...</div> : (
+      {loading ? (
+        <div className="sv-loading">Loading quotations...</div>
+      ) : filteredQuotations.length === 0 ? (
+        <div className="sv-table-wrap" style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
+          No quotations match your criteria.
+        </div>
+      ) : viewMode === 'cards' ? (
+        /* ── CARDS VIEW WITH CLEAN WHITE BACKGROUND & SMOOTH TRANSITIONS ── */
+        <div>
+          <div className="quote-cards-grid">
+            {paginatedQuotations.map(q => {
+              const color = STATUS_COLORS[q.status] || '#64748B';
+              const totalAmt = Number(q.totalAmount || q.netAmount || 0);
+              const itemCount = q.items && q.items.length ? q.items.length : 1;
+              const dateStr = q.creationDate
+                ? new Date(q.creationDate).toLocaleDateString('en-GB')
+                : (q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB') : '—');
+
+              return (
+                <div key={q._id} className="quote-card" onClick={() => setViewQ(q)}>
+                  {/* Card Header: Ref # & Status */}
+                  <div className="quote-card-header">
+                    <div className="quote-card-ref">
+                      <FileText size={16} />
+                      <span>{q.orderReference || q.quotationNumber}</span>
+                    </div>
+                    <span
+                      className="sv-badge"
+                      style={{
+                        background: color + '18',
+                        color: color,
+                        border: `1px solid ${color}40`,
+                        fontSize: '0.75rem',
+                        padding: '3px 10px'
+                      }}
+                    >
+                      {q.status}
+                    </span>
+                  </div>
+
+                  {/* Customer Info */}
+                  <div>
+                    <h4 className="quote-card-client">
+                      <Building size={16} color="#475569" />
+                      <span>{q.clientName || q.customerName}</span>
+                    </h4>
+                  </div>
+
+                  {/* Meta tags: Sales Person & File # */}
+                  <div className="quote-card-meta-row">
+                    <span className="quote-card-tag">
+                      <User size={12} color="#64748B" />
+                      {q.salePerson || q.createdBy?.fullName || 'Sales Rep'}
+                    </span>
+                    {q.fileNo && (
+                      <span className="quote-card-tag">
+                        <Tag size={12} color="#64748B" />
+                        File: {q.fileNo}
+                      </span>
+                    )}
+                    <span className="quote-card-tag">
+                      <Calendar size={12} color="#64748B" />
+                      {dateStr}
+                    </span>
+                  </div>
+
+                  {/* Scope of Supply Box */}
+                  <div className="quote-card-scope-box">
+                    <div className="quote-card-scope-desc" title={q.productSummary || 'Scope of Supply'}>
+                      {q.productSummary || (q.items && q.items[0]?.description) || 'Product Scope'}
+                    </div>
+                    {itemCount > 1 && (
+                      <div style={{ fontSize: '0.72rem', color: '#2563EB', fontWeight: 600, marginTop: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Package size={12} /> {itemCount} product items included
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Price Row */}
+                  <div className="quote-card-price-row">
+                    <div>
+                      <div className="quote-card-price-label">Grand Total</div>
+                      <div className="quote-card-price-val">
+                        Rs. {totalAmt.toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 600 }}>PKR</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Footer & Action Buttons */}
+                  <div className="quote-card-footer" onClick={e => e.stopPropagation()}>
+                    <span style={{ fontSize: '0.75rem', color: '#94A3B8' }}>
+                      {q.validUntil ? `Valid till: ${new Date(q.validUntil).toLocaleDateString('en-GB')}` : 'Ready for PO'}
+                    </span>
+
+                    <div className="quote-card-actions">
+                      <button
+                        className="sv-btn-action-icon"
+                        style={{ color: '#2563EB', background: '#EFF6FF' }}
+                        onClick={() => handleDownloadSinglePDF(q)}
+                        title="Download PDF"
+                      >
+                        <Download size={14} />
+                      </button>
+                      <button
+                        className="sv-btn-action-icon"
+                        style={{ color: '#059669', background: '#ECFDF5' }}
+                        onClick={() => handleRecordCustomerPO(q)}
+                        disabled={recordingPO}
+                        title="Record Customer PO"
+                      >
+                        <FileCheck size={14} />
+                      </button>
+                      <button
+                        className="sv-btn-action-icon"
+                        onClick={() => setViewQ(q)}
+                        title="View Details"
+                      >
+                        <Eye size={14} />
+                      </button>
+                      <button
+                        className="sv-btn-action-icon"
+                        onClick={() => openEdit(q)}
+                        title="Edit Quotation"
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                      <button
+                        className="sv-btn-action-icon"
+                        onClick={() => setDeleteTarget(q)}
+                        title="Delete Quotation"
+                        style={{ color: '#EF4444' }}
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination Controls for Cards */}
+          {totalPages > 1 && (
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 4px', marginTop: '12px' }}>
+              <div style={{ fontSize: '0.82rem', color: '#64748B' }}>
+                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, filteredQuotations.length)} of {filteredQuotations.length} quotations
+              </div>
+              <div style={{ display: 'flex', gap: '6px' }}>
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFF', fontSize: '0.8rem', cursor: currentPage === 1 ? 'not-allowed' : 'pointer' }}
+                >
+                  Previous
+                </button>
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  style={{ padding: '6px 14px', borderRadius: '6px', border: '1px solid #CBD5E1', background: '#FFF', fontSize: '0.8rem', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer' }}
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ── DATA TABLE VIEW ── */
         <div className="sv-table-wrap">
           <table className="sv-table">
             <thead>
               <tr>
-                <th>Order Reference</th>
+                <th>Order Ref #</th>
                 <th>Creation Date</th>
-                <th>Customer</th>
+                <th>Customer Name</th>
                 <th>Sale Person</th>
                 <th>File-No#</th>
-                <th>Product Summary</th>
-                <th>Total</th>
+                <th>Product Summary & Items</th>
+                <th style={{ textAlign: 'right' }}>Total Amount (PKR)</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {paginatedQuotations.length === 0 ? (
-                <tr><td colSpan={9} className="sv-empty">No quotations found. Create your first quotation!</td></tr>
-              ) : paginatedQuotations.map(q => {
-                const badgeColor = STATUS_COLORS[q.status] || '#64748B';
-                const orderRef = q.orderReference || q.quotationNumber || '—';
-                const customer = q.clientName || q.customerName || '—';
-                const salePerson = q.salePerson || q.createdBy?.fullName || '—';
-                const fileNo = q.fileNo || '—';
-                const productSummary = q.productSummary || '—';
-                const total = q.totalAmount || q.netAmount || 0;
+              {paginatedQuotations.map(q => {
+                const color = STATUS_COLORS[q.status] || '#64748B';
+                const totalAmt = Number(q.totalAmount || q.netAmount || 0);
+                const itemCount = q.items && q.items.length ? q.items.length : 1;
 
                 return (
                   <tr key={q._id}>
-                    <td className="sv-name" style={{ fontWeight: 700, color: '#1E293B', whiteSpace: 'nowrap' }}>{orderRef}</td>
-                    <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748B' }}>
-                      {q.creationDate ? new Date(q.creationDate).toLocaleString() : (q.createdAt ? new Date(q.createdAt).toLocaleString() : '—')}
+                    <td className="sv-name" style={{ fontWeight: 800, color: '#2563EB', whiteSpace: 'nowrap' }}>
+                      {q.orderReference || q.quotationNumber}
                     </td>
-                    <td style={{ fontWeight: 600, color: '#0F172A' }}>{customer}</td>
-                    <td>{salePerson}</td>
+                    <td style={{ whiteSpace: 'nowrap', color: '#475569' }}>
+                      {q.creationDate ? new Date(q.creationDate).toLocaleDateString('en-GB') : (q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB') : '—')}
+                    </td>
+                    <td style={{ fontWeight: 600, color: '#1E293B' }}>
+                      {q.clientName || q.customerName}
+                    </td>
+                    <td style={{ color: '#475569' }}>
+                      {q.salePerson || q.createdBy?.fullName || 'Sales Executive'}
+                    </td>
+                    <td style={{ color: '#475569', fontWeight: 600 }}>
+                      {q.fileNo || '—'}
+                    </td>
+                    <td style={{ maxWidth: '280px', color: '#334155' }}>
+                      <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={q.productSummary}>
+                        {q.productSummary || (q.items && q.items[0]?.description) || 'Product Scope'}
+                      </div>
+                      {itemCount > 1 && (
+                        <div style={{ fontSize: '0.72rem', color: '#2563EB', fontWeight: 600, marginTop: '2px' }}>
+                          + {itemCount} itemized products
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ fontWeight: 800, color: '#059669', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      Rs. {totalAmt.toLocaleString()}
+                    </td>
                     <td>
-                      {fileNo !== '—' ? (
-                        <span style={{
-                          padding: '2px 8px',
-                          borderRadius: '4px',
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          background: fileNo.toLowerCase().includes('green') ? '#ECFDF5' : (fileNo.toLowerCase().includes('blue') ? '#EFF6FF' : '#F1F5F9'),
-                          color: fileNo.toLowerCase().includes('green') ? '#047857' : (fileNo.toLowerCase().includes('blue') ? '#1D4ED8' : '#334155')
-                        }}>
-                          {fileNo}
-                        </span>
-                      ) : '—'}
-                    </td>
-                    <td style={{ maxWidth: '240px', fontSize: '0.82rem', color: '#334155' }} title={productSummary}>
-                      {productSummary}
-                    </td>
-                    <td style={{ fontWeight: 800, color: '#059669', whiteSpace: 'nowrap' }}>
-                      Rs. {Number(total).toLocaleString()}
-                    </td>
-                    <td>
-                      <span className="sv-badge" style={{ background: badgeColor + '18', color: badgeColor, border: `1px solid ${badgeColor}33` }}>
+                      <span
+                        className="sv-badge"
+                        style={{
+                          background: color + '18',
+                          color: color,
+                          border: `1px solid ${color}40`,
+                          fontSize: '0.75rem',
+                          padding: '2px 8px'
+                        }}
+                      >
                         {q.status}
                       </span>
                     </td>
@@ -437,7 +971,7 @@ export default function SalesQuotationsView() {
       {/* VIEW MODAL */}
       {viewQ && (
         <div className="sv-modal-overlay" onClick={() => setViewQ(null)}>
-          <div className="sv-modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
+          <div className="sv-modal" style={{ maxWidth: '720px' }} onClick={e => e.stopPropagation()}>
             <div className="sv-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <FileText size={18} color="#2563EB" />
@@ -458,8 +992,10 @@ export default function SalesQuotationsView() {
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>Total Amount</div>
-                  <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>Rs. {Number(viewQ.totalAmount || viewQ.netAmount || 0).toLocaleString()}</div>
+                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>Complete Amount (PKR)</div>
+                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
+                    Rs. {Number(viewQ.netAmount !== undefined ? viewQ.netAmount : (viewQ.totalAmount || 0)).toLocaleString()}
+                  </div>
                 </div>
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>File-No#</div>
@@ -468,17 +1004,74 @@ export default function SalesQuotationsView() {
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>Creation Date</div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginTop: '2px' }}>
-                    {viewQ.creationDate ? new Date(viewQ.creationDate).toLocaleDateString() : (viewQ.createdAt ? new Date(viewQ.createdAt).toLocaleDateString() : 'N/A')}
+                    {viewQ.creationDate ? new Date(viewQ.creationDate).toLocaleDateString('en-GB') : (viewQ.createdAt ? new Date(viewQ.createdAt).toLocaleDateString('en-GB') : 'N/A')}
                   </div>
                 </div>
               </div>
 
-              {viewQ.productSummary && (
-                <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '4px' }}>Product Summary</div>
-                  <div style={{ fontSize: '0.88rem', color: '#334155', lineHeight: 1.5, fontWeight: 500 }}>{viewQ.productSummary}</div>
+              {/* Itemized Products Breakdown Table */}
+              <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '16px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748B', marginBottom: '8px' }}>
+                  Product Scope & Quantities
                 </div>
-              )}
+                <table style={{ width: '100%', fontSize: '0.825rem', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid #CBD5E1', color: '#475569', textAlign: 'left' }}>
+                      <th style={{ padding: '6px 8px', width: '30px' }}>#</th>
+                      <th style={{ padding: '6px 8px' }}>Description / Product</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right' }}>Unit Price (PKR)</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'center' }}>Qty</th>
+                      <th style={{ padding: '6px 8px', textAlign: 'right' }}>Total (PKR)</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {((viewQ.items && viewQ.items.length > 0) ? viewQ.items : [{ description: viewQ.productSummary || 'Scope of Supply', quantity: 1, unitPrice: Number(viewQ.totalAmount || viewQ.netAmount || 0), total: Number(viewQ.totalAmount || viewQ.netAmount || 0) }]).map((it, idx) => {
+                      const qty = Math.max(1, Number(it.quantity) || 1);
+                      const unitP = Number(it.unitPrice !== undefined ? it.unitPrice : (viewQ.totalAmount || 0));
+                      const total = Number(it.total !== undefined ? it.total : qty * unitP);
+                      return (
+                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                          <td style={{ padding: '6px 8px', color: '#94A3B8' }}>{idx + 1}</td>
+                          <td style={{ padding: '6px 8px', fontWeight: 600, color: '#1E293B' }}>{it.description || 'Product Item'}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', color: '#475569' }}>Rs. {unitP.toLocaleString()}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 700, color: '#2563EB' }}>{qty}</td>
+                          <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 800, color: '#059669' }}>Rs. {total.toLocaleString()}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr style={{ borderTop: '2px solid #CBD5E1' }}>
+                      <td colSpan={4} style={{ padding: '6px 8px', textAlign: 'right', color: '#64748B', fontWeight: 600 }}>Subtotal (Sum of Products):</td>
+                      <td style={{ padding: '6px 8px', textAlign: 'right', color: '#1E293B', fontWeight: 700 }}>
+                        Rs. {Number(viewQ.totalAmount || 0).toLocaleString()}
+                      </td>
+                    </tr>
+                    {Number(viewQ.discount || 0) > 0 && (
+                      <tr>
+                        <td colSpan={4} style={{ padding: '4px 8px', textAlign: 'right', color: '#DC2626', fontWeight: 600 }}>Discount (-):</td>
+                        <td style={{ padding: '4px 8px', textAlign: 'right', color: '#DC2626', fontWeight: 700 }}>
+                          - Rs. {Number(viewQ.discount || 0).toLocaleString()}
+                        </td>
+                      </tr>
+                    )}
+                    {Number(viewQ.tax || 0) > 0 && (
+                      <tr>
+                        <td colSpan={4} style={{ padding: '4px 8px', textAlign: 'right', color: '#475569', fontWeight: 600 }}>Tax / GST (+):</td>
+                        <td style={{ padding: '4px 8px', textAlign: 'right', color: '#475569', fontWeight: 700 }}>
+                          + Rs. {Number(viewQ.tax || 0).toLocaleString()}
+                        </td>
+                      </tr>
+                    )}
+                    <tr style={{ borderTop: '1px solid #CBD5E1', fontWeight: 800 }}>
+                      <td colSpan={4} style={{ padding: '8px', textAlign: 'right', color: '#0F172A', fontSize: '0.9rem' }}>Complete Grand Total (PKR):</td>
+                      <td style={{ padding: '8px', textAlign: 'right', color: '#059669', fontSize: '1.05rem' }}>
+                        Rs. {Number(viewQ.netAmount !== undefined ? viewQ.netAmount : (viewQ.totalAmount || 0)).toLocaleString()}
+                      </td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
 
               {viewQ.notes && (
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
@@ -513,17 +1106,17 @@ export default function SalesQuotationsView() {
         </div>
       )}
 
-      {/* CREATE / EDIT MODAL - BEAUTIFUL STRUCTURED CSS */}
+      {/* CREATE / EDIT MODAL - MULTI-PRODUCT QUANTITY, DISCOUNT, TAX & COMPLETE AMOUNT CALCULATOR */}
       {showModal && (
         <div className="sv-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="sv-modal" style={{ maxWidth: '680px' }} onClick={e => e.stopPropagation()}>
+          <div className="sv-modal" style={{ maxWidth: '820px' }} onClick={e => e.stopPropagation()}>
             <div className="sv-modal-header">
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>
                   {editQ ? `Edit Quotation (${editQ.orderReference || editQ.quotationNumber})` : 'New Quotation'}
                 </h3>
                 <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.8rem' }}>
-                  Enter quotation details matching business format and workflow
+                  Enter products, quantities, unit prices, discount, and tax to calculate the complete quotation amount in PKR
                 </p>
               </div>
               <button onClick={() => setShowModal(false)}><X size={18} /></button>
@@ -531,7 +1124,7 @@ export default function SalesQuotationsView() {
             {error && <div className="sv-error" style={{ background: '#FEF2F2', color: '#991B1B', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', border: '1px solid #FECACA', marginBottom: '14px' }}>{error}</div>}
             
             <form onSubmit={handleSave} className="sv-form">
-              {/* Section 1: Customer & Quotation Details */}
+              {/* Section 1: Customer & Identification */}
               <div className="sv-form-section">
                 <div className="sv-form-section-title"><Building size={14} color="#2563EB" /> Customer & Identification</div>
                 <div className="sv-grid-2">
@@ -557,21 +1150,223 @@ export default function SalesQuotationsView() {
                 </div>
               </div>
 
-              {/* Section 2: Products & Financials */}
+              {/* Section 2: Products & Dynamic Quantity / Unit Price Calculation */}
               <div className="sv-form-section">
-                <div className="sv-form-section-title"><DollarSign size={14} color="#059669" /> Products & Quotation Value</div>
-                <div className="sv-field">
-                  <label>Product Summary *</label>
-                  <textarea rows={2} value={form.productSummary} onChange={e => setForm(p => ({ ...p, productSummary: e.target.value }))} placeholder="e.g. 512 GB SSD / Dell PowerEdge R760" required />
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                  <div className="sv-form-section-title" style={{ margin: 0 }}>
+                    <DollarSign size={14} color="#059669" /> Products & Scope of Supply
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddItem}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      background: '#EFF6FF',
+                      border: '1px solid #BFDBFE',
+                      color: '#2563EB',
+                      padding: '5px 10px',
+                      borderRadius: '6px',
+                      fontSize: '0.78rem',
+                      fontWeight: 600,
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <Plus size={13} /> Add Another Product
+                  </button>
                 </div>
 
-                <div className="sv-grid-3">
+                {/* Line Items Table */}
+                <div style={{ overflowX: 'auto', marginBottom: '12px' }}>
+                  <table style={{ width: '100%', fontSize: '0.825rem', borderCollapse: 'collapse', background: '#F8FAFC', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
+                    <thead>
+                      <tr style={{ background: '#F1F5F9', color: '#475569', textAlign: 'left', borderBottom: '1px solid #E2E8F0' }}>
+                        <th style={{ padding: '8px', width: '30px' }}>#</th>
+                        <th style={{ padding: '8px', minWidth: '220px' }}>Product Description / Item Scope *</th>
+                        <th style={{ padding: '8px', width: '140px' }}>Unit Price (PKR) *</th>
+                        <th style={{ padding: '8px', width: '90px', textAlign: 'center' }}>Quantity *</th>
+                        <th style={{ padding: '8px', width: '130px', textAlign: 'right' }}>Total (PKR)</th>
+                        <th style={{ padding: '8px', width: '40px', textAlign: 'center' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {form.items.map((it, idx) => {
+                        const lineTotal = (Number(it.quantity) || 1) * (Number(it.unitPrice) || 0);
+                        return (
+                          <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0' }}>
+                            <td style={{ padding: '8px', color: '#94A3B8', fontWeight: 600 }}>{idx + 1}</td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                value={it.description}
+                                onChange={e => handleItemChange(idx, 'description', e.target.value)}
+                                placeholder="e.g. 512 GB SSD / Dell Server R760"
+                                required
+                                style={{
+                                  width: '100%',
+                                  padding: '7px 10px',
+                                  fontSize: '0.82rem',
+                                  border: '1px solid #CBD5E1',
+                                  borderRadius: '6px',
+                                  background: '#FFFFFF'
+                                }}
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="number"
+                                min="0"
+                                step="any"
+                                value={it.unitPrice === '' ? '' : it.unitPrice}
+                                onChange={e => handleItemChange(idx, 'unitPrice', e.target.value)}
+                                placeholder="e.g. 5000"
+                                required
+                                style={{
+                                  width: '100%',
+                                  padding: '7px 10px',
+                                  fontSize: '0.82rem',
+                                  border: '1px solid #CBD5E1',
+                                  borderRadius: '6px',
+                                  background: '#FFFFFF'
+                                }}
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                type="number"
+                                min="1"
+                                step="1"
+                                value={it.quantity}
+                                onChange={e => handleItemChange(idx, 'quantity', e.target.value)}
+                                placeholder="1"
+                                required
+                                style={{
+                                  width: '100%',
+                                  padding: '7px 10px',
+                                  fontSize: '0.82rem',
+                                  border: '1px solid #CBD5E1',
+                                  borderRadius: '6px',
+                                  textAlign: 'center',
+                                  fontWeight: 700,
+                                  background: '#FFFFFF'
+                                }}
+                              />
+                            </td>
+                            <td style={{ padding: '8px', textAlign: 'right', fontWeight: 800, color: '#059669', whiteSpace: 'nowrap' }}>
+                              Rs. {lineTotal.toLocaleString()}
+                            </td>
+                            <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                              {form.items.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveItem(idx)}
+                                  title="Remove Item"
+                                  style={{
+                                    background: '#FEE2E2',
+                                    border: '1px solid #FECACA',
+                                    color: '#DC2626',
+                                    borderRadius: '6px',
+                                    padding: '5px',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                  }}
+                                >
+                                  <Trash2 size={13} />
+                                </button>
+                              )}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Section 2B: Discount & Tax Options */}
+                <div className="sv-grid-2" style={{ marginBottom: '14px' }}>
                   <div className="sv-field">
-                    <label>Total (PKR) *</label>
-                    <input type="number" value={form.totalAmount} onChange={e => setForm(p => ({ ...p, totalAmount: e.target.value, netAmount: e.target.value }))} placeholder="0" required />
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#DC2626' }}>
+                      <Tag size={13} /> Discount Amount (PKR)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={form.discount === '' ? '' : form.discount}
+                      onChange={e => handleFinancialChange('discount', e.target.value)}
+                      placeholder="0"
+                    />
                   </div>
                   <div className="sv-field">
-                    <label>Status</label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '5px', color: '#475569' }}>
+                      <DollarSign size={13} /> Tax / GST Amount (PKR)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={form.tax === '' ? '' : form.tax}
+                      onChange={e => handleFinancialChange('tax', e.target.value)}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+
+                {/* Comprehensive Amount Breakdown Banner */}
+                <div style={{
+                  background: '#F8FAFC',
+                  border: '1px solid #CBD5E1',
+                  borderRadius: '10px',
+                  padding: '14px 18px',
+                  marginBottom: '14px'
+                }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '10px' }}>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>Subtotal (Products)</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#1E293B', marginTop: '2px' }}>
+                        Rs. {Number(form.totalAmount || 0).toLocaleString()} PKR
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#DC2626' }}>Discount (-)</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#DC2626', marginTop: '2px' }}>
+                        - Rs. {Number(form.discount || 0).toLocaleString()} PKR
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>Tax / GST (+)</div>
+                      <div style={{ fontSize: '1.05rem', fontWeight: 700, color: '#475569', marginTop: '2px' }}>
+                        + Rs. {Number(form.tax || 0).toLocaleString()} PKR
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderTop: '2px solid #E2E8F0',
+                    paddingTop: '10px'
+                  }}>
+                    <div style={{ fontSize: '0.8rem', color: '#065F46', fontWeight: 600 }}>
+                      Formula: <strong>Complete Amount = Subtotal - Discount + Tax</strong>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                      <span style={{ fontSize: '0.82rem', textTransform: 'uppercase', fontWeight: 800, color: '#047857' }}>
+                        Complete Amount:
+                      </span>
+                      <span style={{ fontSize: '1.35rem', fontWeight: 800, color: '#059669' }}>
+                        Rs. {Number(form.netAmount || 0).toLocaleString()} PKR
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sv-grid-2">
+                  <div className="sv-field">
+                    <label>Quotation Status</label>
                     <select value={form.status} onChange={e => setForm(p => ({ ...p, status: e.target.value }))}>
                       <option value="Quotation">Quotation</option>
                       <option value="Draft">Draft</option>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Plus, Menu } from 'lucide-react';
 import NotificationDropdown from '../components/NotificationDropdown';
+import { getUser } from '../utils/authStorage';
 import './EmployeeHeader.css';
 
 export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuToggle, currentUser }) {
@@ -46,14 +47,38 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
   const { title, subtitle } = getHeaderInfo(activeTab);
 
   const getInitials = (name) => {
-    if (!name) return 'SR';
-    const parts = name.trim().split(' ');
+    if (!name) return 'U';
+    const parts = name.trim().split(' ').filter(Boolean);
     if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
     return parts[0].slice(0, 2).toUpperCase();
   };
 
-  const displayName = currentUser?.name || 'Farhan Saleem';
-  const displayRole = currentUser?.position || (currentUser?.role === 'employee' ? 'Sales Representative' : 'Sales Representative');
+  const formatRole = (role, position) => {
+    if (position && typeof position === 'string' && position.trim()) {
+      return position.trim();
+    }
+    if (!role) return 'Sales Representative';
+    const mapping = {
+      sales_manager: 'Sales Manager',
+      sales_rep: 'Sales Representative',
+      employee: 'Sales Representative',
+      admin: 'Administrator',
+      project_manager: 'Project Manager',
+      accountant: 'Accountant',
+      marketing: 'Marketing Specialist',
+      hr: 'HR Manager',
+      hr_manager: 'HR Manager',
+      ceo: 'Chief Executive Officer'
+    };
+    const key = String(role).toLowerCase();
+    if (mapping[key]) return mapping[key];
+    return String(role).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  };
+
+  const user = currentUser || getUser();
+  const displayName = user?.fullName || user?.name || user?.username || 'Sales Representative';
+  const displayRole = formatRole(user?.role, user?.position);
+  const avatarImage = user?.profileImage || user?.profilePicture || user?.avatar;
 
   return (
     <header className="employee-header">
@@ -73,8 +98,8 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
         {/* User Profile Badge */}
         <div className="header-user-profile-badge">
           <div className="header-user-avatar">
-            {currentUser?.profilePicture ? (
-              <img src={currentUser.profilePicture} alt={displayName} />
+            {avatarImage ? (
+              <img src={avatarImage} alt={displayName} />
             ) : (
               <span>{getInitials(displayName)}</span>
             )}
