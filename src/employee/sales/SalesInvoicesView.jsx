@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { QRCodeSVG } from 'qrcode.react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../../utils/api';
 import { 
   Plus, 
@@ -23,7 +25,8 @@ import {
   Layers,
   Printer,
   Download,
-  Edit2
+  Edit2,
+  FileSpreadsheet
 } from 'lucide-react';
 import './SalesViews.css';
 
@@ -502,14 +505,156 @@ export default function SalesInvoicesView() {
     }
   };
 
+  // ── COMPLETE INVOICES LEDGER EXPORT (PDF) ──
+  const downloadCompleteInvoicesPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const nowStr = new Date().toLocaleDateString('en-GB');
+
+    doc.setFillColor(15, 23, 42); // Navy
+    doc.rect(0, 0, 297, 24, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — COMMERCIAL INVOICES MASTER LEDGER', 14, 12);
+
+    const totalInvAmt = invoices.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+    const totalPaidAmt = invoices.reduce((sum, i) => sum + (Number(i.paidAmount) || (i.status === 'Paid' ? Number(i.amount) : 0)), 0);
+    const totalOutAmt = invoices.reduce((sum, i) => {
+      const out = i.outstandingAmount != null ? Number(i.outstandingAmount) : Math.max(0, Number(i.amount) - (Number(i.paidAmount) || 0));
+      return sum + (i.status === 'Paid' || i.status === 'Cancelled' ? 0 : out);
+    }, 0);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated: ${nowStr} | Invoices: ${invoices.length} | Invoiced: Rs. ${totalInvAmt.toLocaleString()} | Paid: Rs. ${totalPaidAmt.toLocaleString()} | Receivable: Rs. ${totalOutAmt.toLocaleString()}`, 14, 19);
+
+    const rows = invoices.map((i, idx) => [
+      idx + 1,
+      i.invoiceNumber || '—',
+      i.clientName || '—',
+      i.dealTitle || i.saleReference || i.salesOrderNumber || '—',
+      i.issueDate ? new Date(i.issueDate).toLocaleDateString('en-GB') : '—',
+      i.dueDate ? new Date(i.dueDate).toLocaleDateString('en-GB') : '—',
+      i.status || 'Pending Review',
+      `Rs. ${Number(i.amount || 0).toLocaleString()}`,
+      `Rs. ${Number(i.paidAmount || (i.status === 'Paid' ? i.amount : 0)).toLocaleString()}`,
+      `Rs. ${Number(i.outstandingAmount != null ? i.outstandingAmount : (i.status === 'Paid' ? 0 : Math.max(0, Number(i.amount) - (Number(i.paidAmount) || 0)))).toLocaleString()}`
+    ]);
+
+    try {
+      autoTable(doc, {
+        startY: 28,
+        head: [['#', 'Invoice #', 'Customer Name', 'Reference / SO', 'Issue Date', 'Due Date', 'Status', 'Total (PKR)', 'Paid (PKR)', 'Balance (PKR)']],
+        body: rows,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [15, 23, 42] } },
+          { content: `Rs. ${totalInvAmt.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [15, 23, 42] } },
+          { content: `Rs. ${totalPaidAmt.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [4, 120, 87] } },
+          { content: `Rs. ${totalOutAmt.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [254, 242, 242], textColor: [185, 28, 28] } }
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        styles: { fontSize: 7.5, cellPadding: 2.8, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 14, right: 14 }
+      });
+
+      doc.save(`Invoices_Master_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error('Invoices PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // ── COMPLETE INVOICES LEDGER EXPORT (EXCEL / CSV) ──
+  const downloadCompleteInvoicesExcel = () => {
+    const totalInvAmt = invoices.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+    const totalPaidAmt = invoices.reduce((sum, i) => sum + (Number(i.paidAmount) || (i.status === 'Paid' ? Number(i.amount) : 0)), 0);
+    const totalOutAmt = invoices.reduce((sum, i) => {
+      const out = i.outstandingAmount != null ? Number(i.outstandingAmount) : Math.max(0, Number(i.amount) - (Number(i.paidAmount) || 0));
+      return sum + (i.status === 'Paid' || i.status === 'Cancelled' ? 0 : out);
+    }, 0);
+
+    const headers = ['#', 'Invoice Number', 'Client Name', 'Customer Email', 'Customer Phone', 'Reference / SO #', 'Issue Date', 'Due Date', 'Status', 'Payment Terms', 'Subtotal', 'Tax Rate (%)', 'Tax (PKR)', 'Discount (PKR)', 'Total Amount (PKR)', 'Paid Amount (PKR)', 'Outstanding Receivable (PKR)'];
+    const rows = invoices.map((i, idx) => [
+      idx + 1,
+      `"${i.invoiceNumber || ''}"`,
+      `"${(i.clientName || '').replace(/"/g, '""')}"`,
+      `"${i.customerEmail || ''}"`,
+      `"${i.customerPhone || ''}"`,
+      `"${i.dealTitle || i.saleReference || i.salesOrderNumber || ''}"`,
+      `"${i.issueDate ? new Date(i.issueDate).toLocaleDateString('en-GB') : ''}"`,
+      `"${i.dueDate ? new Date(i.dueDate).toLocaleDateString('en-GB') : ''}"`,
+      `"${i.status || 'Pending Review'}"`,
+      `"${i.paymentTerms || 'Net 30'}"`,
+      Number(i.subtotal || i.amount || 0),
+      Number(i.taxRate || 0),
+      Number(i.tax || 0),
+      Number(i.discount || 0),
+      Number(i.amount || 0),
+      Number(i.paidAmount || (i.status === 'Paid' ? i.amount : 0)),
+      Number(i.outstandingAmount != null ? i.outstandingAmount : (i.status === 'Paid' ? 0 : Math.max(0, Number(i.amount) - (Number(i.paidAmount) || 0))))
+    ]);
+
+    // Add summary row
+    rows.push([
+      'TOTAL',
+      `"Total Invoices: ${invoices.length}"`,
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      totalInvAmt,
+      totalPaidAmt,
+      totalOutAmt
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Invoices_Master_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   // KPIs
-  const totalInvoiced = invoices.reduce((sum, i) => sum + (i.amount || 0), 0);
+  const now = new Date();
+  const totalInvoiced = invoices.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
   const pendingReviewInvoices = invoices.filter(i => i.status === 'Pending Review' || i.status === 'Submitted');
-  const approvedInvoices = invoices.filter(i => i.status === 'Approved');
+  const approvedInvoices = invoices.filter(i => ['Approved', 'Sent', 'Partially Paid', 'Paid', 'Overdue'].includes(i.status));
   const paidInvoices = invoices.filter(i => i.status === 'Paid');
-  const paidAmount = paidInvoices.reduce((sum, i) => sum + (i.amount || 0), 0);
-  const overdueInvoices = invoices.filter(i => (i.status === 'Overdue' || (i.dueDate && new Date(i.dueDate) < new Date())) && i.status !== 'Paid' && i.status !== 'Cancelled');
-  const overdueAmount = overdueInvoices.reduce((sum, i) => sum + (i.amount || 0), 0);
+  const paidAmount = invoices.reduce((sum, i) => sum + (Number(i.paidAmount) || (i.status === 'Paid' ? Number(i.amount) : 0)), 0);
+
+  // Receivables: strictly approved invoices with remaining unpaid balance
+  const receivableInvoices = invoices.filter(i => ['Approved', 'Sent', 'Partially Paid', 'Overdue'].includes(i.status) && i.status !== 'Paid' && i.status !== 'Cancelled');
+  const receivablesTotal = receivableInvoices.reduce((sum, i) => {
+    const outstanding = i.outstandingAmount != null ? Number(i.outstandingAmount) : (Number(i.amount) - (Number(i.paidAmount) || 0));
+    return sum + Math.max(0, outstanding);
+  }, 0);
+
+  // Overdue: strictly approved invoices past due with remaining unpaid balance
+  const overdueInvoices = invoices.filter(i => {
+    const isApproved = ['Approved', 'Sent', 'Partially Paid', 'Overdue'].includes(i.status);
+    const isPastDue = i.status === 'Overdue' || (i.dueDate && new Date(i.dueDate) < now);
+    const outstanding = i.outstandingAmount != null ? Number(i.outstandingAmount) : (Number(i.amount) - (Number(i.paidAmount) || 0));
+    return isApproved && isPastDue && outstanding > 0 && i.status !== 'Paid' && i.status !== 'Cancelled';
+  });
+  const overdueAmount = overdueInvoices.reduce((sum, i) => {
+    const outstanding = i.outstandingAmount != null ? Number(i.outstandingAmount) : (Number(i.amount) - (Number(i.paidAmount) || 0));
+    return sum + Math.max(0, outstanding);
+  }, 0);
 
   const statuses = ['all', 'Pending Review', 'Approved', 'Draft', 'Sent', 'Paid', 'Rejected', 'Overdue'];
 
@@ -521,9 +666,17 @@ export default function SalesInvoicesView() {
           <h2 className="sv-title"><FileText size={22} color="#2563EB" /> Invoices & Billing Management</h2>
           <p className="sv-subtitle">Create invoices from won sales/deals, submit to Sales Manager for review, and track billing</p>
         </div>
-        <button className="sv-btn-primary" onClick={openCreate}>
-          <Plus size={16} /> Create Invoice from Sale
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button className="sv-btn-secondary" onClick={downloadCompleteInvoicesPDF} title="Download Complete Invoices (PDF)">
+            <Download size={15} color="#DC2626" /> Export PDF
+          </button>
+          <button className="sv-btn-secondary" onClick={downloadCompleteInvoicesExcel} title="Download Complete Invoices (Excel)">
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
+          </button>
+          <button className="sv-btn-primary" onClick={openCreate}>
+            <Plus size={16} /> Create Invoice from Sale
+          </button>
+        </div>
       </div>
 
       {feedback && (
@@ -537,17 +690,17 @@ export default function SalesInvoicesView() {
         <div className="sv-target-card" style={{ borderLeft: '4px solid #2563EB' }}>
           <span className="sv-ts-label">Total Invoiced</span>
           <span className="sv-ts-value">Rs. {totalInvoiced.toLocaleString()}</span>
-          <span style={{ fontSize: '0.78rem', color: '#64748B' }}>{invoices.length} invoices generated</span>
-        </div>
-        <div className="sv-target-card" style={{ borderLeft: '4px solid #F59E0B' }}>
-          <span className="sv-ts-label">Pending Manager Review</span>
-          <span className="sv-ts-value" style={{ color: '#D97706' }}>{pendingReviewInvoices.length}</span>
-          <span style={{ fontSize: '0.78rem', color: '#D97706' }}>Awaiting manager sign-off</span>
+          <span style={{ fontSize: '0.78rem', color: '#64748B' }}>{invoices.length} total invoices</span>
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #10B981' }}>
           <span className="sv-ts-label">Approved Invoices</span>
           <span className="sv-ts-value" style={{ color: '#059669' }}>{approvedInvoices.length}</span>
-          <span style={{ fontSize: '0.78rem', color: '#059669' }}>Synced with Finance</span>
+          <span style={{ fontSize: '0.78rem', color: '#059669' }}>{pendingReviewInvoices.length} awaiting review</span>
+        </div>
+        <div className="sv-target-card" style={{ borderLeft: '4px solid #0284C7' }}>
+          <span className="sv-ts-label">Total Receivables</span>
+          <span className="sv-ts-value" style={{ color: '#0284C7' }}>Rs. {receivablesTotal.toLocaleString()}</span>
+          <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Approved unpaid balances</span>
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #14B8A6' }}>
           <span className="sv-ts-label">Paid / Collected</span>

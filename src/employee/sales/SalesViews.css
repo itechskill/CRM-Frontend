@@ -2187,4 +2187,161 @@
   gap: 6px;
 }
 
+/* Quotation Discount & Tax Percentage Calculator Controls */
+.quote-calc-card {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.quote-calc-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+@media (max-width: 640px) {
+  .quote-calc-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.quote-calc-col {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.quote-calc-col-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.quote-calc-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.quote-stepper-group {
+  display: inline-flex;
+  align-items: center;
+  background: #F1F5F9;
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  overflow: hidden;
+  height: 38px;
+}
+
+.quote-stepper-btn {
+  background: transparent;
+  border: none;
+  width: 32px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #475569;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quote-stepper-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.quote-stepper-val {
+  width: 54px;
+  height: 100%;
+  border: none;
+  border-left: 1px solid #CBD5E1;
+  border-right: 1px solid #CBD5E1;
+  background: #FFFFFF;
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: #0F172A;
+  outline: none;
+}
+
+.quote-presets-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  align-items: center;
+}
+
+.quote-preset-btn {
+  background: #F1F5F9;
+  border: 1px solid #E2E8F0;
+  color: #475569;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.quote-preset-btn:hover {
+  background: #E2E8F0;
+  color: #0F172A;
+}
+
+.quote-preset-btn.active {
+  background: #2563EB;
+  border-color: #2563EB;
+  color: #FFFFFF;
+}
+
+.quote-preset-btn.active-discount {
+  background: #DC2626;
+  border-color: #DC2626;
+  color: #FFFFFF;
+}
+
+.quote-summary-banner {
+  background: linear-gradient(135deg, #F0FDF4 0%, #ECFDF5 100%);
+  border: 1.5px solid #A7F3D0;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.quote-summary-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.quote-summary-stat-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748B;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.quote-summary-stat-val {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin-top: 2px;
+}
+
+
 

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiRequest } from '../../utils/api';
-import { Plus, FileCheck, Edit2, Eye, Trash2, X, Save, Search, Calendar, User, DollarSign, UploadCloud, Link2 } from 'lucide-react';
+import { Plus, FileCheck, Edit2, Eye, Trash2, X, Save, Search, Calendar, User, DollarSign, UploadCloud, Link2, Download, FileSpreadsheet } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
 
 const STATUS_COLORS = {
@@ -82,6 +84,106 @@ export default function SalesCustomerPOsView() {
       return matchesFilter && matchesSearch;
     });
   }, [customerPOs, statusFilter, searchTerm]);
+
+  // Summary totals for customer POs
+  const totalPOAmount = useMemo(() => {
+    return customerPOs.reduce((sum, po) => sum + (Number(po.amount) || 0), 0);
+  }, [customerPOs]);
+
+  const linkedPOsCount = useMemo(() => {
+    return customerPOs.filter(po => po.status === 'Linked' || po.quotationNumber).length;
+  }, [customerPOs]);
+
+  const receivedPOsCount = useMemo(() => {
+    return customerPOs.filter(po => po.status === 'Received').length;
+  }, [customerPOs]);
+
+  // Complete PDF Export with Mathematical Footer Totals
+  const downloadCompleteCustomerPOsPDF = () => {
+    const doc = new jsPDF('landscape');
+    const records = filteredPOs;
+    const totalFilteredAmount = records.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+    // Header styling
+    doc.setFillColor(30, 41, 59);
+    doc.rect(0, 0, 297, 24, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM - CUSTOMER PURCHASE ORDERS LEDGER REPORT', 14, 15);
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString()} | Total Records: ${records.length} | Status Filter: ${statusFilter.toUpperCase()}`, 14, 31);
+
+    const tableData = records.map(p => [
+      p.poNumber || '—',
+      p.customerName || '—',
+      p.quotationNumber || '—',
+      p.poDate ? new Date(p.poDate).toLocaleDateString() : '—',
+      `Rs. ${Number(p.amount || 0).toLocaleString()}`,
+      p.status || 'Received',
+      p.notes ? (p.notes.length > 30 ? p.notes.substring(0, 30) + '...' : p.notes) : '—'
+    ]);
+
+    try {
+      autoTable(doc, {
+        head: [['PO Number', 'Customer Name', 'Linked Quotation', 'PO Date', 'Amount (PKR)', 'Status', 'Notes']],
+        body: tableData,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: `Rs. ${totalFilteredAmount.toLocaleString()}`, styles: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105], fillColor: [241, 245, 249] } },
+          { content: `${records.length} POs`, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
+        ]],
+        startY: 36,
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold' },
+        theme: 'grid'
+      });
+
+      doc.save(`Customer_POs_Ledger_${new Date().toISOString().substring(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('Customer POs PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // Complete Excel Export with Summary Footer
+  const downloadCompleteCustomerPOsExcel = () => {
+    const records = filteredPOs;
+    const totalFilteredAmount = records.reduce((s, p) => s + (Number(p.amount) || 0), 0);
+
+    const headers = ['PO Number', 'Customer Name', 'Linked Quotation', 'PO Date', 'Amount (PKR)', 'Status', 'Notes'];
+    const rows = records.map(p => [
+      `"${p.poNumber || ''}"`,
+      `"${(p.customerName || '').replace(/"/g, '""')}"`,
+      `"${p.quotationNumber || ''}"`,
+      `"${p.poDate ? new Date(p.poDate).toLocaleDateString() : ''}"`,
+      Number(p.amount || 0),
+      `"${p.status || ''}"`,
+      `"${(p.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const summaryRow = [
+      '"TOTAL"',
+      `"Total Records: ${records.length}"`,
+      '""',
+      '""',
+      totalFilteredAmount,
+      '""',
+      '""'
+    ];
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(',')), summaryRow.join(',')].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Customer_POs_Ledger_${new Date().toISOString().substring(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const openCreate = () => {
     const today = new Date().toISOString().substring(0, 10);
@@ -183,7 +285,15 @@ export default function SalesCustomerPOsView() {
           <h2 className="sv-title"><FileCheck size={20} /> Customer Purchase Orders</h2>
           <p className="sv-subtitle">Formal purchase orders received from customers linked to quotations</p>
         </div>
-        <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> Record Customer PO</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button className="sv-btn-secondary" onClick={downloadCompleteCustomerPOsPDF} title="Download Complete POs Report (PDF)">
+            <Download size={15} color="#DC2626" /> Export PDF
+          </button>
+          <button className="sv-btn-secondary" onClick={downloadCompleteCustomerPOsExcel} title="Download Complete POs Report (Excel)">
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
+          </button>
+          <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> Record Customer PO</button>
+        </div>
       </div>
 
       {feedback && (
@@ -191,6 +301,26 @@ export default function SalesCustomerPOsView() {
           {feedback}
         </div>
       )}
+
+      {/* KPI Cards */}
+      <div className="sv-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Customer POs</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>{customerPOs.length}</div>
+        </div>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total PO Value</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>Rs. {totalPOAmount.toLocaleString()}</div>
+        </div>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Linked to Quotations</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>{linkedPOsCount}</div>
+        </div>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Received Status</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#8B5CF6', marginTop: '4px' }}>{receivedPOsCount}</div>
+        </div>
+      </div>
 
       <div className="sv-filters">
         <div className="sv-search-box">
@@ -251,6 +381,19 @@ export default function SalesCustomerPOsView() {
                 </tr>
               ))}
             </tbody>
+            {filteredPOs.length > 0 && (
+              <tfoot>
+                <tr style={{ background: '#F8FAFC', fontWeight: 700, borderTop: '2px solid #E2E8F0' }}>
+                  <td colSpan={4} style={{ textAlign: 'right', padding: '12px', color: '#475569' }}>TOTAL AMOUNT:</td>
+                  <td style={{ color: '#059669', padding: '12px' }}>
+                    Rs. {filteredPOs.reduce((acc, p) => acc + (Number(p.amount) || 0), 0).toLocaleString()}
+                  </td>
+                  <td colSpan={2} style={{ color: '#64748B', padding: '12px', fontSize: '0.85rem' }}>
+                    {filteredPOs.length} Records
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}

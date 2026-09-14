@@ -81,174 +81,308 @@ export default function SalesManagerPaymentsView() {
   const totalCollected = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
   // ── GENERATE INDIVIDUAL PAYMENT SLIP PDF ──
-  const downloadPaymentSlip = (p) => {
+  // ── GENERATE INDIVIDUAL PAYMENT SLIP PDF ──
+  const downloadPaymentSlip = (payment) => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const memberName = p.createdBy?.fullName || 'Sales Department';
-    const amountVal = Number(p.amount || 0);
+    const ref = payment.paymentRefNumber || 'REC-DOC';
+    const customer = payment.customerName || 'Valued Customer';
+    const dateStr = payment.paymentDate ? new Date(payment.paymentDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+    const amount = Number(payment.amount || 0);
 
-    // Header Background
-    doc.setFillColor(15, 23, 42); // Slate 900
-    doc.rect(0, 0, 210, 40, 'F');
+    // Primary Brand Header Banner
+    doc.setFillColor(30, 58, 138); // Deep Navy #1E3A8A
+    doc.rect(0, 0, 210, 36, 'F');
+    doc.setFillColor(5, 150, 105); // Emerald Accent #059669
+    doc.rect(0, 36, 210, 2, 'F');
 
-    // Header Title
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(22);
+    // Brand Title (Left)
+    doc.setFontSize(20);
     doc.setTextColor(255, 255, 255);
-    doc.text('FORTLINE CRM', 16, 20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM', 14, 18);
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(226, 232, 240);
+    doc.text('Financial Accounts & Collections • Official Payment Receipt', 14, 26);
+
+    // Document Title (Right)
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('PAYMENT RECEIPT', 196, 18, { align: 'right' });
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(148, 163, 184);
-    doc.text('Official Customer Payment Receipt / Slip', 16, 28);
+    doc.setTextColor(191, 219, 254);
+    doc.text(`Receipt Ref: ${ref}`, 196, 26, { align: 'right' });
 
+    // Customer & Receipt Details Container Box
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, 44, 182, 38, 2.5, 2.5, 'FD');
+
+    // Left Column: Customer Details
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(14);
-    doc.setTextColor(255, 255, 255);
-    doc.text(p.paymentRefNumber || 'RECEIPT', 194, 20, { align: 'right' });
+    doc.text('RECEIVED FROM CUSTOMER:', 19, 52);
 
-    doc.setFontSize(9);
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(customer, 19, 58, { maxWidth: 85 });
+
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
-    doc.setTextColor(148, 163, 184);
-    doc.text(`Date: ${p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : new Date().toLocaleDateString()}`, 194, 28, { align: 'right' });
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Linked Sales Order: ${payment.salesOrderNumber || '—'}`, 19, 64, { maxWidth: 85 });
+    doc.text(`Linked Invoice: ${payment.invoiceNumber || '—'}`, 19, 70, { maxWidth: 85 });
 
-    // Amount Banner
-    doc.setFillColor(236, 253, 245);
-    doc.setDrawColor(167, 243, 208);
-    doc.roundedRect(16, 48, 178, 26, 3, 3, 'FD');
+    // Vertical Divider Line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(108, 48, 108, 78);
 
+    // Right Column: Payment Details
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(6, 95, 70);
-    doc.text('AMOUNT RECEIVED (PKR)', 22, 56);
+    doc.text('TRANSACTION DETAILS:', 114, 52);
 
-    doc.setFontSize(18);
-    doc.text(`Rs. ${amountVal.toLocaleString()}`, 22, 66);
-
-    doc.setFontSize(10);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Payment Method:', 114, 58);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Status: ${p.paymentType} Payment Received`, 188, 62, { align: 'right' });
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${payment.paymentMethod || 'Bank Transfer'}`, 155, 58);
 
-    // Details Grid
-    const details = [
-      ['Payment Reference #', p.paymentRefNumber || '—'],
-      ['Customer / Client', p.customerName || '—'],
-      ['Invoice Number', p.invoiceNumber || '—'],
-      ['Sales Order Reference', p.salesOrderNumber || '—'],
-      ['Payment Type', p.paymentType || 'Partial'],
-      ['Payment Method', p.paymentMethod || 'Bank Transfer'],
-      ['Payment Date', p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : '—'],
-      ['Recorded By', memberName],
-      ['Currency', 'PKR (Pakistani Rupee)']
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Payment Nature:', 114, 64);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${payment.paymentType || 'Standard'} Payment`, 155, 64);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Receipt Date:', 114, 70);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(dateStr, 155, 70);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Settlement Status:', 114, 76);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(5, 150, 105);
+    doc.text('Payment Confirmed', 155, 76);
+
+    // Itemized Details Table
+    const paymentRows = [
+      ['Payment Reference ID', ref],
+      ['Payer / Organization', customer],
+      ['Payment Method / Channel', payment.paymentMethod || 'Bank Transfer / Online'],
+      ['Classification / Type', `${payment.paymentType || 'Partial'} Settlement`],
+      ['Recorded By (Representative)', payment.createdBy?.fullName || 'Sales & Accounts Team'],
+      ['Settlement Date', dateStr]
     ];
 
     autoTable(doc, {
-      startY: 82,
-      head: [['Payment Information Field', 'Details']],
-      body: details,
-      theme: 'striped',
-      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
-      styles: { fontSize: 9, cellPadding: 4, textColor: [30, 41, 59] },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: 16, right: 16 }
+      startY: 88,
+      margin: { left: 14, right: 14 },
+      tableWidth: 182,
+      head: [['Payment Ledger Specification', 'Details / Recorded Reference']],
+      body: paymentRows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [30, 58, 138],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5,
+        cellPadding: 4,
+        halign: 'left'
+      },
+      styles: {
+        fontSize: 8.5,
+        cellPadding: 3.5,
+        textColor: [30, 41, 59],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      columnStyles: {
+        0: { cellWidth: 70, fontStyle: 'bold', textColor: [71, 85, 105] },
+        1: { cellWidth: 112, textColor: [15, 23, 42] }
+      }
     });
 
-    if (p.notes) {
-      const finalY = doc.lastAutoTable.finalY + 8;
-      doc.setFontSize(9);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(71, 85, 105);
-      doc.text('Remarks / Notes:', 16, finalY);
-      doc.setFont('helvetica', 'normal');
-      doc.setTextColor(100, 116, 139);
-      doc.text(p.notes, 16, finalY + 6);
+    let finalY = doc.lastAutoTable.finalY + 8;
+    if (finalY > 215) {
+      doc.addPage();
+      finalY = 20;
     }
 
-    // Signatures
-    const signY = 240;
-    doc.setDrawColor(203, 213, 225);
-    doc.line(16, signY, 80, signY);
-    doc.line(130, signY, 194, signY);
+    // Notes Box (Left, X=14, Width=100)
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, finalY, 100, 36, 2, 2, 'FD');
 
+    doc.setTextColor(30, 58, 138);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text('RECEIPT ACKNOWLEDGEMENT & REMARKS:', 18, finalY + 7);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
     doc.setFontSize(8);
+    doc.text(payment.notes || 'This payment has been securely received, validated and credited to the customer account ledger.', 18, finalY + 14, { maxWidth: 92 });
+
+    // Amount Banner (Right, X=118, Width=78)
+    doc.setFillColor(236, 253, 245);
+    doc.setDrawColor(167, 243, 208);
+    doc.roundedRect(118, finalY, 78, 36, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(6, 95, 70);
+    doc.text('TOTAL AMOUNT CREDITED (PKR):', 122, finalY + 8);
+
+    doc.setFontSize(14);
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Rs. ${amount.toLocaleString()}`, 192, finalY + 22, { align: 'right' });
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(16, 185, 129);
+    doc.text('✓ Verified & Account Reconciled', 122, finalY + 31);
+
+    // Signature Block
+    const sigY = 252;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+
+    doc.line(14, sigY + 12, 75, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Accounts Department:', 14, sigY + 17);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
-    doc.text('Received By / Authorized Signature', 16, signY + 5);
-    doc.text('Customer Acceptance Signature', 130, signY + 5);
+    doc.text('Authorized Finance Officer', 14, sigY + 21);
 
-    doc.save(`${p.paymentRefNumber || 'Receipt'}-${p.customerName.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`);
+    doc.line(135, sigY + 12, 196, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Customer Acceptance:', 135, sigY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Payer Sign & Stamp', 135, sigY + 21);
+
+    // Document Footer Note
+    doc.setDrawColor(241, 245, 249);
+    doc.line(14, 280, 196, 280);
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Generated via Fortline CRM • Official Payment Receipt Document • System Generated', 105, 285, { align: 'center' });
+
+    doc.save(`Payment_Slip_${ref}.pdf`);
   };
 
   // ── GENERATE COMPLETE PAYMENTS REPORT (PDF) ──
   const downloadCompleteReportPDF = () => {
+    const dataset = filteredPayments.length > 0 ? filteredPayments : payments;
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-    const nowStr = new Date().toLocaleDateString();
+    const nowStr = new Date().toLocaleDateString('en-GB');
 
     doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 297, 28, 'F');
+    doc.rect(0, 0, 297, 24, 'F');
 
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
+    doc.setFontSize(14);
     doc.setTextColor(255, 255, 255);
-    doc.text('FORTLINE CRM — PAYMENTS & COLLECTIONS MASTER REPORT', 14, 14);
+    doc.text('FORTLINE CRM — PAYMENTS & COLLECTIONS MASTER REPORT', 14, 12);
 
-    doc.setFontSize(9);
+    const totalAmt = dataset.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(148, 163, 184);
-    doc.text(`Generated on: ${nowStr} | Total Records: ${filteredPayments.length} | Total Volume: Rs. ${totalCollected.toLocaleString()}`, 14, 22);
+    doc.text(`Generated on: ${nowStr} | Total Records: ${dataset.length} | Grand Total: Rs. ${totalAmt.toLocaleString()} PKR`, 14, 19);
 
-    const rows = filteredPayments.map((p, idx) => [
+    const rows = dataset.map((p, idx) => [
       idx + 1,
       p.paymentRefNumber || '—',
       p.customerName || '—',
       p.createdBy?.fullName || 'Sales Member',
       p.salesOrderNumber || p.invoiceNumber || '—',
-      p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : '—',
+      p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('en-GB') : '—',
       p.paymentMethod || 'Bank Transfer',
       p.paymentType || 'Partial',
       `Rs. ${Number(p.amount || 0).toLocaleString()}`
     ]);
 
-    autoTable(doc, {
-      startY: 34,
-      head: [['#', 'Receipt #', 'Customer', 'Sales Person', 'Linked Order/Inv', 'Date', 'Method', 'Type', 'Amount (PKR)']],
-      body: rows,
-      theme: 'grid',
-      headStyles: { fillColor: [5, 150, 105], textColor: 255, fontStyle: 'bold', fontSize: 8 },
-      styles: { fontSize: 8, cellPadding: 3, textColor: [30, 41, 59] },
-      alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: 14, right: 14 }
-    });
+    try {
+      autoTable(doc, {
+        startY: 28,
+        head: [['#', 'Receipt #', 'Customer', 'Sales Person', 'Linked Order/Inv', 'Date', 'Method', 'Type', 'Amount (PKR)']],
+        body: rows,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [15, 23, 42] } },
+          { content: `Rs. ${totalAmt.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [4, 120, 87] } }
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [5, 150, 105], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+        styles: { fontSize: 8, cellPadding: 3, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 14, right: 14 }
+      });
 
-    const finalY = doc.lastAutoTable.finalY + 8;
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(5, 150, 105);
-    doc.text(`Total Collections: Rs. ${totalCollected.toLocaleString()}`, 283, finalY, { align: 'right' });
-
-    doc.save(`Payments-Report-${new Date().toISOString().split('T')[0]}.pdf`);
+      doc.save(`Payments-Report-${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error('Manager payments PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
   };
 
   // ── GENERATE COMPLETE PAYMENTS REPORT (EXCEL / CSV) ──
   const downloadCompleteReportExcel = () => {
-    const headers = ['#', 'Payment Ref', 'Customer Name', 'Sales Representative', 'Linked Order #', 'Linked Invoice #', 'Payment Date', 'Payment Method', 'Payment Type', 'Amount (PKR)', 'Notes'];
-    const csvRows = [
-      headers.join(','),
-      ...filteredPayments.map((p, idx) => [
-        idx + 1,
-        `"${p.paymentRefNumber || ''}"`,
-        `"${p.customerName || ''}"`,
-        `"${p.createdBy?.fullName || ''}"`,
-        `"${p.salesOrderNumber || ''}"`,
-        `"${p.invoiceNumber || ''}"`,
-        `"${p.paymentDate ? new Date(p.paymentDate).toLocaleDateString() : ''}"`,
-        `"${p.paymentMethod || ''}"`,
-        `"${p.paymentType || ''}"`,
-        Number(p.amount || 0),
-        `"${(p.notes || '').replace(/"/g, '""')}"`
-      ].join(','))
-    ];
+    const dataset = filteredPayments.length > 0 ? filteredPayments : payments;
+    const totalAmt = dataset.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
 
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const headers = ['#', 'Payment Ref', 'Customer Name', 'Sales Representative', 'Linked Order #', 'Linked Invoice #', 'Payment Date', 'Payment Method', 'Payment Type', 'Amount (PKR)', 'Notes'];
+    const rows = dataset.map((p, idx) => [
+      idx + 1,
+      `"${p.paymentRefNumber || ''}"`,
+      `"${(p.customerName || '').replace(/"/g, '""')}"`,
+      `"${(p.createdBy?.fullName || 'Sales Member').replace(/"/g, '""')}"`,
+      `"${p.salesOrderNumber || ''}"`,
+      `"${p.invoiceNumber || ''}"`,
+      `"${p.paymentDate ? new Date(p.paymentDate).toLocaleDateString('en-GB') : ''}"`,
+      `"${p.paymentMethod || 'Bank Transfer'}"`,
+      `"${p.paymentType || 'Partial'}"`,
+      Number(p.amount || 0),
+      `"${(p.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    rows.push([
+      'TOTAL',
+      `"Total Records: ${dataset.length}"`,
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      totalAmt,
+      '""'
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
@@ -260,14 +394,33 @@ export default function SalesManagerPaymentsView() {
   const handleInvoiceSelect = (invId) => {
     const selected = invoices.find(i => i._id === invId);
     if (selected) {
-      const remaining = Number(selected.outstandingAmount || selected.amount || 0);
+      const invTotal = Number(selected.amount || 0);
+      const invPaid = Number(selected.paidAmount || 0);
+      const remaining = Math.max(0, invTotal - invPaid);
+
+      let linkedSoNum = selected.salesOrderNumber || selected.saleReference || '';
+      let linkedSoId = selected.salesOrderId;
+      if (typeof linkedSoId === 'object' && linkedSoId !== null) {
+        linkedSoNum = linkedSoId.orderReference || linkedSoId.orderNumber || linkedSoNum;
+        linkedSoId = linkedSoId._id;
+      }
+
       setPaymentForm(prev => ({
         ...prev,
         invoiceId: selected._id,
         invoiceNumber: selected.invoiceNumber || '',
-        salesOrderNumber: selected.salesOrderNumber || '',
+        salesOrderId: linkedSoId || '',
+        salesOrderNumber: linkedSoNum || '',
         customerName: selected.clientName || '',
-        amount: remaining > 0 ? remaining : selected.amount
+        amount: prev.paymentType === 'Full' || !prev.amount ? remaining : prev.amount
+      }));
+    } else {
+      setPaymentForm(prev => ({
+        ...prev,
+        invoiceId: '',
+        invoiceNumber: '',
+        salesOrderId: '',
+        salesOrderNumber: ''
       }));
     }
   };
@@ -278,12 +431,22 @@ export default function SalesManagerPaymentsView() {
       setError('Please provide customer name and valid payment amount.');
       return;
     }
+    const payNum = Number(paymentForm.amount);
+    const selectedInv = invoices.find(i => i._id === paymentForm.invoiceId);
+    if (selectedInv) {
+      const remaining = Math.max(0, Number(selectedInv.amount || 0) - Number(selectedInv.paidAmount || 0));
+      if (payNum > remaining + 0.01) {
+        setError(`Payment amount cannot exceed the remaining invoice balance of Rs. ${remaining.toLocaleString()}.`);
+        return;
+      }
+    }
+
     setSavingPayment(true);
     setError('');
     try {
       const payload = {
         ...paymentForm,
-        amount: Number(paymentForm.amount)
+        amount: payNum
       };
       const { response, data } = await apiRequest('/api/sales-employee/payments', {
         method: 'POST',
@@ -291,7 +454,7 @@ export default function SalesManagerPaymentsView() {
       });
       if (response.ok && data.success) {
         setShowAddModal(false);
-        setFeedback(`Payment of Rs. ${Number(payload.amount).toLocaleString()} recorded successfully.`);
+        setFeedback(`Payment of Rs. ${payNum.toLocaleString()} recorded successfully.`);
         fetchData();
         setTimeout(() => setFeedback(''), 4000);
       } else {
@@ -315,20 +478,20 @@ export default function SalesManagerPaymentsView() {
             Audit trail of all advance, partial, and full customer payments with live MongoDB receipts and exports
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
           <button
             onClick={downloadCompleteReportPDF}
-            className="sv-btn-primary"
-            style={{ background: '#059669', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            className="sv-btn-secondary"
+            title="Download Complete Payments (PDF)"
           >
-            <Download size={15} /> Export PDF Report
+            <Download size={15} color="#DC2626" /> Export PDF
           </button>
           <button
             onClick={downloadCompleteReportExcel}
-            className="sv-btn-primary"
-            style={{ background: '#0D9488', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            className="sv-btn-secondary"
+            title="Download Complete Payments (Excel)"
           >
-            <FileSpreadsheet size={15} /> Export Excel
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
           </button>
           <button
             onClick={() => {
@@ -503,20 +666,57 @@ export default function SalesManagerPaymentsView() {
             {error && <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', color: '#DC2626', padding: '10px', borderRadius: '8px', fontSize: '0.85rem', marginBottom: '12px' }}>{error}</div>}
 
             <form onSubmit={handleRecordPayment} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>Select Approved Invoice (Optional)</label>
-                <select
-                  value={paymentForm.invoiceId}
-                  onChange={e => handleInvoiceSelect(e.target.value)}
-                  style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.875rem' }}
-                >
-                  <option value="">-- Direct Payment / No Invoice Linked --</option>
-                  {invoices.map(inv => (
-                    <option key={inv._id} value={inv._id}>
-                      {inv.invoiceNumber} — {inv.clientName} (Total: Rs. {Number(inv.amount || 0).toLocaleString()} | Outstanding: Rs. {Number(inv.outstandingAmount || inv.amount || 0).toLocaleString()})
-                    </option>
-                  ))}
-                </select>
+              <div style={{ background: '#F8FAFC', padding: '14px', borderRadius: '8px', border: '1px solid #E2E8F0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>Select Approved Invoice</label>
+                    <select
+                      value={paymentForm.invoiceId}
+                      onChange={e => handleInvoiceSelect(e.target.value)}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.875rem' }}
+                    >
+                      <option value="">-- Direct Payment / No Invoice Linked --</option>
+                      {invoices.map(inv => (
+                        <option key={inv._id} value={inv._id}>
+                          {inv.invoiceNumber} — {inv.clientName} (Total: Rs. {Number(inv.amount || 0).toLocaleString()} | Outstanding: Rs. {Number(inv.outstandingAmount != null ? inv.outstandingAmount : inv.amount).toLocaleString()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>Linked Sales Order (Auto-Resolved)</label>
+                    <input
+                      value={paymentForm.salesOrderNumber || 'Direct / None'}
+                      readOnly
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.875rem', background: '#F1F5F9', color: '#334155', fontWeight: 600, cursor: 'not-allowed' }}
+                    />
+                  </div>
+                </div>
+
+                {(() => {
+                  const sel = invoices.find(i => i._id === paymentForm.invoiceId);
+                  if (!sel) return null;
+                  const tot = Number(sel.amount || 0);
+                  const paid = Number(sel.paidAmount || 0);
+                  const rem = Math.max(0, tot - paid);
+                  return (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', background: '#FFF', padding: '10px', borderRadius: '6px', border: '1px solid #E2E8F0', marginTop: '4px' }}>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: '#64748B', fontWeight: 700 }}>Invoice Total</div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#0F172A' }}>Rs. {tot.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: '#059669', fontWeight: 700 }}>Already Paid</div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#059669' }}>Rs. {paid.toLocaleString()}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.7rem', color: '#DC2626', fontWeight: 700 }}>Remaining Receivable</div>
+                        <div style={{ fontSize: '0.9rem', fontWeight: 800, color: '#DC2626' }}>Rs. {rem.toLocaleString()}</div>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
@@ -530,25 +730,20 @@ export default function SalesManagerPaymentsView() {
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.875rem' }}
                   />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>Payment Amount (PKR) *</label>
-                  <input
-                    type="number"
-                    value={paymentForm.amount}
-                    onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
-                    placeholder="Amount in PKR"
-                    required
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.875rem' }}
-                  />
-                </div>
-              </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>Payment Type</label>
                   <select
                     value={paymentForm.paymentType}
-                    onChange={e => setPaymentForm(p => ({ ...p, paymentType: e.target.value }))}
+                    onChange={e => {
+                      const newType = e.target.value;
+                      const sel = invoices.find(i => i._id === paymentForm.invoiceId);
+                      let amt = paymentForm.amount;
+                      if (newType === 'Full' && sel) {
+                        amt = Math.max(0, Number(sel.amount || 0) - Number(sel.paidAmount || 0));
+                      }
+                      setPaymentForm(p => ({ ...p, paymentType: newType, amount: amt }));
+                    }}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.875rem' }}
                   >
                     <option value="Advance">Advance Payment</option>
@@ -556,6 +751,24 @@ export default function SalesManagerPaymentsView() {
                     <option value="Full">Full Payment</option>
                   </select>
                 </div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>
+                    {paymentForm.paymentType === 'Advance' ? 'Advance Amount to Pay *' : (paymentForm.paymentType === 'Partial' ? 'Partial Amount Paid *' : 'Full Payment Amount *')}
+                  </label>
+                  <input
+                    type="number"
+                    value={paymentForm.amount}
+                    onChange={e => setPaymentForm(p => ({ ...p, amount: e.target.value }))}
+                    placeholder="Amount in PKR"
+                    required
+                    min="1"
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.875rem' }}
+                  />
+                </div>
+
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                   <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>Payment Method</label>
                   <select
@@ -571,6 +784,24 @@ export default function SalesManagerPaymentsView() {
                   </select>
                 </div>
               </div>
+
+              {/* LIVE REMAINING CALCULATION */}
+              {(() => {
+                const sel = invoices.find(i => i._id === paymentForm.invoiceId);
+                if (!sel) return null;
+                const rem = Math.max(0, Number(sel.amount || 0) - Number(sel.paidAmount || 0));
+                const after = Math.max(0, rem - (Number(paymentForm.amount) || 0));
+                return (
+                  <div style={{ padding: '8px 12px', background: after === 0 ? '#ECFDF5' : '#EFF6FF', borderRadius: '6px', border: after === 0 ? '1px solid #A7F3D0' : '1px solid #BFDBFE', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 600, color: after === 0 ? '#065F46' : '#1E40AF' }}>
+                      {after === 0 ? '✓ Invoice will be fully settled' : 'Remaining Balance after this payment:'}
+                    </span>
+                    <span style={{ fontSize: '0.9rem', fontWeight: 800, color: after === 0 ? '#059669' : '#1D4ED8' }}>
+                      Rs. {after.toLocaleString()}
+                    </span>
+                  </div>
+                );
+              })()}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 <label style={{ fontSize: '0.8rem', fontWeight: 700, color: '#334155' }}>Payment Notes & Reference</label>

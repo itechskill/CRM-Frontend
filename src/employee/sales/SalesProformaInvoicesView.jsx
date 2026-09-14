@@ -27,7 +27,9 @@ import {
   Layers,
   Percent,
   PlusCircle,
-  MinusCircle
+  MinusCircle,
+  Tag,
+  Minus
 } from 'lucide-react';
 import './SalesViews.css';
 
@@ -48,7 +50,11 @@ const EMPTY_PROFORMA_FORM = {
   clientAddress: '',
   items: [{ description: '', quantity: 1, unitPrice: 0, total: 0 }],
   discount: 0,
+  discountPercentage: 0,
   tax: 0,
+  taxPercentage: 0,
+  totalAmount: 0,
+  netAmount: 0,
   status: 'Issued',
   issueDate: new Date().toISOString().split('T')[0],
   dueDate: '',
@@ -74,6 +80,63 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
   const [viewProforma, setViewProforma] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
+
+  /**
+   * Universal Financial Recalculation Engine for Proforma Invoices
+   * Handles subtotal, discount percentage/amount, tax percentage/amount, and complete grand total.
+   */
+  const recalculateForm = (items, currentDiscountPct, currentDiscountAmt, currentTaxPct, currentTaxAmt, trigger = 'items') => {
+    const subtotal = items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+    
+    let discountPct = currentDiscountPct === '' ? '' : Math.max(0, parseFloat(currentDiscountPct) || 0);
+    let discountAmt = currentDiscountAmt === '' ? '' : Math.max(0, parseFloat(currentDiscountAmt) || 0);
+    
+    if (trigger === 'discountPct') {
+      discountAmt = subtotal > 0 && typeof discountPct === 'number'
+        ? Math.round(((subtotal * discountPct) / 100) * 100) / 100
+        : (discountPct === 0 ? 0 : discountAmt);
+    } else if (trigger === 'discountAmt') {
+      discountPct = subtotal > 0 && typeof discountAmt === 'number'
+        ? Math.round(((discountAmt / subtotal) * 100) * 100) / 100
+        : (discountAmt === 0 ? 0 : discountPct);
+    } else if (trigger === 'items') {
+      if (typeof discountPct === 'number' && discountPct > 0) {
+        discountAmt = Math.round(((subtotal * discountPct) / 100) * 100) / 100;
+      }
+    }
+    
+    const numDiscountAmt = typeof discountAmt === 'number' ? discountAmt : (Number(discountAmt) || 0);
+    const taxableBase = Math.max(0, subtotal - numDiscountAmt);
+    
+    let taxPct = currentTaxPct === '' ? '' : Math.max(0, parseFloat(currentTaxPct) || 0);
+    let taxAmt = currentTaxAmt === '' ? '' : Math.max(0, parseFloat(currentTaxAmt) || 0);
+    
+    if (trigger === 'taxPct' || trigger === 'discountPct' || trigger === 'discountAmt') {
+      taxAmt = taxableBase > 0 && typeof taxPct === 'number'
+        ? Math.round(((taxableBase * taxPct) / 100) * 100) / 100
+        : (taxPct === 0 ? 0 : taxAmt);
+    } else if (trigger === 'taxAmt') {
+      taxPct = taxableBase > 0 && typeof taxAmt === 'number'
+        ? Math.round(((taxAmt / taxableBase) * 100) * 100) / 100
+        : (taxAmt === 0 ? 0 : taxPct);
+    } else if (trigger === 'items') {
+      if (typeof taxPct === 'number' && taxPct > 0) {
+        taxAmt = Math.round(((taxableBase * taxPct) / 100) * 100) / 100;
+      }
+    }
+    
+    const numTaxAmt = typeof taxAmt === 'number' ? taxAmt : (Number(taxAmt) || 0);
+    const netAmount = Math.max(0, Math.round((subtotal - numDiscountAmt + numTaxAmt) * 100) / 100);
+    
+    return {
+      totalAmount: subtotal,
+      discount: discountAmt,
+      discountPercentage: discountPct,
+      tax: taxAmt,
+      taxPercentage: taxPct,
+      netAmount
+    };
+  };
 
   // Fetch Proforma Invoices
   const fetchProformas = useCallback(async () => {
@@ -135,6 +198,20 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
         }))
       : [{ description: so.productSummary || 'Standard Products', quantity: 1, unitPrice: Number(so.netAmount || so.totalAmount) || 0, total: Number(so.netAmount || so.totalAmount) || 0 }];
 
+    const calculatedSubtotal = items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+    const discVal = Number(so.discount) || 0;
+    const discPct = so.discountPercentage !== undefined && so.discountPercentage !== null 
+      ? Number(so.discountPercentage)
+      : (calculatedSubtotal > 0 && discVal > 0 ? Math.round(((discVal / calculatedSubtotal) * 100) * 100) / 100 : 0);
+    
+    const taxableBase = Math.max(0, calculatedSubtotal - discVal);
+    const taxVal = Number(so.tax) || 0;
+    const taxPct = so.taxPercentage !== undefined && so.taxPercentage !== null
+      ? Number(so.taxPercentage)
+      : (taxableBase > 0 && taxVal > 0 ? Math.round(((taxVal / taxableBase) * 100) * 100) / 100 : (calculatedSubtotal > 0 && taxVal > 0 ? Math.round(((taxVal / calculatedSubtotal) * 100) * 100) / 100 : 0));
+
+    const financials = recalculateForm(items, discPct, discVal, taxPct, taxVal, 'items');
+
     setForm({
       salesOrderId: so._id,
       salesOrderNumber: so.orderReference || so.orderNumber || '',
@@ -143,8 +220,7 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
       clientPhone: so.clientPhone || '',
       clientAddress: so.clientAddress || '',
       items: items,
-      discount: Number(so.discount) || 0,
-      tax: Number(so.tax) || 0,
+      ...financials,
       status: 'Issued',
       issueDate: new Date().toISOString().split('T')[0],
       dueDate: '',
@@ -175,6 +251,20 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
         }))
       : [{ description: so.productSummary || 'Standard Products', quantity: 1, unitPrice: Number(so.netAmount || so.totalAmount) || 0, total: Number(so.netAmount || so.totalAmount) || 0 }];
 
+    const calculatedSubtotal = items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+    const discVal = Number(so.discount) || 0;
+    const discPct = so.discountPercentage !== undefined && so.discountPercentage !== null 
+      ? Number(so.discountPercentage)
+      : (calculatedSubtotal > 0 && discVal > 0 ? Math.round(((discVal / calculatedSubtotal) * 100) * 100) / 100 : 0);
+    
+    const taxableBase = Math.max(0, calculatedSubtotal - discVal);
+    const taxVal = Number(so.tax) || 0;
+    const taxPct = so.taxPercentage !== undefined && so.taxPercentage !== null
+      ? Number(so.taxPercentage)
+      : (taxableBase > 0 && taxVal > 0 ? Math.round(((taxVal / taxableBase) * 100) * 100) / 100 : (calculatedSubtotal > 0 && taxVal > 0 ? Math.round(((taxVal / calculatedSubtotal) * 100) * 100) / 100 : 0));
+
+    const financials = recalculateForm(items, discPct, discVal, taxPct, taxVal, 'items');
+
     setForm(prev => ({
       ...prev,
       salesOrderId: so._id,
@@ -184,49 +274,110 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
       clientPhone: so.clientPhone || '',
       clientAddress: so.clientAddress || '',
       items: items,
-      discount: Number(so.discount) || 0,
-      tax: Number(so.tax) || 0
+      ...financials
     }));
   };
 
   const handleItemChange = (index, field, value) => {
-    const updated = [...form.items];
-    updated[index][field] = value;
+    setForm(prev => {
+      const updated = prev.items.map((it, idx) => {
+        if (idx !== index) return it;
+        const copy = { ...it };
+        if (field === 'description') {
+          copy.description = value;
+        } else if (field === 'quantity') {
+          const q = value === '' ? '' : Math.max(1, parseInt(value, 10) || 1);
+          copy.quantity = q;
+          copy.total = (typeof q === 'number' ? q : 1) * (Number(copy.unitPrice) || 0);
+        } else if (field === 'unitPrice') {
+          const u = value === '' ? '' : Math.max(0, parseFloat(value) || 0);
+          copy.unitPrice = u;
+          copy.total = (Math.max(1, parseInt(copy.quantity, 10) || 1)) * (typeof u === 'number' ? u : 0);
+        }
+        return copy;
+      });
 
-    if (field === 'quantity' || field === 'unitPrice') {
-      const q = Number(updated[index].quantity) || 0;
-      const u = Number(updated[index].unitPrice) || 0;
-      updated[index].total = q * u;
-    }
+      const financials = recalculateForm(
+        updated,
+        prev.discountPercentage,
+        prev.discount,
+        prev.taxPercentage,
+        prev.tax,
+        'items'
+      );
 
-    setForm(prev => ({ ...prev, items: updated }));
+      return {
+        ...prev,
+        items: updated,
+        ...financials
+      };
+    });
+  };
+
+  const handleDiscountPctChange = (val) => {
+    setForm(prev => {
+      const financials = recalculateForm(prev.items, val, prev.discount, prev.taxPercentage, prev.tax, 'discountPct');
+      return { ...prev, ...financials };
+    });
+  };
+
+  const handleDiscountAmtChange = (val) => {
+    setForm(prev => {
+      const financials = recalculateForm(prev.items, prev.discountPercentage, val, prev.taxPercentage, prev.tax, 'discountAmt');
+      return { ...prev, ...financials };
+    });
+  };
+
+  const handleTaxPctChange = (val) => {
+    setForm(prev => {
+      const financials = recalculateForm(prev.items, prev.discountPercentage, prev.discount, val, prev.tax, 'taxPct');
+      return { ...prev, ...financials };
+    });
+  };
+
+  const handleTaxAmtChange = (val) => {
+    setForm(prev => {
+      const financials = recalculateForm(prev.items, prev.discountPercentage, prev.discount, prev.taxPercentage, val, 'taxAmt');
+      return { ...prev, ...financials };
+    });
+  };
+
+  const stepTaxPct = (delta) => {
+    const current = Number(form.taxPercentage) || 0;
+    const nextVal = Math.max(0, Math.min(100, Math.round((current + delta) * 10) / 10));
+    handleTaxPctChange(nextVal);
+  };
+
+  const stepDiscountPct = (delta) => {
+    const current = Number(form.discountPercentage) || 0;
+    const nextVal = Math.max(0, Math.min(100, Math.round((current + delta) * 10) / 10));
+    handleDiscountPctChange(nextVal);
   };
 
   const handleAddItem = () => {
-    setForm(prev => ({
-      ...prev,
-      items: [...prev.items, { description: '', quantity: 1, unitPrice: 0, total: 0 }]
-    }));
+    setForm(prev => {
+      const newItems = [...prev.items, { description: '', quantity: 1, unitPrice: 0, total: 0 }];
+      const financials = recalculateForm(newItems, prev.discountPercentage, prev.discount, prev.taxPercentage, prev.tax, 'items');
+      return {
+        ...prev,
+        items: newItems,
+        ...financials
+      };
+    });
   };
 
   const handleRemoveItem = (index) => {
-    if (form.items.length <= 1) return;
-    setForm(prev => ({
-      ...prev,
-      items: prev.items.filter((_, idx) => idx !== index)
-    }));
+    setForm(prev => {
+      if (prev.items.length <= 1) return prev;
+      const newItems = prev.items.filter((_, idx) => idx !== index);
+      const financials = recalculateForm(newItems, prev.discountPercentage, prev.discount, prev.taxPercentage, prev.tax, 'items');
+      return {
+        ...prev,
+        items: newItems,
+        ...financials
+      };
+    });
   };
-
-  // Subtotal and Net Amount calculation
-  const subtotal = useMemo(() => {
-    return form.items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
-  }, [form.items]);
-
-  const calculatedNetAmount = useMemo(() => {
-    const disc = Number(form.discount) || 0;
-    const tx = Number(form.tax) || 0;
-    return Math.max(0, subtotal - disc + tx);
-  }, [subtotal, form.discount, form.tax]);
 
   const handleSave = async (e) => {
     e.preventDefault();
@@ -241,6 +392,15 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
       return;
     }
 
+    const calculated = recalculateForm(
+      form.items,
+      form.discountPercentage,
+      form.discount,
+      form.taxPercentage,
+      form.tax,
+      'items'
+    );
+
     setSaving(true);
     try {
       const payload = {
@@ -251,10 +411,12 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
         clientPhone: form.clientPhone,
         clientAddress: form.clientAddress,
         items: form.items,
-        totalAmount: subtotal,
-        discount: Number(form.discount) || 0,
-        tax: Number(form.tax) || 0,
-        netAmount: calculatedNetAmount,
+        totalAmount: calculated.totalAmount,
+        discount: Number(calculated.discount) || 0,
+        discountPercentage: Number(calculated.discountPercentage) || 0,
+        tax: Number(calculated.tax) || 0,
+        taxPercentage: Number(calculated.taxPercentage) || 0,
+        netAmount: calculated.netAmount,
         status: form.status,
         issueDate: form.issueDate || new Date(),
         dueDate: form.dueDate || null,
@@ -290,6 +452,21 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
   };
 
   const handleOpenEdit = (pi) => {
+    const rawItems = pi.items && pi.items.length > 0 ? pi.items : [{ description: '', quantity: 1, unitPrice: 0, total: 0 }];
+    const calculatedSubtotal = rawItems.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+    const discVal = Number(pi.discount) || 0;
+    const discPct = pi.discountPercentage !== undefined && pi.discountPercentage !== null 
+      ? Number(pi.discountPercentage) 
+      : (calculatedSubtotal > 0 && discVal > 0 ? Math.round(((discVal / calculatedSubtotal) * 100) * 100) / 100 : 0);
+    
+    const taxableBase = Math.max(0, calculatedSubtotal - discVal);
+    const taxVal = Number(pi.tax) || 0;
+    const taxPct = pi.taxPercentage !== undefined && pi.taxPercentage !== null 
+      ? Number(pi.taxPercentage) 
+      : (taxableBase > 0 && taxVal > 0 ? Math.round(((taxVal / taxableBase) * 100) * 100) / 100 : 0);
+
+    const financials = recalculateForm(rawItems, discPct, discVal, taxPct, taxVal, 'items');
+
     setEditProforma(pi);
     setError('');
     setForm({
@@ -299,9 +476,8 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
       clientEmail: pi.clientEmail || '',
       clientPhone: pi.clientPhone || '',
       clientAddress: pi.clientAddress || '',
-      items: pi.items && pi.items.length > 0 ? pi.items : [{ description: '', quantity: 1, unitPrice: 0, total: 0 }],
-      discount: pi.discount || 0,
-      tax: pi.tax || 0,
+      items: rawItems,
+      ...financials,
       status: pi.status || 'Issued',
       issueDate: pi.issueDate ? new Date(pi.issueDate).toISOString().split('T')[0] : '',
       dueDate: pi.dueDate ? new Date(pi.dueDate).toISOString().split('T')[0] : '',
@@ -337,57 +513,114 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
 
   // Download Proforma Invoice PDF
   const handleDownloadPDF = (pi) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
-    // Primary Brand Header
-    doc.setFillColor(37, 99, 235); // #2563EB
+    // Primary Brand Header Banner (A4 width = 210mm)
+    doc.setFillColor(30, 58, 138); // Deep Navy #1E3A8A
     doc.rect(0, 0, 210, 36, 'F');
 
+    // Accent line
+    doc.setFillColor(37, 99, 235); // Blue #2563EB
+    doc.rect(0, 36, 210, 2, 'F');
+
+    // Brand Title & Subtitle (Left)
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
     doc.setFont('helvetica', 'bold');
     doc.text('FORTLINE CRM', 14, 18);
 
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setFont('helvetica', 'normal');
-    doc.text('Commercial Sales & Operations Portal', 14, 26);
+    doc.setTextColor(226, 232, 240);
+    doc.text('Commercial Sales & Operations Portal • Tax & Commercial Documents', 14, 26);
 
-    doc.setFontSize(16);
+    // Document Title & Reference (Right)
+    doc.setFontSize(15);
     doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
     doc.text('PROFORMA INVOICE', 196, 18, { align: 'right' });
 
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Ref: ${pi.proformaNumber || 'PI-0000'}`, 196, 26, { align: 'right' });
+    doc.setTextColor(191, 219, 254);
+    doc.text(`Doc Ref: ${pi.proformaNumber || 'PI-0000'}`, 196, 26, { align: 'right' });
 
-    // Document Meta & Customer Info Box
+    // Customer & Order Information Container Box
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, 44, 182, 38, 2.5, 2.5, 'FD');
+
+    // Left Column: Customer Details (X = 19)
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('BILLED / CONFINED TO:', 19, 52);
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.setFontSize(9);
+    doc.text(pi.clientName || 'Valued Customer', 19, 58, { maxWidth: 85 });
 
-    // Left Column: Customer Details
-    doc.setFont('helvetica', 'bold');
-    doc.text('BILLED / CONFINED TO:', 14, 46);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Customer Name: ${pi.clientName || 'N/A'}`, 14, 52);
-    if (pi.clientEmail) doc.text(`Email: ${pi.clientEmail}`, 14, 58);
-    if (pi.clientPhone) doc.text(`Phone: ${pi.clientPhone}`, 14, 64);
-    if (pi.clientAddress) doc.text(`Address: ${pi.clientAddress}`, 14, 70);
+    doc.setTextColor(71, 85, 105);
+    const emailStr = pi.clientEmail ? `Email: ${pi.clientEmail}` : 'Email: —';
+    const phoneStr = pi.clientPhone ? `Phone: ${pi.clientPhone}` : 'Phone: —';
+    doc.text(`${emailStr}   •   ${phoneStr}`, 19, 64, { maxWidth: 85 });
 
-    // Right Column: Proforma & Order Meta
+    if (pi.clientAddress) {
+      doc.text(`Address: ${pi.clientAddress}`, 19, 70, { maxWidth: 85 });
+    } else {
+      doc.text('Address: Direct Dispatch / Standard Delivery', 19, 70, { maxWidth: 85 });
+    }
+
+    // Vertical Divider Line between Customer and Order info
+    doc.setDrawColor(226, 232, 240);
+    doc.line(108, 48, 108, 78);
+
+    // Right Column: Order & Proforma Meta (X = 114)
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'bold');
-    doc.text('ORDER & INVOICE DETAILS:', 120, 46);
+    doc.text('ORDER & INVOICE DETAILS:', 114, 52);
+
+    doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Sales Order Ref: ${pi.salesOrderNumber || pi.orderReference || 'N/A'}`, 120, 52);
-    if (pi.customerPONumber) doc.text(`Customer PO: ${pi.customerPONumber}`, 120, 58);
-    doc.text(`Issue Date: ${pi.issueDate ? new Date(pi.issueDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}`, 120, 64);
-    if (pi.dueDate) doc.text(`Valid Until / Due: ${new Date(pi.dueDate).toLocaleDateString('en-GB')}`, 120, 70);
-    doc.text(`Status: ${pi.status || 'Issued'}`, 120, 76);
+    doc.setTextColor(71, 85, 105);
+
+    doc.text('Sales Order Ref:', 114, 58);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${pi.salesOrderNumber || pi.orderReference || '—'}`, 155, 58);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Customer PO #:', 114, 64);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${pi.customerPONumber || 'N/A'}`, 155, 64);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Issue Date:', 114, 70);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${pi.issueDate ? new Date(pi.issueDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}`, 155, 70);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Status:', 114, 76);
+    doc.setFont('helvetica', 'bold');
+    const isApproved = pi.status === 'Approved';
+    const isCancelled = pi.status === 'Cancelled';
+    doc.setTextColor(isApproved ? 5 : (isCancelled ? 220 : 37), isApproved ? 150 : (isCancelled ? 38 : 99), isApproved ? 105 : (isCancelled ? 38 : 235));
+    doc.text(`${pi.status || 'Issued'}`, 155, 76);
 
     // Items Table
     const tableBody = (pi.items && pi.items.length > 0)
       ? pi.items.map((it, idx) => [
           idx + 1,
-          it.description || 'Standard Product',
+          it.description || 'Standard Product Item',
           it.quantity || 1,
           `Rs. ${Number(it.unitPrice || 0).toLocaleString()}`,
           `Rs. ${Number(it.total || (it.quantity * it.unitPrice) || 0).toLocaleString()}`
@@ -395,75 +628,268 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
       : [[1, 'Sales Order Items', 1, `Rs. ${Number(pi.netAmount || 0).toLocaleString()}`, `Rs. ${Number(pi.netAmount || 0).toLocaleString()}`]];
 
     autoTable(doc, {
-      startY: 84,
-      head: [['#', 'Item Description', 'Qty', 'Unit Price (PKR)', 'Total Amount (PKR)']],
+      startY: 88,
+      margin: { left: 14, right: 14 },
+      tableWidth: 182,
+      head: [['#', 'Item Description & Specifications', 'Qty', 'Unit Price (PKR)', 'Total Amount (PKR)']],
       body: tableBody,
       theme: 'grid',
       headStyles: {
-        fillColor: [37, 99, 235],
+        fillColor: [30, 58, 138],
         textColor: 255,
         fontStyle: 'bold',
-        fontSize: 9
+        fontSize: 8.5,
+        cellPadding: 4,
+        halign: 'left'
       },
       styles: {
         fontSize: 8.5,
-        cellPadding: 4,
-        textColor: [30, 41, 59]
+        cellPadding: 3.5,
+        textColor: [30, 41, 59],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
       },
       columnStyles: {
         0: { cellWidth: 10, halign: 'center' },
-        1: { cellWidth: 85 },
+        1: { cellWidth: 84, halign: 'left' },
         2: { cellWidth: 20, halign: 'center' },
-        3: { cellWidth: 35, halign: 'right' },
-        4: { cellWidth: 40, halign: 'right' }
+        3: { cellWidth: 34, halign: 'right' },
+        4: { cellWidth: 34, halign: 'right' }
       }
     });
 
-    const finalY = doc.lastAutoTable.finalY + 8;
-
-    // Financial Summary Block (Right aligned)
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Subtotal:`, 135, finalY);
-    doc.text(`Rs. ${Number(pi.totalAmount || 0).toLocaleString()}`, 196, finalY, { align: 'right' });
-
-    if (pi.discount > 0) {
-      doc.text(`Discount:`, 135, finalY + 6);
-      doc.text(`- Rs. ${Number(pi.discount).toLocaleString()}`, 196, finalY + 6, { align: 'right' });
+    let finalY = doc.lastAutoTable.finalY + 8;
+    if (finalY > 215) {
+      doc.addPage();
+      finalY = 20;
     }
 
-    if (pi.tax > 0) {
-      doc.text(`Tax Amount:`, 135, finalY + 12);
-      doc.text(`+ Rs. ${Number(pi.tax).toLocaleString()}`, 196, finalY + 12, { align: 'right' });
-    }
+    // Terms & Conditions Container Box (Left, X=14, Width=100)
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, finalY, 100, 42, 2, 2, 'FD');
 
-    doc.setFillColor(241, 245, 249);
-    doc.rect(130, finalY + 16, 70, 10, 'F');
+    doc.setTextColor(30, 58, 138);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(5, 150, 105);
-    doc.text(`Grand Total:`, 135, finalY + 23);
-    doc.text(`Rs. ${Number(pi.netAmount || 0).toLocaleString()}`, 196, finalY + 23, { align: 'right' });
+    doc.setFontSize(8.5);
+    doc.text('COMMERCIAL TERMS & INSTRUCTIONS:', 18, finalY + 7);
 
-    // Terms & Conditions Block (Left)
-    doc.setTextColor(15, 23, 42);
-    doc.setFont('helvetica', 'bold');
-    doc.text('TERMS & CONDITIONS:', 14, finalY);
     doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
     doc.setFontSize(8);
-    doc.text(`• Payment Terms: ${pi.paymentTerms || 'Advance 100%'}`, 14, finalY + 6);
-    doc.text(`• Delivery Terms: ${pi.deliveryTerms || 'Ex-Works / Standard Dispatch'}`, 14, finalY + 12);
-    doc.text(`• Currency: Pakistani Rupee (PKR)`, 14, finalY + 18);
+    doc.text(`• Payment Terms: ${pi.paymentTerms || 'Advance 100%'}`, 18, finalY + 14);
+    doc.text(`• Delivery Terms: ${pi.deliveryTerms || 'Ex-Works / Standard Dispatch'}`, 18, finalY + 20);
+    doc.text(`• Currency: Pakistani Rupee (PKR)`, 18, finalY + 26);
+    if (pi.dueDate) {
+      doc.text(`• Validity Period: Valid until ${new Date(pi.dueDate).toLocaleDateString('en-GB')}`, 18, finalY + 32);
+    }
     if (pi.notes) {
-      doc.text(`• Remarks: ${pi.notes}`, 14, finalY + 24, { maxWidth: 105 });
+      doc.text(`• Notes: ${pi.notes}`, 18, finalY + 38, { maxWidth: 92 });
     }
 
-    // Signatures
+    const subtotal = Number(pi.totalAmount || 0);
+    const discount = Number(pi.discount || 0);
+    const discountPct = pi.discountPercentage !== undefined && pi.discountPercentage !== null && Number(pi.discountPercentage) > 0
+      ? Number(pi.discountPercentage)
+      : (subtotal > 0 && discount > 0 ? Math.round(((discount / subtotal) * 100) * 10) / 10 : 0);
+    const taxableBase = Math.max(0, subtotal - discount);
+    const tax = Number(pi.tax || 0);
+    const taxPct = pi.taxPercentage !== undefined && pi.taxPercentage !== null && Number(pi.taxPercentage) > 0
+      ? Number(pi.taxPercentage)
+      : (taxableBase > 0 && tax > 0 ? Math.round(((tax / taxableBase) * 100) * 10) / 10 : (subtotal > 0 && tax > 0 ? Math.round(((tax / subtotal) * 100) * 10) / 10 : 0));
+    const grandTotal = Number(pi.netAmount !== undefined ? pi.netAmount : (subtotal - discount + tax));
+
+    // Financial Breakdown Box (Right, X=118, Width=78)
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(118, finalY, 78, 42, 2, 2, 'FD');
+
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
-    doc.text('Prepared By: Sales Department', 14, 260);
-    doc.text('Authorized Signature & Company Stamp', 140, 260);
-    doc.line(140, 275, 196, 275);
+    doc.setTextColor(71, 85, 105);
+    doc.text('Subtotal:', 122, finalY + 7);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Rs. ${subtotal.toLocaleString()}`, 192, finalY + 7, { align: 'right' });
+
+    if (discount > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(220, 38, 38);
+      const discLbl = discountPct > 0 ? `Discount (- ${discountPct}%):` : 'Discount (-):';
+      doc.text(discLbl, 122, finalY + 13);
+      doc.text(`- Rs. ${discount.toLocaleString()}`, 192, finalY + 13, { align: 'right' });
+    }
+
+    if (tax > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      const taxLbl = taxPct > 0 ? `Tax / GST (+ ${taxPct}%):` : 'Tax / GST (+):';
+      doc.text(taxLbl, 122, finalY + 19);
+      doc.text(`+ Rs. ${tax.toLocaleString()}`, 192, finalY + 19, { align: 'right' });
+    }
+
+    // Grand Total Highlight Rect
+    doc.setFillColor(236, 253, 245); // #ECFDF5
+    doc.setDrawColor(167, 243, 208); // #A7F3D0
+    doc.roundedRect(122, finalY + 24, 70, 14, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(4, 120, 87); // #047857
+    doc.text('GRAND TOTAL (PKR):', 126, finalY + 30);
+
+    doc.setFontSize(11);
+    doc.setTextColor(5, 150, 105); // #059669
+    doc.text(`Rs. ${Number(pi.netAmount || 0).toLocaleString()}`, 188, finalY + 35, { align: 'right' });
+
+    // Signature Block
+    const sigY = 252;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+
+    // Left Signature
+    doc.line(14, sigY + 12, 75, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Prepared By:', 14, sigY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Commercial Sales Department', 14, sigY + 21);
+
+    // Right Signature
+    doc.line(135, sigY + 12, 196, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Authorized Signatory:', 135, sigY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Company Stamp & Official Approval', 135, sigY + 21);
+
+    // Document Footer Note
+    doc.setDrawColor(241, 245, 249);
+    doc.line(14, 280, 196, 280);
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Generated via Fortline CRM • Commercial Proforma Invoice • Official Commercial Document', 105, 285, { align: 'center' });
 
     doc.save(`Proforma_Invoice_${pi.proformaNumber || 'PI'}.pdf`);
+  };
+
+  // ── COMPLETE PROFORMA INVOICES LEDGER EXPORT (PDF) ──
+  const downloadCompleteProformasPDF = () => {
+    const dataset = filteredProformas.length > 0 ? filteredProformas : proformas;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const nowStr = new Date().toLocaleDateString('en-GB');
+
+    doc.setFillColor(15, 23, 42); // Navy
+    doc.rect(0, 0, 297, 24, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — PROFORMA INVOICES MASTER LEDGER', 14, 12);
+
+    const totalAmt = dataset.reduce((sum, p) => sum + (Number(p.netAmount || p.totalAmount) || 0), 0);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated: ${nowStr} | Total Records: ${dataset.length} | Grand Total Volume: Rs. ${totalAmt.toLocaleString()} PKR`, 14, 19);
+
+    const rows = dataset.map((p, idx) => [
+      idx + 1,
+      p.proformaNumber || '—',
+      p.clientName || '—',
+      p.salesOrderNumber || p.orderReference || '—',
+      p.customerPONumber || '—',
+      p.issueDate ? new Date(p.issueDate).toLocaleDateString('en-GB') : '—',
+      p.validUntil ? new Date(p.validUntil).toLocaleDateString('en-GB') : '—',
+      p.status || 'Draft',
+      (p.items || []).length,
+      `Rs. ${Number(p.netAmount || p.totalAmount || 0).toLocaleString()}`
+    ]);
+
+    try {
+      autoTable(doc, {
+        startY: 28,
+        head: [['#', 'PI Number', 'Customer Name', 'Linked SO #', 'Customer PO #', 'Issue Date', 'Valid Until', 'Status', 'Items', 'Grand Total (PKR)']],
+        body: rows,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [15, 23, 42] } },
+          { content: `Rs. ${totalAmt.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [4, 120, 87] } }
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [30, 58, 138], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+        styles: { fontSize: 8, cellPadding: 3, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 14, right: 14 }
+      });
+
+      doc.save(`Proforma_Invoices_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error('Proforma invoices PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // ── COMPLETE PROFORMA INVOICES LEDGER EXPORT (EXCEL / CSV) ──
+  const downloadCompleteProformasExcel = () => {
+    const dataset = filteredProformas.length > 0 ? filteredProformas : proformas;
+    const totalAmt = dataset.reduce((sum, p) => sum + (Number(p.netAmount || p.totalAmount) || 0), 0);
+
+    const headers = ['#', 'Proforma Number', 'Client Name', 'Customer Email', 'Customer Phone', 'Sales Order #', 'Customer PO #', 'Issue Date', 'Valid Until', 'Status', 'Payment Terms', 'Subtotal', 'Tax Rate (%)', 'Tax (PKR)', 'Discount (PKR)', 'Net Total Amount (PKR)', 'Notes'];
+    const rows = dataset.map((p, idx) => [
+      idx + 1,
+      `"${p.proformaNumber || ''}"`,
+      `"${(p.clientName || '').replace(/"/g, '""')}"`,
+      `"${p.clientEmail || ''}"`,
+      `"${p.clientPhone || ''}"`,
+      `"${p.salesOrderNumber || p.orderReference || ''}"`,
+      `"${p.customerPONumber || ''}"`,
+      `"${p.issueDate ? new Date(p.issueDate).toLocaleDateString('en-GB') : ''}"`,
+      `"${p.validUntil ? new Date(p.validUntil).toLocaleDateString('en-GB') : ''}"`,
+      `"${p.status || 'Draft'}"`,
+      `"${p.paymentTerms || 'Advance Payment'}"`,
+      Number(p.subtotal || p.netAmount || 0),
+      Number(p.taxRate || 0),
+      Number(p.tax || 0),
+      Number(p.discount || 0),
+      Number(p.netAmount || p.totalAmount || 0),
+      `"${(p.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    rows.push([
+      'TOTAL',
+      `"Total Records: ${dataset.length}"`,
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      totalAmt,
+      '""'
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Proforma_Invoices_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   // KPI Calculations
@@ -484,7 +910,13 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
             Generate and manage optional commercial proforma invoices from Sales Orders before dispatch
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button className="sv-btn-secondary" onClick={downloadCompleteProformasPDF} title="Download Complete Proformas (PDF)">
+            <Download size={15} color="#DC2626" /> Export PDF
+          </button>
+          <button className="sv-btn-secondary" onClick={downloadCompleteProformasExcel} title="Download Complete Proformas (Excel)">
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
+          </button>
           <button className="sv-btn-primary" onClick={handleOpenCreate}>
             <Plus size={16} /> New Proforma Invoice
           </button>
@@ -905,102 +1337,291 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
               {/* SECTION 3: Commercial Terms, Dates & Calculations */}
               <div className="sv-form-section">
                 <div className="sv-form-section-title">
-                  <DollarSign size={14} color="#059669" /> 3. Commercial Terms & Financial Breakdown
+                  <Calendar size={14} color="#2563EB" /> 3. Commercial Terms & Delivery Dates
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: '16px' }}>
-                  {/* Terms & Dates Left Column */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                    <div className="sv-grid-2">
-                      <div className="sv-field">
-                        <label>Issue Date</label>
-                        <input
-                          type="date"
-                          value={form.issueDate}
-                          onChange={e => setForm({ ...form, issueDate: e.target.value })}
-                        />
-                      </div>
-                      <div className="sv-field">
-                        <label>Due Date / Validity</label>
-                        <input
-                          type="date"
-                          value={form.dueDate}
-                          onChange={e => setForm({ ...form, dueDate: e.target.value })}
-                        />
-                      </div>
-                    </div>
-
-                    <div className="sv-grid-2">
-                      <div className="sv-field">
-                        <label>Payment Terms</label>
-                        <input
-                          value={form.paymentTerms}
-                          onChange={e => setForm({ ...form, paymentTerms: e.target.value })}
-                          placeholder="Advance 100%, Net 30 Days..."
-                        />
-                      </div>
-                      <div className="sv-field">
-                        <label>Delivery Terms</label>
-                        <input
-                          value={form.deliveryTerms}
-                          onChange={e => setForm({ ...form, deliveryTerms: e.target.value })}
-                          placeholder="Ex-Works, Door Delivery..."
-                        />
-                      </div>
-                    </div>
-
-                    <div className="sv-field">
-                      <label>Notes & Commercial Remarks</label>
-                      <textarea
-                        rows={2}
-                        value={form.notes}
-                        onChange={e => setForm({ ...form, notes: e.target.value })}
-                        placeholder="Special instructions or commercial terms..."
-                      />
-                    </div>
+                <div className="sv-grid-2" style={{ marginBottom: '14px' }}>
+                  <div className="sv-field">
+                    <label>Issue Date</label>
+                    <input
+                      type="date"
+                      value={form.issueDate}
+                      onChange={e => setForm({ ...form, issueDate: e.target.value })}
+                    />
                   </div>
+                  <div className="sv-field">
+                    <label>Due Date / Validity</label>
+                    <input
+                      type="date"
+                      value={form.dueDate}
+                      onChange={e => setForm({ ...form, dueDate: e.target.value })}
+                    />
+                  </div>
+                </div>
 
-                  {/* Financial Summary Card Right Column */}
-                  <div style={{ background: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '12px', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem', color: '#64748B', paddingBottom: '6px', borderBottom: '1px dashed #E2E8F0' }}>
-                        <span>Subtotal Amount:</span>
-                        <span style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.9rem' }}>
-                          Rs. {subtotal.toLocaleString()}
+                <div className="sv-grid-2" style={{ marginBottom: '14px' }}>
+                  <div className="sv-field">
+                    <label>Payment Terms</label>
+                    <input
+                      value={form.paymentTerms}
+                      onChange={e => setForm({ ...form, paymentTerms: e.target.value })}
+                      placeholder="Advance 100%, Net 30 Days..."
+                    />
+                  </div>
+                  <div className="sv-field">
+                    <label>Delivery Terms</label>
+                    <input
+                      value={form.deliveryTerms}
+                      onChange={e => setForm({ ...form, deliveryTerms: e.target.value })}
+                      placeholder="Ex-Works, Door Delivery..."
+                    />
+                  </div>
+                </div>
+
+                <div className="sv-field" style={{ marginBottom: '16px' }}>
+                  <label>Notes & Commercial Remarks</label>
+                  <textarea
+                    rows={2}
+                    value={form.notes}
+                    onChange={e => setForm({ ...form, notes: e.target.value })}
+                    placeholder="Special instructions or commercial terms..."
+                  />
+                </div>
+
+                {/* Section 3B: Dynamic Percentage & PKR Discount and Tax Calculator */}
+                <div className="quote-calc-card">
+                  <div className="quote-calc-grid">
+                    {/* Discount Control Column */}
+                    <div className="quote-calc-col">
+                      <div className="quote-calc-col-header" style={{ color: '#DC2626' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Tag size={14} /> Discount
+                        </span>
+                        <span style={{ fontSize: '0.75rem', background: '#FEE2E2', color: '#DC2626', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                          - {Number(form.discountPercentage || 0)}%
                         </span>
                       </div>
 
-                      <div className="sv-field" style={{ margin: 0 }}>
-                        <label style={{ fontSize: '0.75rem', color: '#64748B' }}>Discount (PKR)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={form.discount}
-                          onChange={e => setForm({ ...form, discount: e.target.value })}
-                          placeholder="0"
-                          style={{ padding: '6px 10px', fontSize: '0.85rem' }}
-                        />
+                      <div className="quote-calc-input-row">
+                        {/* Percentage Stepper */}
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                            Discount (%)
+                          </label>
+                          <div className="quote-stepper-group" style={{ width: '100%' }}>
+                            <button
+                              type="button"
+                              className="quote-stepper-btn"
+                              onClick={() => stepDiscountPct(-1)}
+                              title="Decrease Discount % by 1%"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="any"
+                              value={form.discountPercentage === '' ? '' : form.discountPercentage}
+                              onChange={e => handleDiscountPctChange(e.target.value)}
+                              className="quote-stepper-val"
+                              style={{ flex: 1 }}
+                              placeholder="0"
+                            />
+                            <button
+                              type="button"
+                              className="quote-stepper-btn"
+                              onClick={() => stepDiscountPct(1)}
+                              title="Increase Discount % by 1%"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Direct Amount Input */}
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                            Discount Amount (PKR)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={form.discount === '' ? '' : form.discount}
+                            onChange={e => handleDiscountAmtChange(e.target.value)}
+                            placeholder="0"
+                            style={{
+                              width: '100%',
+                              height: '38px',
+                              padding: '6px 10px',
+                              fontSize: '0.85rem',
+                              fontWeight: 700,
+                              color: '#DC2626',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '8px',
+                              background: '#FFFFFF'
+                            }}
+                          />
+                        </div>
                       </div>
 
-                      <div className="sv-field" style={{ margin: 0 }}>
-                        <label style={{ fontSize: '0.75rem', color: '#64748B' }}>Tax / GST (PKR)</label>
-                        <input
-                          type="number"
-                          min="0"
-                          value={form.tax}
-                          onChange={e => setForm({ ...form, tax: e.target.value })}
-                          placeholder="0"
-                          style={{ padding: '6px 10px', fontSize: '0.85rem' }}
-                        />
+                      {/* Quick Percentage Presets */}
+                      <div className="quote-presets-row">
+                        <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>Presets:</span>
+                        {[0, 5, 10, 15, 20].map(pct => (
+                          <button
+                            key={pct}
+                            type="button"
+                            className={`quote-preset-btn ${Number(form.discountPercentage) === pct ? 'active-discount' : ''}`}
+                            onClick={() => handleDiscountPctChange(pct)}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
                       </div>
                     </div>
 
-                    <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#166534', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                        Grand Total (PKR)
+                    {/* Tax / GST Control Column */}
+                    <div className="quote-calc-col">
+                      <div className="quote-calc-col-header" style={{ color: '#2563EB' }}>
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <Percent size={14} /> Tax / GST
+                        </span>
+                        <span style={{ fontSize: '0.75rem', background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
+                          + {Number(form.taxPercentage || 0)}%
+                        </span>
                       </div>
-                      <div style={{ fontSize: '1.35rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
-                        Rs. {calculatedNetAmount.toLocaleString()}
+
+                      <div className="quote-calc-input-row">
+                        {/* Percentage Stepper with easy increase / decrease */}
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                            Tax Rate (%)
+                          </label>
+                          <div className="quote-stepper-group" style={{ width: '100%' }}>
+                            <button
+                              type="button"
+                              className="quote-stepper-btn"
+                              onClick={() => stepTaxPct(-1)}
+                              title="Decrease Tax % by 1%"
+                            >
+                              -
+                            </button>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              step="any"
+                              value={form.taxPercentage === '' ? '' : form.taxPercentage}
+                              onChange={e => handleTaxPctChange(e.target.value)}
+                              className="quote-stepper-val"
+                              style={{ flex: 1 }}
+                              placeholder="0"
+                            />
+                            <button
+                              type="button"
+                              className="quote-stepper-btn"
+                              onClick={() => stepTaxPct(1)}
+                              title="Increase Tax % by 1%"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Direct Tax PKR Input */}
+                        <div style={{ flex: 1 }}>
+                          <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
+                            Tax Amount (PKR)
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            value={form.tax === '' ? '' : form.tax}
+                            onChange={e => handleTaxAmtChange(e.target.value)}
+                            placeholder="0"
+                            style={{
+                              width: '100%',
+                              height: '38px',
+                              padding: '6px 10px',
+                              fontSize: '0.85rem',
+                              fontWeight: 700,
+                              color: '#1E293B',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '8px',
+                              background: '#FFFFFF'
+                            }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Quick Percentage Presets */}
+                      <div className="quote-presets-row">
+                        <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>Presets:</span>
+                        {[0, 5, 10, 15, 16, 17, 18].map(pct => (
+                          <button
+                            key={pct}
+                            type="button"
+                            className={`quote-preset-btn ${Number(form.taxPercentage) === pct ? 'active' : ''}`}
+                            onClick={() => handleTaxPctChange(pct)}
+                          >
+                            {pct}%
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comprehensive Live Calculation Summary Banner */}
+                  <div className="quote-summary-banner">
+                    <div className="quote-summary-stat-grid">
+                      <div>
+                        <div className="quote-summary-stat-label">Subtotal (Products)</div>
+                        <div className="quote-summary-stat-val" style={{ color: '#1E293B' }}>
+                          Rs. {Number(form.totalAmount || 0).toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748B' }}>PKR</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="quote-summary-stat-label" style={{ color: '#DC2626' }}>
+                          Discount ({Number(form.discountPercentage || 0)}%)
+                        </div>
+                        <div className="quote-summary-stat-val" style={{ color: '#DC2626' }}>
+                          - Rs. {Number(form.discount || 0).toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>PKR</span>
+                        </div>
+                      </div>
+                      <div>
+                        <div className="quote-summary-stat-label" style={{ color: '#2563EB' }}>
+                          Tax / GST ({Number(form.taxPercentage || 0)}%)
+                        </div>
+                        <div className="quote-summary-stat-val" style={{ color: '#2563EB' }}>
+                          + Rs. {Number(form.tax || 0).toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>PKR</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      borderTop: '1.5px dashed #A7F3D0',
+                      paddingTop: '10px',
+                      flexWrap: 'wrap',
+                      gap: '8px'
+                    }}>
+                      <div style={{ fontSize: '0.8rem', color: '#065F46', fontWeight: 600 }}>
+                        Calculation: <strong>Rs. {Number(form.totalAmount || 0).toLocaleString()}</strong> (Subtotal) 
+                        {Number(form.discount || 0) > 0 && <span> - <strong>Rs. {Number(form.discount || 0).toLocaleString()}</strong> ({Number(form.discountPercentage || 0)}% Disc)</span>}
+                        {Number(form.tax || 0) > 0 && <span> + <strong>Rs. {Number(form.tax || 0).toLocaleString()}</strong> ({Number(form.taxPercentage || 0)}% Tax)</span>}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
+                        <span style={{ fontSize: '0.82rem', textTransform: 'uppercase', fontWeight: 800, color: '#047857' }}>
+                          Grand Total:
+                        </span>
+                        <span style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669' }}>
+                          Rs. {Number(form.netAmount || 0).toLocaleString()} <span style={{ fontSize: '0.85rem' }}>PKR</span>
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -1154,13 +1775,13 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
                   </div>
                   {Number(viewProforma.discount) > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', color: '#DC2626' }}>
-                      <span>Discount:</span>
+                      <span>Discount (- {Number(viewProforma.discountPercentage !== undefined && viewProforma.discountPercentage !== null && Number(viewProforma.discountPercentage) > 0 ? viewProforma.discountPercentage : ((Number(viewProforma.discount) / Math.max(1, Number(viewProforma.totalAmount || 0))) * 100)).toFixed(1)}%):</span>
                       <span>- Rs. {Number(viewProforma.discount).toLocaleString()}</span>
                     </div>
                   )}
                   {Number(viewProforma.tax) > 0 && (
-                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#64748B' }}>
-                      <span>Tax / GST:</span>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', color: '#475569' }}>
+                      <span>Tax / GST (+ {Number(viewProforma.taxPercentage !== undefined && viewProforma.taxPercentage !== null && Number(viewProforma.taxPercentage) > 0 ? viewProforma.taxPercentage : ((Number(viewProforma.tax) / Math.max(1, Number(viewProforma.totalAmount || 0) - Number(viewProforma.discount || 0))) * 100)).toFixed(1)}%):</span>
                       <span>+ Rs. {Number(viewProforma.tax).toLocaleString()}</span>
                     </div>
                   )}

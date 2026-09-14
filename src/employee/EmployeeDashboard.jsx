@@ -142,8 +142,9 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
     salaryTarget: salesStats?.salaryTarget || 0,
     liability: salesStats?.liability || 0,
     netRevenue: salesStats?.salesAchieved || 0,
-    totalInvoicesCount: 0,
-    paidInvoicesAmount: 0
+    totalInvoicesCount: salesStats?.totalInvoicesCount || 0,
+    approvedInvoicesCount: salesStats?.approvedInvoicesCount || 0,
+    paidInvoicesAmount: salesStats?.paidInvoicesAmount || 0
   };
 
   const pendingTasks = tasksList.filter(t => t.status !== 'Completed');
@@ -346,17 +347,24 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
           <div className="hero-card-main-val">
             <div className="hero-val-group">
               <span className="hero-val-label">Sales Achieved</span>
-              <span className="hero-val-num">Rs. {Number(salesPerf.salesAchieved || 0).toLocaleString()}</span>
+              <span className="hero-val-num" title={`Rs. ${Number(salesPerf.salesAchieved || 0).toLocaleString()}`}>
+                <span className="hero-val-prefix">Rs.</span>
+                <span className="hero-val-text">{Math.round(Number(salesPerf.salesAchieved || 0)).toLocaleString()}</span>
+              </span>
             </div>
-            <div className="hero-val-divider" />
             <div className="hero-val-group">
               <span className="hero-val-label">Target Quota</span>
-              <span className="hero-val-num light">Rs. {Number(salesPerf.monthlyTarget || 0).toLocaleString()}</span>
+              <span className="hero-val-num light" title={`Rs. ${Number(salesPerf.monthlyTarget || 0).toLocaleString()}`}>
+                <span className="hero-val-prefix">Rs.</span>
+                <span className="hero-val-text">{Math.round(Number(salesPerf.monthlyTarget || 0)).toLocaleString()}</span>
+              </span>
             </div>
-            <div className="hero-val-divider" />
             <div className="hero-val-group">
               <span className="hero-val-label">Remaining</span>
-              <span className="hero-val-num rem">Rs. {Number(salesPerf.remainingTarget || 0).toLocaleString()}</span>
+              <span className="hero-val-num rem" title={`Rs. ${Number(salesPerf.remainingTarget || 0).toLocaleString()}`}>
+                <span className="hero-val-prefix">Rs.</span>
+                <span className="hero-val-text">{Math.round(Number(salesPerf.remainingTarget || 0)).toLocaleString()}</span>
+              </span>
             </div>
           </div>
 
@@ -378,7 +386,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
             <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_deals')}>
               <span className="pill-title">Won Deals</span>
               <span className="pill-value" style={{ color: '#059669' }}>{salesPerf.wonDealsCount || 0}</span>
-              <span className="pill-sub">Rs. {Number(salesPerf.wonDealsValue || 0).toLocaleString()} volume</span>
+              <span className="pill-sub">Rs. {Math.round(Number(salesPerf.wonDealsValue || 0)).toLocaleString()} volume</span>
             </div>
             <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_quotations')}>
               <span className="pill-title">Quotations</span>
@@ -406,7 +414,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
               </div>
             </div>
             <div className="hero-badge-pct green">
-              <span>Rs. {Number(finPerf.netRevenue || 0).toLocaleString()}</span>
+              <span>Rs. {Math.round(Number(finPerf.netRevenue || 0)).toLocaleString()}</span>
               <span className="hero-badge-sub">Net Revenue</span>
             </div>
           </div>
@@ -414,22 +422,23 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
           <div className="hero-card-main-val">
             <div className="hero-val-group">
               <span className="hero-val-label">Overdue Amount</span>
-              <span className="hero-val-num" style={{ color: finPerf.overdueAmount > 0 ? '#DC2626' : '#059669' }}>
-                Rs. {Number(finPerf.overdueAmount || 0).toLocaleString()}
+              <span className="hero-val-num" style={{ color: finPerf.overdueAmount > 0 ? '#DC2626' : '#059669' }} title={`Rs. ${Number(finPerf.overdueAmount || 0).toLocaleString()}`}>
+                <span className="hero-val-prefix">Rs.</span>
+                <span className="hero-val-text">{Math.round(Number(finPerf.overdueAmount || 0)).toLocaleString()}</span>
               </span>
             </div>
-            <div className="hero-val-divider" />
             <div className="hero-val-group">
               <span className="hero-val-label">Total Receivables</span>
-              <span className="hero-val-num" style={{ color: '#0284C7' }}>
-                Rs. {Number(finPerf.receivables || 0).toLocaleString()}
+              <span className="hero-val-num" style={{ color: '#0284C7' }} title={`Rs. ${Number(finPerf.receivables || 0).toLocaleString()}`}>
+                <span className="hero-val-prefix">Rs.</span>
+                <span className="hero-val-text">{Math.round(Number(finPerf.receivables || 0)).toLocaleString()}</span>
               </span>
             </div>
-            <div className="hero-val-divider" />
             <div className="hero-val-group">
               <span className="hero-val-label">Salary Target</span>
-              <span className="hero-val-num light">
-                Rs. {Number(finPerf.salaryTarget || 0).toLocaleString()}
+              <span className="hero-val-num light" title={`Rs. ${Number(finPerf.salaryTarget || 0).toLocaleString()}`}>
+                <span className="hero-val-prefix">Rs.</span>
+                <span className="hero-val-text">{Math.round(Number(finPerf.salaryTarget || 0)).toLocaleString()}</span>
               </span>
             </div>
           </div>
@@ -450,9 +459,9 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
           {/* Financial Performance Key Metric Pills */}
           <div className="hero-pills-grid">
             <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_invoices')}>
-              <span className="pill-title">Invoices</span>
-              <span className="pill-value">{finPerf.totalInvoicesCount || 0}</span>
-              <span className="pill-sub">Created from Won Deals</span>
+              <span className="pill-title">Approved Invoices</span>
+              <span className="pill-value">{finPerf.approvedInvoicesCount || 0}</span>
+              <span className="pill-sub">Total {finPerf.totalInvoicesCount || 0} Invoices</span>
             </div>
             <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_invoices')}>
               <span className="pill-title">Settled Invoices</span>

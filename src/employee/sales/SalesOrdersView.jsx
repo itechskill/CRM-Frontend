@@ -374,40 +374,99 @@ export default function SalesOrdersView() {
 
   // ── INDIVIDUAL SALES ORDER PDF DOWNLOAD ──
   const handleDownloadSinglePDF = (order) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const ref = order.orderReference || order.orderNumber || 'SO-DOC';
     const customer = order.clientName || order.customerName || 'Valued Customer';
-    const dateStr = order.orderDate ? new Date(order.orderDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
+    const dateStr = order.orderDate ? new Date(order.orderDate).toLocaleDateString('en-GB') : (order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'));
 
-    // Header Card
-    doc.setFillColor(37, 99, 235);
-    doc.rect(0, 0, 210, 32, 'F');
+    // Primary Brand Header Banner
+    doc.setFillColor(30, 58, 138); // Deep Navy #1E3A8A
+    doc.rect(0, 0, 210, 36, 'F');
+    doc.setFillColor(37, 99, 235); // Blue Accent
+    doc.rect(0, 36, 210, 2, 'F');
 
+    // Brand Title (Left)
     doc.setFontSize(20);
     doc.setTextColor(255, 255, 255);
-    doc.text('Fortline CRM - Sales Order', 14, 20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM', 14, 18);
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(226, 232, 240);
+    doc.text('Commercial Sales & Operations Portal • Sales Order Confirmation', 14, 26);
+
+    // Document Title (Right)
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('SALES ORDER', 196, 18, { align: 'right' });
 
     doc.setFontSize(10);
-    doc.text(`Order Reference: ${ref}`, 145, 15);
-    doc.text(`Date: ${dateStr}`, 145, 23);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(191, 219, 254);
+    doc.text(`Order Ref: ${ref}`, 196, 26, { align: 'right' });
 
-    // Customer & Details Box
+    // Customer & Order Details Box
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, 44, 182, 38, 2.5, 2.5, 'FD');
+
+    // Left Column: Customer Details
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('CUSTOMER INFORMATION:', 19, 52);
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.setFontSize(11);
-    doc.text('Customer Information:', 14, 45);
-    doc.setFontSize(13);
-    doc.text(customer, 14, 53);
+    doc.text(customer, 19, 58, { maxWidth: 85 });
 
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Email: ${order.clientEmail || '—'}`, 14, 60);
-    doc.text(`Phone: ${order.clientPhone || '—'}`, 14, 66);
-    doc.text(`Address: ${order.clientAddress || 'Pakistan'}`, 14, 72);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Email: ${order.clientEmail || '—'}   •   Phone: ${order.clientPhone || '—'}`, 19, 64, { maxWidth: 85 });
+    doc.text(`Delivery Address: ${order.clientAddress || 'Direct Dispatch / Standard Delivery'}`, 19, 70, { maxWidth: 85 });
 
-    doc.text(`Sales Rep: ${order.salePerson || order.createdBy?.fullName || 'Sales Team'}`, 120, 53);
-    doc.text(`Customer PO #: ${order.customerPONumber || '—'}`, 120, 60);
-    doc.text(`Product File: ${order.fileNo || '—'} (${order.fileType || 'Standard'})`, 120, 66);
-    doc.text(`Stock Status: ${order.stockStatus || 'Available'}`, 120, 72);
+    // Vertical Divider Line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(108, 48, 108, 78);
+
+    // Right Column: Order Meta
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SALES & PRODUCT DETAILS:', 114, 52);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Sales Representative:', 114, 58);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${order.salePerson || order.createdBy?.fullName || 'Sales Team'}`, 155, 58);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Customer PO #:', 114, 64);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${order.customerPONumber || 'N/A'}`, 155, 64);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Product File # / Type:', 114, 70);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${order.fileNo || '—'} (${order.fileType || 'Standard'})`, 155, 70);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Order Date:', 114, 76);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(dateStr, 155, 76);
 
     // Items Table
     const items = order.items && order.items.length
@@ -421,30 +480,130 @@ export default function SalesOrdersView() {
       : [[1, order.productSummary || 'Product Scope', 1, `Rs. ${(Number(order.netAmount || order.totalAmount || 0)).toLocaleString()}`, `Rs. ${(Number(order.netAmount || order.totalAmount || 0)).toLocaleString()}`]];
 
     autoTable(doc, {
-      startY: 82,
-      head: [['#', 'Item / Description', 'Qty', 'Unit Price', 'Total (PKR)']],
+      startY: 88,
+      margin: { left: 14, right: 14 },
+      tableWidth: 182,
+      head: [['#', 'Item Description & Scope', 'Qty', 'Unit Price (PKR)', 'Total Amount (PKR)']],
       body: items,
       theme: 'grid',
-      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 9, textColor: [15, 23, 42] }
+      headStyles: {
+        fillColor: [30, 58, 138],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5,
+        cellPadding: 4,
+        halign: 'left'
+      },
+      styles: {
+        fontSize: 8.5,
+        cellPadding: 3.5,
+        textColor: [30, 41, 59],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 84, halign: 'left' },
+        2: { cellWidth: 20, halign: 'center' },
+        3: { cellWidth: 34, halign: 'right' },
+        4: { cellWidth: 34, halign: 'right' }
+      }
     });
 
-    const finalY = doc.lastAutoTable.finalY + 12;
+    let finalY = doc.lastAutoTable.finalY + 8;
+    if (finalY > 215) {
+      doc.addPage();
+      finalY = 20;
+    }
 
-    // Totals Box
-    doc.setFontSize(10);
+    // Status & Notes Box (Left, X=14, Width=100)
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, finalY, 100, 42, 2, 2, 'FD');
+
+    doc.setTextColor(30, 58, 138);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text('FULFILLMENT & PAYMENT STATUS:', 18, finalY + 7);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.setFontSize(8);
+    doc.text(`• Delivery Status: ${order.deliveryStatus || 'Not Delivered'}`, 18, finalY + 14);
+    doc.text(`• Invoice Status: ${order.invoiceStatus || 'Not Invoiced'}`, 18, finalY + 20);
+    doc.text(`• Payment Status: ${order.paymentStatus || 'Pending'}`, 18, finalY + 26);
+    if (order.notes) {
+      doc.text(`• Order Notes: ${order.notes}`, 18, finalY + 34, { maxWidth: 92 });
+    }
+
+    // Financial Breakdown Box (Right, X=118, Width=78)
+    const netTotal = Number(order.netAmount || order.totalAmount || 0);
+    const paidAmt = Number(order.totalPaid || 0);
+    const outstanding = Number(order.outstandingBalance !== undefined ? order.outstandingBalance : (netTotal - paidAmt));
+
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(118, finalY, 78, 42, 2, 2, 'FD');
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Total Order Value:', 122, finalY + 7);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text(`Total Amount: Rs. ${(Number(order.netAmount || order.totalAmount || 0)).toLocaleString()}`, 130, finalY);
-    doc.text(`Amount Paid: Rs. ${(Number(order.totalPaid || 0)).toLocaleString()}`, 130, finalY + 6);
-    doc.setFontSize(11);
-    doc.setTextColor(220, 38, 38);
-    doc.text(`Outstanding Balance: Rs. ${(Number(order.outstandingBalance !== undefined ? order.outstandingBalance : (Number(order.netAmount || order.totalAmount || 0) - Number(order.totalPaid || 0)))).toLocaleString()}`, 130, finalY + 13);
+    doc.text(`Rs. ${netTotal.toLocaleString()}`, 192, finalY + 7, { align: 'right' });
 
-    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(5, 150, 105);
+    doc.text('Amount Received:', 122, finalY + 13);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Rs. ${paidAmt.toLocaleString()}`, 192, finalY + 13, { align: 'right' });
+
+    // Outstanding Balance Highlight Rect
+    doc.setFillColor(outstanding > 0 ? 254 : 240, outstanding > 0 ? 242 : 253, outstanding > 0 ? 242 : 244);
+    doc.setDrawColor(outstanding > 0 ? 254 : 187, outstanding > 0 ? 202 : 247, outstanding > 0 ? 202 : 208);
+    doc.roundedRect(122, finalY + 20, 70, 18, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(outstanding > 0 ? 220 : 5, outstanding > 0 ? 38 : 150, outstanding > 0 ? 38 : 105);
+    doc.text('OUTSTANDING BALANCE:', 126, finalY + 26);
+
+    doc.setFontSize(11);
+    doc.text(`Rs. ${outstanding.toLocaleString()}`, 188, finalY + 34, { align: 'right' });
+
+    // Signature Block
+    const sigY = 252;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+
+    doc.line(14, sigY + 12, 75, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Sales Department:', 14, sigY + 17);
+    doc.setFont('helvetica', 'normal');
     doc.setTextColor(100, 116, 139);
-    doc.text(`Delivery Status: ${order.deliveryStatus || 'Not Delivered'}`, 14, finalY);
-    doc.text(`Payment Status: ${order.paymentStatus || 'Pending'}`, 14, finalY + 6);
-    if (order.notes) doc.text(`Notes: ${order.notes}`, 14, finalY + 13);
+    doc.text('Authorized Commercial Representative', 14, sigY + 21);
+
+    doc.line(135, sigY + 12, 196, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Client Acceptance / Stamp:', 135, sigY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Customer Authorized Signature', 135, sigY + 21);
+
+    // Document Footer Note
+    doc.setDrawColor(241, 245, 249);
+    doc.line(14, 280, 196, 280);
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Generated via Fortline CRM • Official Sales Order Confirmation • System Generated', 105, 285, { align: 'center' });
 
     doc.save(`Sales_Order_${ref}.pdf`);
   };
@@ -452,39 +611,55 @@ export default function SalesOrdersView() {
   // ── EXPORT ENTIRE LIST TO PDF ──
   const handleExportListPDF = () => {
     if (filteredOrders.length === 0) return;
-    const doc = new jsPDF('landscape');
+    try {
+      const doc = new jsPDF('landscape');
 
-    doc.setFontSize(16);
-    doc.setTextColor(15, 23, 42);
-    doc.text('Fortline CRM - Sales Orders Master List', 14, 18);
+      doc.setFontSize(16);
+      doc.setTextColor(15, 23, 42);
+      doc.text('Fortline CRM - Sales Orders Master List', 14, 18);
 
-    doc.setFontSize(9);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} | Total Orders: ${filteredOrders.length}`, 14, 25);
+      const totalVal = filteredOrders.reduce((sum, o) => sum + (Number(o.netAmount || o.totalAmount) || 0), 0);
+      const totalPaid = filteredOrders.reduce((sum, o) => sum + (Number(o.totalPaid) || 0), 0);
+      const totalRem = filteredOrders.reduce((sum, o) => sum + (Number(o.outstandingBalance !== undefined ? o.outstandingBalance : ((Number(o.netAmount || o.totalAmount) || 0) - (Number(o.totalPaid) || 0)))), 0);
 
-    const rows = filteredOrders.map(o => [
-      o.orderReference || o.orderNumber || '—',
-      o.clientName || o.customerName || '—',
-      o.salePerson || o.createdBy?.fullName || 'Sales Team',
-      o.orderDate ? new Date(o.orderDate).toLocaleDateString('en-GB') : (o.creationDate ? new Date(o.creationDate).toLocaleDateString('en-GB') : '—'),
-      `Rs. ${(Number(o.netAmount || o.totalAmount || 0)).toLocaleString()}`,
-      `Rs. ${(Number(o.totalPaid || 0)).toLocaleString()}`,
-      `Rs. ${(Number(o.outstandingBalance !== undefined ? o.outstandingBalance : (Number(o.netAmount || o.totalAmount || 0) - Number(o.totalPaid || 0)))).toLocaleString()}`,
-      o.deliveryStatus || 'Not Delivered',
-      o.paymentStatus || 'Pending'
-    ]);
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} | Total Orders: ${filteredOrders.length} | Value: Rs. ${totalVal.toLocaleString()}`, 14, 25);
 
-    autoTable(doc, {
-      startY: 32,
-      head: [['Order Ref #', 'Customer / Client', 'Sales Member', 'Date', 'Total (PKR)', 'Collected', 'Remaining', 'Delivery', 'Payment']],
-      body: rows,
-      theme: 'grid',
-      headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
-      bodyStyles: { fontSize: 8, textColor: [15, 23, 42] },
-      alternateRowStyles: { fillColor: [248, 250, 252] }
-    });
+      const rows = filteredOrders.map(o => [
+        o.orderReference || o.orderNumber || '—',
+        o.clientName || o.customerName || '—',
+        o.salePerson || o.createdBy?.fullName || 'Sales Team',
+        o.orderDate ? new Date(o.orderDate).toLocaleDateString('en-GB') : (o.creationDate ? new Date(o.creationDate).toLocaleDateString('en-GB') : '—'),
+        `Rs. ${(Number(o.netAmount || o.totalAmount || 0)).toLocaleString()}`,
+        `Rs. ${(Number(o.totalPaid || 0)).toLocaleString()}`,
+        `Rs. ${(Number(o.outstandingBalance !== undefined ? o.outstandingBalance : (Number(o.netAmount || o.totalAmount || 0) - Number(o.totalPaid || 0)))).toLocaleString()}`,
+        o.deliveryStatus || 'Not Delivered',
+        o.paymentStatus || 'Pending'
+      ]);
 
-    doc.save(`Sales_Orders_List_${new Date().toISOString().slice(0, 10)}.pdf`);
+      autoTable(doc, {
+        startY: 32,
+        head: [['Order Ref #', 'Customer / Client', 'Sales Member', 'Date', 'Total (PKR)', 'Collected', 'Remaining', 'Delivery', 'Payment']],
+        body: rows,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [15, 23, 42] } },
+          { content: `Rs. ${totalVal.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [15, 23, 42] } },
+          { content: `Rs. ${totalPaid.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [4, 120, 87] } },
+          { content: `Rs. ${totalRem.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [254, 242, 242], textColor: [185, 28, 28] } },
+          { content: `${filteredOrders.length} Orders`, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+        bodyStyles: { fontSize: 8, textColor: [15, 23, 42] },
+        alternateRowStyles: { fillColor: [248, 250, 252] }
+      });
+
+      doc.save(`Sales_Orders_List_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('Sales orders PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
   };
 
   // ── EXPORT LIST TO EXCEL (CSV) ──
@@ -500,18 +675,20 @@ export default function SalesOrdersView() {
       const summary = (o.productSummary || '').replace(/,/g, ' ');
       const total = Number(o.netAmount || o.totalAmount || 0);
       const paid = Number(o.totalPaid || 0);
-      const remaining = o.outstandingBalance !== undefined ? Number(o.outstandingBalance) : (total - paid);
-      return [`"${ref}"`, `"${client}"`, `"${rep}"`, `"${date}"`, `"${file}"`, `"${summary}"`, total, paid, remaining, `"${o.deliveryStatus || ''}"`, `"${o.paymentStatus || ''}"`].join(',');
+      const out = Number(o.outstandingBalance !== undefined ? o.outstandingBalance : (total - paid));
+      const del = o.deliveryStatus || 'Not Delivered';
+      const pay = o.paymentStatus || 'Pending';
+      return [ref, client, rep, date, file, summary, total, paid, out, del, pay].join(',');
     });
 
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Sales_Orders_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
+    link.href = url;
+    link.download = `Sales_Orders_List_${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
-    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   };
 
   const handleDelete = async () => {
@@ -545,11 +722,11 @@ export default function SalesOrdersView() {
           <h2 className="sv-title"><ShoppingCart size={22} color="#2563EB" /> Sales Orders</h2>
           <p className="sv-subtitle">Complete Sales Orders tracking Customer POs, stock checks, warehouse dispatch, invoices & payments</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button onClick={handleExportListPDF} className="sv-btn-cancel" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-            <FileText size={15} color="#DC2626" /> Export PDF
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button onClick={handleExportListPDF} className="sv-btn-secondary" title="Download Complete Sales Orders (PDF)">
+            <Download size={15} color="#DC2626" /> Export PDF
           </button>
-          <button onClick={handleExportListExcel} className="sv-btn-cancel" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          <button onClick={handleExportListExcel} className="sv-btn-secondary" title="Download Complete Sales Orders (Excel)">
             <FileSpreadsheet size={15} color="#059669" /> Export Excel
           </button>
           <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Sales Order</button>

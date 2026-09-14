@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
-import { Plus, MoreHorizontal, DollarSign, User, Calendar, CheckCircle, X, AlertCircle } from 'lucide-react';
+import { Plus, MoreHorizontal, DollarSign, User, Calendar, CheckCircle, X, AlertCircle, Download, FileSpreadsheet } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './SalesDealsView.css';
 
 export default function SalesDealsView() {
@@ -109,26 +111,131 @@ export default function SalesDealsView() {
   const totalPipelineValue = deals.reduce((sum, d) => sum + (d.value || 0), 0);
   const avgDealSize = deals.length > 0 ? Math.round(totalPipelineValue / deals.length) : 0;
 
+  // Complete PDF Export with Mathematical Footer Totals
+  const downloadCompleteDealsPDF = () => {
+    const doc = new jsPDF('landscape');
+    const records = deals;
+    const totalFilteredVal = records.reduce((s, d) => s + (Number(d.value) || 0), 0);
+
+    doc.setFillColor(30, 41, 59);
+    doc.rect(0, 0, 297, 24, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM - DEALS PIPELINE REPORT (MANAGER LEDGER)', 14, 15);
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString()} | Total Deals: ${records.length} | Won Deals: ${closedWonDeals.length}`, 14, 31);
+
+    const tableData = records.map(d => [
+      d.title || '—',
+      d.client || d.clientName || '—',
+      `Rs. ${Number(d.value || 0).toLocaleString()}`,
+      d.stage || 'Qualification',
+      `${d.probability || 50}%`,
+      d.rep || 'Sales Team',
+      d.date || '—'
+    ]);
+
+    try {
+      autoTable(doc, {
+        head: [['Deal Title', 'Client Organization', 'Deal Value (PKR)', 'Pipeline Stage', 'Probability', 'Assigned Rep', 'Closing Target']],
+        body: tableData,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: `Rs. ${totalFilteredVal.toLocaleString()}`, styles: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105], fillColor: [241, 245, 249] } },
+          { content: `${records.length} Total Deals (Won: ${closedWonDeals.length})`, colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
+        ]],
+        startY: 36,
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold' },
+        theme: 'grid'
+      });
+
+      doc.save(`Sales_Manager_Deals_Report_${new Date().toISOString().substring(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('Manager deals PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // Complete Excel Export with Summary Footer
+  const downloadCompleteDealsExcel = () => {
+    const records = deals;
+    const totalFilteredVal = records.reduce((s, d) => s + (Number(d.value) || 0), 0);
+
+    const headers = ['Deal Title', 'Client Organization', 'Deal Value (PKR)', 'Stage', 'Probability (%)', 'Assigned Rep', 'Closing Target'];
+    const rows = records.map(d => [
+      `"${(d.title || '').replace(/"/g, '""')}"`,
+      `"${(d.client || d.clientName || '').replace(/"/g, '""')}"`,
+      Number(d.value || 0),
+      `"${d.stage || 'Qualification'}"`,
+      Number(d.probability || 50),
+      `"${(d.rep || 'Sales Team').replace(/"/g, '""')}"`,
+      `"${d.date || ''}"`
+    ]);
+
+    const summaryRow = [
+      '"TOTAL"',
+      `"Total Records: ${records.length}"`,
+      totalFilteredVal,
+      `"Won Deals: ${closedWonDeals.length}"`,
+      '""',
+      '""',
+      '""'
+    ];
+
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(r => r.join(',')),
+      summaryRow.join(',')
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Sales_Manager_Deals_Report_${new Date().toISOString().substring(0, 10)}.csv`;
+    link.click();
+  };
+
   return (
-    <div className="sales-sm-deals-view">
-      {/* Deals Header Stats */}
-      <div className="deals-top-bar">
+    <div className="deals-view">
+      {/* Top Bar with KPI Metrics & Actions */}
+      <div className="deals-topbar">
         <div className="deals-stat">
-          <span className="stat-label">Total Active Pipeline</span>
+          <span className="stat-label">Total Pipeline</span>
           <span className="stat-val">Rs. {totalPipelineValue.toLocaleString()}</span>
         </div>
         <div className="deals-stat">
-          <span className="stat-label">Deals Won</span>
-          <span className="stat-val">{closedWonDeals.length}</span>
+          <span className="stat-label">Won Revenue</span>
+          <span className="stat-val" style={{ color: '#15803D' }}>Rs. {wonRevenue.toLocaleString()}</span>
         </div>
         <div className="deals-stat">
           <span className="stat-label">Average Deal Size</span>
           <span className="stat-val">Rs. {avgDealSize.toLocaleString()}</span>
         </div>
-        <button className="new-deal-btn" onClick={() => { setIsModalOpen(true); setErrorMessage(''); }}>
-          <Plus size={16} />
-          <span>New Deal</span>
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#334155', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+            onClick={downloadCompleteDealsPDF}
+            title="Download Complete Deals Report (PDF)"
+          >
+            <Download size={15} color="#DC2626" /> Export PDF
+          </button>
+          <button
+            style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFFFFF', color: '#334155', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer' }}
+            onClick={downloadCompleteDealsExcel}
+            title="Download Complete Deals Report (Excel)"
+          >
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
+          </button>
+          <button className="new-deal-btn" onClick={() => { setIsModalOpen(true); setErrorMessage(''); }}>
+            <Plus size={16} />
+            <span>New Deal</span>
+          </button>
+        </div>
       </div>
 
       {loading ? (

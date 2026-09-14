@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOMServer from 'react-dom/server';
 import { QRCodeSVG } from 'qrcode.react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
 import {
   FileText,
@@ -21,7 +23,8 @@ import {
   Clock,
   Send,
   Filter,
-  Download
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 
@@ -442,13 +445,159 @@ export default function SalesInvoicesView() {
     }
   };
 
+  // ── COMPLETE INVOICES LEDGER EXPORT (PDF) ──
+  const downloadCompleteInvoicesPDF = () => {
+    const dataset = filteredInvoices.length > 0 ? filteredInvoices : invoices;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const nowStr = new Date().toLocaleDateString('en-GB');
+
+    doc.setFillColor(15, 23, 42); // Navy
+    doc.rect(0, 0, 297, 24, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — SALES TEAM INVOICES MASTER LEDGER', 14, 12);
+
+    const totalInvAmt = dataset.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+    const totalPaidAmt = dataset.reduce((sum, i) => sum + (Number(i.paidAmount) || (i.status === 'Paid' ? Number(i.amount) : 0)), 0);
+    const totalOutAmt = dataset.reduce((sum, i) => {
+      const out = i.outstandingAmount != null ? Number(i.outstandingAmount) : Math.max(0, Number(i.amount) - (Number(i.paidAmount) || 0));
+      return sum + (i.status === 'Paid' || i.status === 'Cancelled' ? 0 : out);
+    }, 0);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated: ${nowStr} | Invoices: ${dataset.length} | Invoiced: Rs. ${totalInvAmt.toLocaleString()} | Paid: Rs. ${totalPaidAmt.toLocaleString()} | Outstanding: Rs. ${totalOutAmt.toLocaleString()}`, 14, 19);
+
+    const rows = dataset.map((i, idx) => [
+      idx + 1,
+      i.invoiceNumber || '—',
+      i.clientName || '—',
+      i.createdBy?.fullName || 'Sales Rep',
+      i.dealTitle || i.saleReference || i.salesOrderNumber || '—',
+      i.issueDate ? new Date(i.issueDate).toLocaleDateString('en-GB') : '—',
+      i.dueDate ? new Date(i.dueDate).toLocaleDateString('en-GB') : '—',
+      i.status || 'Pending Review',
+      `Rs. ${Number(i.amount || 0).toLocaleString()}`,
+      `Rs. ${Number(i.paidAmount || (i.status === 'Paid' ? i.amount : 0)).toLocaleString()}`,
+      `Rs. ${Number(i.outstandingAmount != null ? i.outstandingAmount : (i.status === 'Paid' ? 0 : Math.max(0, Number(i.amount) - (Number(i.paidAmount) || 0)))).toLocaleString()}`
+    ]);
+
+    try {
+      autoTable(doc, {
+        startY: 28,
+        head: [['#', 'Invoice #', 'Customer Name', 'Sales Rep', 'Reference / SO', 'Issue Date', 'Due Date', 'Status', 'Total (PKR)', 'Paid (PKR)', 'Balance (PKR)']],
+        body: rows,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 8, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [15, 23, 42] } },
+          { content: `Rs. ${totalInvAmt.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [15, 23, 42] } },
+          { content: `Rs. ${totalPaidAmt.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [4, 120, 87] } },
+          { content: `Rs. ${totalOutAmt.toLocaleString()}`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [254, 242, 242], textColor: [185, 28, 28] } }
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8 },
+        styles: { fontSize: 7.5, cellPadding: 2.8, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 14, right: 14 }
+      });
+
+      doc.save(`Sales_Team_Invoices_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error('Manager invoices PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // ── COMPLETE INVOICES LEDGER EXPORT (EXCEL / CSV) ──
+  const downloadCompleteInvoicesExcel = () => {
+    const dataset = filteredInvoices.length > 0 ? filteredInvoices : invoices;
+    const totalInvAmt = dataset.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
+    const totalPaidAmt = dataset.reduce((sum, i) => sum + (Number(i.paidAmount) || (i.status === 'Paid' ? Number(i.amount) : 0)), 0);
+    const totalOutAmt = dataset.reduce((sum, i) => {
+      const out = i.outstandingAmount != null ? Number(i.outstandingAmount) : Math.max(0, Number(i.amount) - (Number(i.paidAmount) || 0));
+      return sum + (i.status === 'Paid' || i.status === 'Cancelled' ? 0 : out);
+    }, 0);
+
+    const headers = ['#', 'Invoice Number', 'Client Name', 'Sales Rep', 'Customer Email', 'Customer Phone', 'Reference / SO #', 'Issue Date', 'Due Date', 'Status', 'Payment Terms', 'Subtotal', 'Tax Rate (%)', 'Tax (PKR)', 'Discount (PKR)', 'Total Amount (PKR)', 'Paid Amount (PKR)', 'Outstanding Receivable (PKR)'];
+    const rows = dataset.map((i, idx) => [
+      idx + 1,
+      `"${i.invoiceNumber || ''}"`,
+      `"${(i.clientName || '').replace(/"/g, '""')}"`,
+      `"${(i.createdBy?.fullName || 'Sales Rep').replace(/"/g, '""')}"`,
+      `"${i.customerEmail || ''}"`,
+      `"${i.customerPhone || ''}"`,
+      `"${i.dealTitle || i.saleReference || i.salesOrderNumber || ''}"`,
+      `"${i.issueDate ? new Date(i.issueDate).toLocaleDateString('en-GB') : ''}"`,
+      `"${i.dueDate ? new Date(i.dueDate).toLocaleDateString('en-GB') : ''}"`,
+      `"${i.status || 'Pending Review'}"`,
+      `"${i.paymentTerms || 'Net 30'}"`,
+      Number(i.subtotal || i.amount || 0),
+      Number(i.taxRate || 0),
+      Number(i.tax || 0),
+      Number(i.discount || 0),
+      Number(i.amount || 0),
+      Number(i.paidAmount || (i.status === 'Paid' ? i.amount : 0)),
+      Number(i.outstandingAmount != null ? i.outstandingAmount : (i.status === 'Paid' ? 0 : Math.max(0, Number(i.amount) - (Number(i.paidAmount) || 0))))
+    ]);
+
+    // Summary row
+    rows.push([
+      'TOTAL',
+      `"Total Invoices: ${dataset.length}"`,
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      totalInvAmt,
+      totalPaidAmt,
+      totalOutAmt
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Sales_Team_Invoices_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   // Metrics
-  const totalTeamInvoiced = invoices.reduce((sum, i) => sum + (i.amount || 0), 0);
+  const now = new Date();
+  const totalTeamInvoiced = invoices.reduce((sum, i) => sum + (Number(i.amount) || 0), 0);
   const pendingReviewCount = invoices.filter(i => i.status === 'Pending Review' || i.status === 'Submitted').length;
-  const approvedCount = invoices.filter(i => i.status === 'Approved').length;
+  const approvedCount = invoices.filter(i => ['Approved', 'Sent', 'Partially Paid', 'Paid', 'Overdue'].includes(i.status)).length;
   const rejectedCount = invoices.filter(i => i.status === 'Rejected').length;
   const paidCount = invoices.filter(i => i.status === 'Paid').length;
-  const paidAmount = invoices.filter(i => i.status === 'Paid').reduce((sum, i) => sum + (i.amount || 0), 0);
+  const paidAmount = invoices.reduce((sum, i) => sum + (Number(i.paidAmount) || (i.status === 'Paid' ? Number(i.amount) : 0)), 0);
+
+  const receivableInvoices = invoices.filter(i => ['Approved', 'Sent', 'Partially Paid', 'Overdue'].includes(i.status) && i.status !== 'Paid' && i.status !== 'Cancelled');
+  const receivablesTotal = receivableInvoices.reduce((sum, i) => {
+    const outstanding = i.outstandingAmount != null ? Number(i.outstandingAmount) : (Number(i.amount) - (Number(i.paidAmount) || 0));
+    return sum + Math.max(0, outstanding);
+  }, 0);
+
+  const overdueInvoices = invoices.filter(i => {
+    const isApproved = ['Approved', 'Sent', 'Partially Paid', 'Overdue'].includes(i.status);
+    const isPastDue = i.status === 'Overdue' || (i.dueDate && new Date(i.dueDate) < now);
+    const outstanding = i.outstandingAmount != null ? Number(i.outstandingAmount) : (Number(i.amount) - (Number(i.paidAmount) || 0));
+    return isApproved && isPastDue && outstanding > 0 && i.status !== 'Paid' && i.status !== 'Cancelled';
+  });
+  const overdueAmount = overdueInvoices.reduce((sum, i) => {
+    const outstanding = i.outstandingAmount != null ? Number(i.outstandingAmount) : (Number(i.amount) - (Number(i.paidAmount) || 0));
+    return sum + Math.max(0, outstanding);
+  }, 0);
 
   const statuses = ['all', 'Pending Review', 'Approved', 'Rejected', 'Draft', 'Sent', 'Paid', 'Overdue'];
 
@@ -460,17 +609,26 @@ export default function SalesInvoicesView() {
           <h2 className="sv-title"><FileText size={22} color="#2563EB" /> Sales Team Invoices & Billing Management</h2>
           <p className="sv-subtitle">Review, edit, approve, and oversee all invoices submitted by sales team members</p>
         </div>
-        {feedbackMsg && (
-          <div style={{ background: '#ECFDF5', color: '#065F46', padding: '8px 16px', borderRadius: '8px', border: '1px solid #A7F3D0', fontWeight: 600, fontSize: '0.85rem' }}>
-            {feedbackMsg}
-          </div>
-        )}
-        {errorMsg && (
-          <div style={{ background: '#FEF2F2', color: '#991B1B', padding: '8px 16px', borderRadius: '8px', border: '1px solid #FECACA', fontWeight: 600, fontSize: '0.85rem' }}>
-            {errorMsg}
-          </div>
-        )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button className="sv-btn-secondary" onClick={downloadCompleteInvoicesPDF} title="Download Complete Invoices (PDF)">
+            <Download size={15} color="#DC2626" /> Export PDF
+          </button>
+          <button className="sv-btn-secondary" onClick={downloadCompleteInvoicesExcel} title="Download Complete Invoices (Excel)">
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
+          </button>
+        </div>
       </div>
+
+      {feedbackMsg && (
+        <div style={{ background: '#ECFDF5', color: '#065F46', padding: '8px 16px', borderRadius: '8px', border: '1px solid #A7F3D0', fontWeight: 600, fontSize: '0.85rem', marginBottom: '14px' }}>
+          {feedbackMsg}
+        </div>
+      )}
+      {errorMsg && (
+        <div style={{ background: '#FEF2F2', color: '#991B1B', padding: '8px 16px', borderRadius: '8px', border: '1px solid #FECACA', fontWeight: 600, fontSize: '0.85rem', marginBottom: '14px' }}>
+          {errorMsg}
+        </div>
+      )}
 
       {/* KPI Cards */}
       <div className="sv-grid-4">
@@ -482,17 +640,19 @@ export default function SalesInvoicesView() {
         <div className="sv-target-card" style={{ borderLeft: '4px solid #F59E0B' }}>
           <span className="sv-ts-label">Pending Manager Review</span>
           <span className="sv-ts-value" style={{ color: '#D97706' }}>{pendingReviewCount}</span>
-          <span style={{ fontSize: '0.78rem', color: '#D97706' }}>Requires manager action</span>
+          <span style={{ fontSize: '0.78rem', color: '#D97706' }}>Requires manager review</span>
+        </div>
+        <div className="sv-target-card" style={{ borderLeft: '4px solid #0284C7' }}>
+          <span className="sv-ts-label">Total Receivables</span>
+          <span className="sv-ts-value" style={{ color: '#0284C7' }}>Rs. {receivablesTotal.toLocaleString()}</span>
+          <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Approved unpaid balances</span>
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #10B981' }}>
-          <span className="sv-ts-label">Approved Invoices</span>
-          <span className="sv-ts-value" style={{ color: '#059669' }}>{approvedCount}</span>
-          <span style={{ fontSize: '0.78rem', color: '#059669' }}>Synced with Finance</span>
-        </div>
-        <div className="sv-target-card" style={{ borderLeft: '4px solid #EF4444' }}>
-          <span className="sv-ts-label">Rejected / Needs Revision</span>
-          <span className="sv-ts-value" style={{ color: '#DC2626' }}>{rejectedCount}</span>
-          <span style={{ fontSize: '0.78rem', color: '#DC2626' }}>Returned to sales member</span>
+          <span className="sv-ts-label">Paid / Collected</span>
+          <span className="sv-ts-value" style={{ color: '#059669' }}>Rs. {paidAmount.toLocaleString()}</span>
+          <span style={{ fontSize: '0.78rem', color: overdueAmount > 0 ? '#DC2626' : '#64748B' }}>
+            {overdueAmount > 0 ? `Overdue: Rs. ${overdueAmount.toLocaleString()}` : `${paidCount} settled`}
+          </span>
         </div>
       </div>
 

@@ -139,65 +139,214 @@ export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
   };
 
   const downloadPayrollSlipPDF = (empPayroll) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const user = empPayroll.user || {};
     const empName = user.fullName || 'Employee';
-    const dept = user.department || 'General';
-    const role = user.role || 'Staff';
+    const dept = user.department || 'General Operations';
+    const role = user.role || 'Staff Member';
     const empId = user.employeeId || empPayroll._id?.slice(-6) || 'EMP-100';
+    const netSalary = Number(empPayroll.netPay || 0);
 
-    doc.setFontSize(18);
-    doc.setTextColor(124, 58, 237);
-    doc.text('Fortline CRM Enterprise Payroll Slip', 14, 20);
+    // Primary Brand Header Banner
+    doc.setFillColor(30, 58, 138); // Deep Navy #1E3A8A
+    doc.rect(0, 0, 210, 36, 'F');
+    doc.setFillColor(124, 58, 237); // Purple Accent #7C3AED
+    doc.rect(0, 36, 210, 2, 'F');
+
+    // Brand Title (Left)
+    doc.setFontSize(20);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM', 14, 18);
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(226, 232, 240);
+    doc.text('Human Resources & Payroll Disbursement • Confidential Pay Slip', 14, 26);
+
+    // Document Title (Right)
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('SALARY PAYSLIP', 196, 18, { align: 'right' });
 
     doc.setFontSize(10);
-    doc.setTextColor(100, 116, 139);
-    doc.text(`Disbursement Month: August 2026`, 14, 28);
-    doc.text(`Generated Date: ${new Date().toLocaleDateString()}`, 14, 34);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(191, 219, 254);
+    doc.text(`Employee ID: ${empId}`, 196, 26, { align: 'right' });
 
-    doc.setLineWidth(0.5);
+    // Employee & Payroll Details Box
+    doc.setFillColor(248, 250, 252);
     doc.setDrawColor(226, 232, 240);
-    doc.line(14, 38, 196, 38);
+    doc.roundedRect(14, 44, 182, 38, 2.5, 2.5, 'FD');
 
-    doc.setFontSize(11);
+    // Left Column: Employee Details
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('EMPLOYEE CREDENTIALS:', 19, 52);
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text('Employee Information:', 14, 46);
+    doc.text(empName, 19, 58, { maxWidth: 85 });
 
-    const infoRows = [
-      ['Employee ID', empId, 'Department', dept],
-      ['Full Name', empName, 'Job Title / Role', role],
-      ['Email', user.email || '—', 'Disbursement Status', empPayroll.status || 'Pending']
-    ];
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Department: ${dept}`, 19, 64, { maxWidth: 85 });
+    doc.text(`Designation: ${role}`, 19, 70, { maxWidth: 85 });
 
-    autoTable(doc, {
-      startY: 50,
-      body: infoRows,
-      theme: 'plain',
-      styles: { fontSize: 9, cellPadding: 3 }
-    });
+    // Vertical Divider Line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(108, 48, 108, 78);
 
-    const finalY1 = doc.lastAutoTable.finalY + 8;
-    doc.setFontSize(11);
+    // Right Column: Payroll Meta
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PAYROLL DISBURSEMENT META:', 114, 52);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Disbursement Cycle:', 114, 58);
+    doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text('Salary & Deductions Statement:', 14, finalY1);
+    doc.text('Monthly Payroll Cycle', 155, 58);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Payment Status:', 114, 64);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(5, 150, 105);
+    doc.text(empPayroll.status || 'Processed', 155, 64);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Currency Unit:', 114, 70);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('PKR (Pakistani Rupee)', 155, 70);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Generated Date:', 114, 76);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(new Date().toLocaleDateString('en-GB'), 155, 76);
 
     const salaryRows = [
-      ['Base Monthly Salary', `Rs. ${(empPayroll.baseSalary || 0).toLocaleString()}`],
-      ['Performance Bonus / Allowances', `+Rs. ${(empPayroll.bonus || 0).toLocaleString()}`],
-      ['Tax & Benefit Deductions', `-Rs. ${(empPayroll.taxDeduction || 0).toLocaleString()}`],
-      ['Total Net Salary Disbursed', `Rs. ${(empPayroll.netPay || 0).toLocaleString()}`]
+      ['1', 'Base Monthly Salary Earnings', `Rs. ${(empPayroll.baseSalary || 0).toLocaleString()}`, 'Regular Earnings'],
+      ['2', 'Performance Allowances / Bonus', `+Rs. ${(empPayroll.bonus || 0).toLocaleString()}`, 'Additional Incentives'],
+      ['3', 'Tax Deductions / Withholdings', `-Rs. ${(empPayroll.taxDeduction || 0).toLocaleString()}`, 'Statutory Deductions'],
+      ['4', 'Net Salary Payable Disbursed', `Rs. ${netSalary.toLocaleString()}`, 'Direct Bank Deposit']
     ];
 
     autoTable(doc, {
-      startY: finalY1 + 4,
-      head: [['Component', 'Amount (PKR)']],
+      startY: 88,
+      margin: { left: 14, right: 14 },
+      tableWidth: 182,
+      head: [['#', 'Salary Component', 'Amount (PKR)', 'Remarks / Notes']],
       body: salaryRows,
       theme: 'grid',
-      headStyles: { fillColor: [124, 58, 237] },
-      styles: { fontSize: 9 }
+      headStyles: {
+        fillColor: [30, 58, 138],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5,
+        cellPadding: 4,
+        halign: 'left'
+      },
+      styles: {
+        fontSize: 8.5,
+        cellPadding: 3.5,
+        textColor: [30, 41, 59],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 72, halign: 'left' },
+        2: { cellWidth: 46, halign: 'right', fontStyle: 'bold' },
+        3: { cellWidth: 54, halign: 'left' }
+      }
     });
 
-    doc.save(`Payroll_Slip_${empName.replace(/[^a-zA-Z0-9]/g, '_')}_Aug2026.pdf`);
+    let finalY = doc.lastAutoTable.finalY + 8;
+    if (finalY > 215) {
+      doc.addPage();
+      finalY = 20;
+    }
+
+    // Notes Box (Left, X=14, Width=100)
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, finalY, 100, 36, 2, 2, 'FD');
+
+    doc.setTextColor(30, 58, 138);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.text('HR & PAYROLL NOTES:', 18, finalY + 7);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.setFontSize(8);
+    doc.text('This is a computer-generated salary advice slip. Disbursed directly into the registered employee payroll bank account.', 18, finalY + 14, { maxWidth: 92 });
+
+    // Net Pay Banner (Right, X=118, Width=78)
+    doc.setFillColor(236, 253, 245);
+    doc.setDrawColor(167, 243, 208);
+    doc.roundedRect(118, finalY, 78, 36, 2, 2, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8);
+    doc.setTextColor(6, 95, 70);
+    doc.text('TOTAL NET SALARY DISBURSED:', 122, finalY + 8);
+
+    doc.setFontSize(14);
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Rs. ${netSalary.toLocaleString()}`, 192, finalY + 22, { align: 'right' });
+
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(16, 185, 129);
+    doc.text('✓ Disbursed & Account Credited', 122, finalY + 31);
+
+    // Signature Block
+    const sigY = 252;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+
+    doc.line(14, sigY + 12, 75, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Payroll Department:', 14, sigY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Authorized Finance Manager', 14, sigY + 21);
+
+    doc.line(135, sigY + 12, 196, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Employee Signature:', 135, sigY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Recipient Acknowledgement', 135, sigY + 21);
+
+    // Document Footer Note
+    doc.setDrawColor(241, 245, 249);
+    doc.line(14, 280, 196, 280);
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Generated via Fortline CRM • Confidential Employee Payroll Record • System Generated', 105, 285, { align: 'center' });
+
+    doc.save(`Payroll_Slip_${empName.replace(/[^a-zA-Z0-9]/g, '_')}_Disbursement.pdf`);
   };
 
   const totalGross = payrollList.reduce((sum, emp) => sum + (emp.baseSalary || 0) + (emp.bonus || 0), 0);

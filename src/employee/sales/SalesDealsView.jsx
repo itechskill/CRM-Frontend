@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiRequest } from '../../utils/api';
 import {
   Plus,
@@ -20,8 +20,12 @@ import {
   List,
   Building,
   User,
-  ArrowUpRight
+  ArrowUpRight,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
 
 const STAGE_COLORS = {
@@ -225,6 +229,99 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const stages = ['all', 'Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Won', 'Closed Lost'];
   const pipelineStages = ['Prospecting', 'Qualification', 'Proposal', 'Negotiation', 'Won'];
 
+  // Complete PDF Export with Mathematical Footer Totals
+  const downloadCompleteDealsPDF = () => {
+    const doc = new jsPDF('landscape');
+    const records = deals;
+    const totalFilteredValue = records.reduce((s, d) => s + (Number(d.value) || 0), 0);
+
+    doc.setFillColor(30, 41, 59);
+    doc.rect(0, 0, 297, 24, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM - DEALS & REQUIREMENTS LEDGER REPORT', 14, 15);
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString()} | Total Deals: ${records.length} | Won: ${wonDeals.length} | Active Pipeline: Rs. ${activeValue.toLocaleString()}`, 14, 31);
+
+    const tableData = records.map(d => [
+      d.title || '—',
+      d.clientName || d.company || '—',
+      `Rs. ${Number(d.value || 0).toLocaleString()}`,
+      d.stage || 'Qualification',
+      `${d.probability || getStageProbability(d.stage)}%`,
+      d.closingDate ? new Date(d.closingDate).toLocaleDateString('en-GB') : '—',
+      d.notes ? (d.notes.length > 25 ? d.notes.substring(0, 25) + '...' : d.notes) : '—'
+    ]);
+
+    try {
+      autoTable(doc, {
+        head: [['Deal Title', 'Client / Company', 'Value (PKR)', 'Stage', 'Probability', 'Target Close', 'Notes']],
+        body: tableData,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 2, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: `Rs. ${totalFilteredValue.toLocaleString()}`, styles: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105], fillColor: [241, 245, 249] } },
+          { content: `${records.length} Deals (Won: ${wonDeals.length})`, colSpan: 4, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
+        ]],
+        startY: 36,
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold' },
+        theme: 'grid'
+      });
+
+      doc.save(`Sales_Deals_Report_${new Date().toISOString().substring(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('Deals PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // Complete Excel Export with Summary Footer
+  const downloadCompleteDealsExcel = () => {
+    const records = deals;
+    const totalFilteredValue = records.reduce((s, d) => s + (Number(d.value) || 0), 0);
+
+    const headers = ['Deal Title', 'Client Name', 'Company', 'Contact Person', 'Value (PKR)', 'Stage', 'Probability (%)', 'Closing Date', 'Notes'];
+    const rows = records.map(d => [
+      `"${(d.title || '').replace(/"/g, '""')}"`,
+      `"${(d.clientName || '').replace(/"/g, '""')}"`,
+      `"${(d.company || '').replace(/"/g, '""')}"`,
+      `"${(d.contactPerson || '').replace(/"/g, '""')}"`,
+      Number(d.value || 0),
+      `"${d.stage || ''}"`,
+      Number(d.probability || getStageProbability(d.stage)),
+      `"${d.closingDate ? new Date(d.closingDate).toLocaleDateString() : ''}"`,
+      `"${(d.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const summaryRow = [
+      '"TOTAL"',
+      `"Total Deals: ${records.length}"`,
+      '""',
+      '""',
+      totalFilteredValue,
+      `"Won Deals: ${wonDeals.length}"`,
+      '""',
+      '""',
+      '""'
+    ];
+
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(r => r.join(',')),
+      summaryRow.join(',')
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Sales_Deals_Report_${new Date().toISOString().substring(0, 10)}.csv`;
+    link.click();
+  };
+
   return (
     <div className="sv-container">
       <div className="sv-header">
@@ -232,7 +329,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
           <h2 className="sv-title"><TrendingUp size={20} /> Deals & Requirements</h2>
           <p className="sv-subtitle">Manage customer requirements and move deals through the pipeline to Quotation</p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
           {/* View Mode Switcher */}
           <div style={{
             display: 'inline-flex',
@@ -283,6 +380,12 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
             </button>
           </div>
 
+          <button className="sv-btn-secondary" onClick={downloadCompleteDealsPDF} title="Download Complete Deals (PDF)">
+            <Download size={15} color="#DC2626" /> Export PDF
+          </button>
+          <button className="sv-btn-secondary" onClick={downloadCompleteDealsExcel} title="Download Complete Deals (Excel)">
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
+          </button>
           <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Deal</button>
         </div>
       </div>
@@ -570,6 +673,19 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                 );
               })}
             </tbody>
+            {deals.length > 0 && (
+              <tfoot>
+                <tr style={{ background: '#F8FAFC', fontWeight: 700, borderTop: '2px solid #E2E8F0' }}>
+                  <td colSpan={2} style={{ textAlign: 'right', padding: '12px', color: '#475569' }}>TOTAL PIPELINE VALUE:</td>
+                  <td style={{ color: '#059669', padding: '12px', fontWeight: 800 }}>
+                    Rs. {deals.reduce((s, d) => s + (Number(d.value) || 0), 0).toLocaleString()}
+                  </td>
+                  <td colSpan={4} style={{ color: '#64748B', padding: '12px', fontSize: '0.85rem' }}>
+                    {deals.length} Total Deals (Won: {wonDeals.length}, Active Pipeline: Rs. {activeValue.toLocaleString()})
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}
