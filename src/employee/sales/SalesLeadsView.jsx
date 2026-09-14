@@ -1,6 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiRequest } from '../../utils/api';
-import { Plus, Search, Edit2, Users, X, Save, Eye, Trash2, Mail, Phone, DollarSign, Tag, FileText, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, Edit2, Users, X, Save, Eye, Trash2, Mail, Phone, DollarSign, Tag, FileText, ArrowRight, CheckCircle2, Download, FileSpreadsheet } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
 
 const STATUS_COLORS = {
@@ -66,6 +68,114 @@ export default function SalesLeadsView({ onNavigateDeals }) {
     fetchLeads();
   }, [fetchLeads]);
 
+  // Derived metrics
+  const totalPipelineValue = useMemo(() => {
+    return leads.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
+  }, [leads]);
+
+  const convertedCount = useMemo(() => {
+    return leads.filter(l => l.status === 'Converted' || l.status === 'Converted to Deal').length;
+  }, [leads]);
+
+  const qualifiedCount = useMemo(() => {
+    return leads.filter(l => l.status === 'Qualified').length;
+  }, [leads]);
+
+  // Complete PDF Export with Summary Footer
+  const downloadCompleteLeadsPDF = () => {
+    const doc = new jsPDF('landscape');
+    const records = leads;
+    const totalFilteredValue = records.reduce((s, l) => s + (Number(l.value) || 0), 0);
+
+    doc.setFillColor(30, 41, 59);
+    doc.rect(0, 0, 297, 24, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM - SALES LEADS REPORT', 14, 15);
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString()} | Total Leads: ${records.length} | Converted: ${convertedCount}`, 14, 31);
+
+    const tableData = records.map(l => [
+      l.name || '—',
+      l.company || '—',
+      l.email || l.phone || '—',
+      l.status || 'New',
+      l.value ? `Rs. ${Number(l.value).toLocaleString()}` : '—',
+      l.source || 'Direct',
+      l.followUpDate ? new Date(l.followUpDate).toLocaleDateString() : '—'
+    ]);
+
+    try {
+      autoTable(doc, {
+        head: [['Lead Name', 'Company', 'Contact Info', 'Status', 'Estimated Value (PKR)', 'Source', 'Follow-up Date']],
+        body: tableData,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: `Rs. ${totalFilteredValue.toLocaleString()}`, styles: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105], fillColor: [241, 245, 249] } },
+          { content: `${records.length} Total Leads`, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
+        ]],
+        startY: 36,
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold' },
+        theme: 'grid'
+      });
+
+      doc.save(`Sales_Leads_Report_${new Date().toISOString().substring(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('Leads PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // Complete Excel Export with Summary Footer
+  const downloadCompleteLeadsExcel = () => {
+    const records = leads;
+    const totalFilteredValue = records.reduce((s, l) => s + (Number(l.value) || 0), 0);
+
+    const headers = ['Lead Name', 'Company', 'Contact Person', 'Email', 'Phone', 'Status', 'Estimated Value (PKR)', 'Source', 'Follow-up Date', 'Notes'];
+    const rows = records.map(l => [
+      `"${(l.name || '').replace(/"/g, '""')}"`,
+      `"${(l.company || '').replace(/"/g, '""')}"`,
+      `"${(l.contactPerson || '').replace(/"/g, '""')}"`,
+      `"${(l.email || '').replace(/"/g, '""')}"`,
+      `"${(l.phone || '').replace(/"/g, '""')}"`,
+      `"${l.status || 'New'}"`,
+      Number(l.value || 0),
+      `"${l.source || 'Direct'}"`,
+      `"${l.followUpDate ? new Date(l.followUpDate).toLocaleDateString() : ''}"`,
+      `"${(l.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const summaryRow = [
+      '"TOTAL"',
+      `"Total Leads: ${records.length}"`,
+      '""',
+      '""',
+      '""',
+      `"Converted: ${convertedCount}"`,
+      totalFilteredValue,
+      '""',
+      '""',
+      '""'
+    ];
+
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(r => r.join(',')),
+      summaryRow.join(',')
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Sales_Leads_Report_${new Date().toISOString().substring(0, 10)}.csv`;
+    link.click();
+  };
+
   const openCreate = () => {
     setForm(EMPTY_FORM);
     setEditLead(null);
@@ -103,7 +213,7 @@ export default function SalesLeadsView({ onNavigateDeals }) {
     try {
       const payload = {
         ...form,
-        value: form.value ? Number(form.value) : 0,
+        value: Number(form.value) || 0,
         followUpDate: form.followUpDate || null
       };
       const url = editLead ? `/api/sales-employee/leads/${editLead._id}` : '/api/sales-employee/leads';
@@ -111,6 +221,8 @@ export default function SalesLeadsView({ onNavigateDeals }) {
       const { response, data } = await apiRequest(url, { method, body: JSON.stringify(payload) });
       if (response.ok && data.success) {
         setShowModal(false);
+        setFeedback(editLead ? `Lead "${form.name}" updated.` : `Lead "${form.name}" created.`);
+        setTimeout(() => setFeedback(''), 3000);
         fetchLeads();
       } else {
         setError(data.message || 'Failed to save lead.');
@@ -119,46 +231,6 @@ export default function SalesLeadsView({ onNavigateDeals }) {
       setError('Server error.');
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleConvertToDeal = async (lead) => {
-    setConverting(true);
-    try {
-      // 1. Create a deal in the sales employee pipeline
-      const dealPayload = {
-        title: `Deal - ${lead.company || lead.name}`,
-        clientName: lead.name,
-        company: lead.company || '',
-        contactPerson: lead.contactPerson || lead.name,
-        value: lead.value ? Number(lead.value) : 0,
-        stage: 'Prospecting',
-        probability: 60,
-        requirements: lead.requirements || '',
-        notes: `Converted from Lead: ${lead.name}. Source: ${lead.source || 'Direct'}. ${lead.notes || ''}`
-      };
-      const { response: dRes, data: dData } = await apiRequest('/api/sales-employee/deals', {
-        method: 'POST',
-        body: JSON.stringify(dealPayload)
-      });
-
-      if (dRes.ok && dData.success) {
-        // 2. Mark lead status as Converted to Deal
-        await apiRequest(`/api/sales-employee/leads/${lead._id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ status: 'Converted to Deal' })
-        });
-        setFeedback(`Lead "${lead.name}" successfully converted to Deal!`);
-        setViewLead(null);
-        fetchLeads();
-        setTimeout(() => setFeedback(''), 4000);
-      } else {
-        setFeedback(dData.message || 'Failed to convert lead.');
-      }
-    } catch (e) {
-      setFeedback('Error converting lead to deal.');
-    } finally {
-      setConverting(false);
     }
   };
 
@@ -173,12 +245,47 @@ export default function SalesLeadsView({ onNavigateDeals }) {
         fetchLeads();
         setTimeout(() => setFeedback(''), 3000);
       } else {
-        setFeedback(data.message || 'Failed to delete.');
+        setFeedback(data.message || 'Failed to delete lead.');
       }
     } catch (e) {
       setFeedback('Server error.');
     } finally {
       setDeleting(false);
+    }
+  };
+
+  const handleConvertToDeal = async (lead) => {
+    if (!window.confirm(`Convert lead "${lead.name}" to a Sales Deal?`)) return;
+    try {
+      const dealPayload = {
+        title: `${lead.name} - Deal`,
+        company: lead.company,
+        clientName: lead.name,
+        contactPerson: lead.contactPerson || lead.name,
+        email: lead.email,
+        phone: lead.phone,
+        value: Number(lead.value) || 0,
+        stage: 'Qualification',
+        notes: `Converted from Lead. ${lead.notes || ''}`.trim()
+      };
+      const { response, data } = await apiRequest('/api/sales-employee/deals', {
+        method: 'POST',
+        body: JSON.stringify(dealPayload)
+      });
+      if (response.ok && data.success) {
+        // Update lead status
+        await apiRequest(`/api/sales-employee/leads/${lead._id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ status: 'Converted to Deal' })
+        });
+        setFeedback(`Lead "${lead.name}" converted to Deal!`);
+        setTimeout(() => setFeedback(''), 3000);
+        fetchLeads();
+      } else {
+        setFeedback(data.message || 'Failed to convert.');
+      }
+    } catch (e) {
+      setFeedback('Server error.');
     }
   };
 
@@ -191,7 +298,15 @@ export default function SalesLeadsView({ onNavigateDeals }) {
           <h2 className="sv-title"><Users size={20} /> My Leads</h2>
           <p className="sv-subtitle">Capture and qualify prospects, then convert to Deals</p>
         </div>
-        <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Lead</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button className="sv-btn-secondary" onClick={downloadCompleteLeadsPDF} title="Download Complete Leads Report (PDF)">
+            <Download size={15} color="#DC2626" /> Export PDF
+          </button>
+          <button className="sv-btn-secondary" onClick={downloadCompleteLeadsExcel} title="Download Complete Leads Report (Excel)">
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
+          </button>
+          <button className="sv-btn-primary" onClick={openCreate}><Plus size={16} /> New Lead</button>
+        </div>
       </div>
 
       {feedback && (
@@ -199,6 +314,26 @@ export default function SalesLeadsView({ onNavigateDeals }) {
           <CheckCircle2 size={16} color="#059669" /> {feedback}
         </div>
       )}
+
+      {/* KPI Cards */}
+      <div className="sv-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Pipeline Value</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>Rs. {totalPipelineValue.toLocaleString()}</div>
+        </div>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Leads</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>{leads.length}</div>
+        </div>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Converted to Deals</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#F59E0B', marginTop: '4px' }}>{convertedCount}</div>
+        </div>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Qualified Prospects</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>{qualifiedCount}</div>
+        </div>
+      </div>
 
       <div className="sv-filters">
         <div className="sv-search-box">
@@ -266,6 +401,19 @@ export default function SalesLeadsView({ onNavigateDeals }) {
                 </tr>
               ))}
             </tbody>
+            {leads.length > 0 && (
+              <tfoot>
+                <tr style={{ background: '#F8FAFC', fontWeight: 700, borderTop: '2px solid #E2E8F0' }}>
+                  <td colSpan={4} style={{ textAlign: 'right', padding: '12px', color: '#475569' }}>TOTAL PIPELINE VALUE:</td>
+                  <td style={{ color: '#059669', padding: '12px' }}>
+                    Rs. {leads.reduce((acc, l) => acc + (Number(l.value) || 0), 0).toLocaleString()}
+                  </td>
+                  <td colSpan={2} style={{ color: '#64748B', padding: '12px', fontSize: '0.85rem' }}>
+                    {leads.length} Leads
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}

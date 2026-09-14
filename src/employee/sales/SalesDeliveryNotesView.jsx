@@ -26,7 +26,8 @@ import {
   ShoppingCart,
   Send,
   Download,
-  AlertTriangle
+  AlertTriangle,
+  FileSpreadsheet
 } from 'lucide-react';
 import './SalesViews.css';
 
@@ -431,35 +432,97 @@ export default function SalesDeliveryNotesView() {
 
   // ── 8. DOWNLOAD DELIVERY SLIP (PDF) ──
   const handleDownloadPDF = (note) => {
-    const doc = new jsPDF();
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const ref = note.deliveryNumber || note.deliveryNoteNumber || 'DN-0001';
 
-    doc.setFillColor(37, 99, 235);
-    doc.rect(0, 0, 210, 24, 'F');
+    // Primary Brand Header Banner
+    doc.setFillColor(30, 58, 138); // Deep Navy #1E3A8A
+    doc.rect(0, 0, 210, 36, 'F');
+    doc.setFillColor(37, 99, 235); // Blue Accent
+    doc.rect(0, 36, 210, 2, 'F');
+
+    // Brand Title (Left)
+    doc.setFontSize(20);
     doc.setTextColor(255, 255, 255);
-    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text('FORTLINE LOGISTICS & WAREHOUSE', 14, 15);
-    doc.setFontSize(10);
-    doc.text('OFFICIAL DELIVERY NOTE / DISPATCH SLIP', 135, 15);
+    doc.text('FORTLINE CRM', 14, 18);
 
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Delivery Note: ${ref}`, 14, 34);
-
-    doc.setFontSize(9);
+    doc.setFontSize(9.5);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Dispatch Date: ${note.scheduledDate ? new Date(note.scheduledDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}`, 14, 40);
-    doc.text(`Delivery Deadline: ${note.deadline ? new Date(note.deadline).toLocaleDateString('en-GB') : (note.scheduledDate ? new Date(new Date(note.scheduledDate).getTime() + 3*86400000).toLocaleDateString('en-GB') : '—')} (2-3 Days Guaranteed)`, 14, 46);
-    doc.text(`Source Sales Order: ${note.salesOrderNumber || note.sourceDocument || 'Direct'}`, 14, 52);
-    doc.text(`Tracking Number: ${note.trackingNumber || 'TRK-LOGISTICS'}`, 14, 58);
-    doc.text(`Carrier: ${note.carrier || 'Internal Fleet'}`, 14, 64);
+    doc.setTextColor(226, 232, 240);
+    doc.text('Logistics, Warehouse & Fulfillment Operations', 14, 26);
 
-    doc.text(`Customer / Consignee: ${note.clientName || note.recipientName || '—'}`, 110, 34);
-    doc.text(`Recipient Contact: ${note.recipientPhone || '—'}`, 110, 40);
-    doc.text(`Delivery Address: ${note.deliveryAddress || '—'}`, 110, 46);
-    doc.text(`Status: ${note.status || 'Done'}`, 110, 52);
+    // Document Title (Right)
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('DELIVERY NOTE', 196, 18, { align: 'right' });
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(191, 219, 254);
+    doc.text(`Slip Ref: ${ref}`, 196, 26, { align: 'right' });
+
+    // Customer & Logistics Details Container Box
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.roundedRect(14, 44, 182, 38, 2.5, 2.5, 'FD');
+
+    // Left Column: Customer Details
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RECIPIENT & DELIVERY DETAILS:', 19, 52);
+
+    doc.setFontSize(9.5);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(note.clientName || note.recipientName || 'Valued Consignee', 19, 58, { maxWidth: 85 });
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Recipient Contact: ${note.recipientPhone || '—'}`, 19, 64, { maxWidth: 85 });
+    doc.text(`Delivery Location: ${note.deliveryAddress || 'Standard Warehouse Dispatch'}`, 19, 70, { maxWidth: 85 });
+
+    // Vertical Divider Line
+    doc.setDrawColor(226, 232, 240);
+    doc.line(108, 48, 108, 78);
+
+    // Right Column: Logistics Meta
+    doc.setTextColor(30, 58, 138);
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'bold');
+    doc.text('DISPATCH & SHIPMENT METADATA:', 114, 52);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Source Order #:', 114, 58);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${note.salesOrderNumber || note.sourceDocument || 'Direct'}`, 155, 58);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Tracking Code:', 114, 64);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${note.trackingNumber || 'TRK-LOGISTICS'}`, 155, 64);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Carrier / Fleet:', 114, 70);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${note.carrier || 'Internal Fleet'}`, 155, 70);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(71, 85, 105);
+    doc.text('Dispatch Date:', 114, 76);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`${note.scheduledDate ? new Date(note.scheduledDate).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}`, 155, 76);
 
     const tableRows = (note.items || []).map((it, idx) => [
       idx + 1,
@@ -471,31 +534,208 @@ export default function SalesDeliveryNotesView() {
     ]);
 
     autoTable(doc, {
-      startY: 70,
-      head: [['#', 'Item Description', 'Demand Qty', 'Dispatched Qty', 'Unit', 'Stock Status']],
+      startY: 88,
+      margin: { left: 14, right: 14 },
+      tableWidth: 182,
+      head: [['#', 'Item Description & Scope', 'Ordered Qty', 'Delivered Qty', 'Unit', 'Stock Status']],
       body: tableRows.length ? tableRows : [['1', 'Standard Package Items', '1', '1', 'pcs', 'In Stock']],
       theme: 'grid',
-      headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center' },
-      styles: { fontSize: 8.5, cellPadding: 4 },
+      headStyles: {
+        fillColor: [30, 58, 138],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5,
+        cellPadding: 4,
+        halign: 'left'
+      },
+      styles: {
+        fontSize: 8.5,
+        cellPadding: 3.5,
+        textColor: [30, 41, 59],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.2
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
       columnStyles: {
         0: { halign: 'center', cellWidth: 10 },
-        1: { halign: 'left' },
-        2: { halign: 'center', cellWidth: 24 },
-        3: { halign: 'center', cellWidth: 26 },
+        1: { halign: 'left', cellWidth: 80 },
+        2: { halign: 'center', cellWidth: 23 },
+        3: { halign: 'center', cellWidth: 23 },
         4: { halign: 'center', cellWidth: 20 },
         5: { halign: 'center', cellWidth: 26 }
       }
     });
 
-    const finalY = doc.lastAutoTable.finalY + 20;
-    doc.setDrawColor(203, 213, 225);
-    doc.line(14, finalY + 15, 75, finalY + 15);
-    doc.text('Dispatched By (Warehouse)', 14, finalY + 20);
+    let finalY = doc.lastAutoTable.finalY + 8;
+    if (finalY > 215) {
+      doc.addPage();
+      finalY = 20;
+    }
 
-    doc.line(135, finalY + 15, 195, finalY + 15);
-    doc.text('Received & Acknowledged By', 135, finalY + 20);
+    // Notes Box
+    if (note.notes) {
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(14, finalY, 182, 22, 2, 2, 'FD');
+      doc.setTextColor(30, 58, 138);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(8.5);
+      doc.text('DISPATCH & SPECIAL HANDLING INSTRUCTIONS:', 18, finalY + 7);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(71, 85, 105);
+      doc.setFontSize(8);
+      doc.text(note.notes, 18, finalY + 14, { maxWidth: 174 });
+      finalY += 28;
+    }
+
+    // Signatures
+    const sigY = 252;
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.3);
+
+    doc.line(14, sigY + 12, 75, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Dispatched By:', 14, sigY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Warehouse Logistics Department', 14, sigY + 21);
+
+    doc.line(135, sigY + 12, 196, sigY + 12);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text('Received & Verified By:', 135, sigY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(100, 116, 139);
+    doc.text('Customer Consignee Signature & Stamp', 135, sigY + 21);
+
+    // Document Footer Note
+    doc.setDrawColor(241, 245, 249);
+    doc.line(14, 280, 196, 280);
+    doc.setFontSize(7.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Generated via Fortline CRM • Official Delivery Dispatch Note • System Generated', 105, 285, { align: 'center' });
 
     doc.save(`DeliveryNote_${ref}.pdf`);
+  };
+
+  // ── COMPLETE DELIVERY NOTES LEDGER EXPORT (PDF) ──
+  const downloadCompleteDeliveryNotesPDF = () => {
+    const dataset = filteredNotes.length > 0 ? filteredNotes : notes;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const nowStr = new Date().toLocaleDateString('en-GB');
+
+    doc.setFillColor(15, 23, 42); // Navy
+    doc.rect(0, 0, 297, 24, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — WAREHOUSE DELIVERY & SHIPMENTS LEDGER', 14, 12);
+
+    const totalPieces = dataset.reduce((sum, n) => {
+      const pcs = (n.items || []).reduce((acc, it) => acc + (Number(it.quantity || it.demand) || 1), 0);
+      return sum + pcs;
+    }, 0);
+
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(148, 163, 184);
+    doc.text(`Generated: ${nowStr} | Total Dispatches: ${dataset.length} | Total Units / Quantity: ${totalPieces} pcs`, 14, 19);
+
+    const rows = dataset.map((n, idx) => {
+      const pcs = (n.items || []).reduce((acc, it) => acc + (Number(it.quantity || it.demand) || 1), 0);
+      return [
+        idx + 1,
+        n.deliveryNumber || n.deliveryNoteNumber || '—',
+        n.clientName || n.recipientName || '—',
+        n.salesOrderNumber || n.sourceDocument || 'Direct',
+        n.carrier || 'Internal Logistics',
+        n.trackingNumber || '—',
+        n.scheduledDate ? new Date(n.scheduledDate).toLocaleDateString('en-GB') : '—',
+        n.deadline ? new Date(n.deadline).toLocaleDateString('en-GB') : '—',
+        n.status || 'Ready',
+        `${pcs} pcs`
+      ];
+    });
+
+    try {
+      autoTable(doc, {
+        startY: 28,
+        head: [['#', 'Delivery #', 'Customer / Consignee', 'Linked SO #', 'Carrier', 'Tracking #', 'Dispatch Date', 'Deadline', 'Status', 'Total Quantity']],
+        body: rows,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 9, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249], textColor: [15, 23, 42] } },
+          { content: `${totalPieces} pcs`, styles: { halign: 'left', fontStyle: 'bold', fillColor: [236, 253, 245], textColor: [4, 120, 87] } }
+        ]],
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235], textColor: 255, fontStyle: 'bold', fontSize: 8.5 },
+        styles: { fontSize: 8, cellPadding: 3, textColor: [30, 41, 59] },
+        alternateRowStyles: { fillColor: [248, 250, 252] },
+        margin: { left: 14, right: 14 }
+      });
+
+      doc.save(`Delivery_Notes_Ledger_${new Date().toISOString().split('T')[0]}.pdf`);
+    } catch (err) {
+      console.error('Delivery notes PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // ── COMPLETE DELIVERY NOTES LEDGER EXPORT (EXCEL / CSV) ──
+  const downloadCompleteDeliveryNotesExcel = () => {
+    const dataset = filteredNotes.length > 0 ? filteredNotes : notes;
+    const totalPieces = dataset.reduce((sum, n) => {
+      const pcs = (n.items || []).reduce((acc, it) => acc + (Number(it.quantity || it.demand) || 1), 0);
+      return sum + pcs;
+    }, 0);
+
+    const headers = ['#', 'Delivery Number', 'Customer / Recipient', 'Linked Sales Order #', 'Carrier / Transporter', 'Tracking #', 'Scheduled Dispatch Date', 'Delivery Deadline', 'Status', 'Total Pieces (Qty)', 'Delivery Address', 'Notes'];
+    const rows = dataset.map((n, idx) => {
+      const pcs = (n.items || []).reduce((acc, it) => acc + (Number(it.quantity || it.demand) || 1), 0);
+      return [
+        idx + 1,
+        `"${n.deliveryNumber || n.deliveryNoteNumber || ''}"`,
+        `"${(n.clientName || n.recipientName || '').replace(/"/g, '""')}"`,
+        `"${n.salesOrderNumber || n.sourceDocument || ''}"`,
+        `"${n.carrier || 'Internal Logistics'}"`,
+        `"${n.trackingNumber || ''}"`,
+        `"${n.scheduledDate ? new Date(n.scheduledDate).toLocaleDateString('en-GB') : ''}"`,
+        `"${n.deadline ? new Date(n.deadline).toLocaleDateString('en-GB') : ''}"`,
+        `"${n.status || 'Ready'}"`,
+        pcs,
+        `"${(n.shippingAddress || '').replace(/"/g, '""')}"`,
+        `"${(n.notes || '').replace(/"/g, '""')}"`
+      ];
+    });
+
+    rows.push([
+      'TOTAL',
+      `"Total Records: ${dataset.length}"`,
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      '""',
+      totalPieces,
+      '""',
+      '""'
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `Delivery_Notes_Ledger_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
   };
 
   // ── 9. FILTERING & SEARCH ──
@@ -504,7 +744,7 @@ export default function SalesDeliveryNotesView() {
       const q = searchQuery.toLowerCase();
       const matchesSearch =
         (n.deliveryNumber || n.deliveryNoteNumber || '').toLowerCase().includes(q) ||
-        (n.clientName || n.recipientName || '').toLowerCase().includes(q) ||
+        (n.recipientName || n.clientName || '').toLowerCase().includes(q) ||
         (n.sourceDocument || n.salesOrderNumber || '').toLowerCase().includes(q) ||
         (n.trackingNumber || '').toLowerCase().includes(q);
       const matchesFilter = filter === 'all' || (n.status || 'Ready').toLowerCase() === filter.toLowerCase();
@@ -520,9 +760,17 @@ export default function SalesDeliveryNotesView() {
           <h2 className="sv-title"><Truck size={22} color="#2563EB" /> Delivery Notes &amp; Shipments</h2>
           <p className="sv-subtitle">Generate warehouse outbound dispatches, link Sales Orders, and deduct live inventory</p>
         </div>
-        <button className="sv-btn-primary" onClick={handleOpenCreateModal}>
-          <Plus size={16} /> New Delivery Note
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button className="sv-btn-secondary" onClick={downloadCompleteDeliveryNotesPDF} title="Download Complete Delivery Notes (PDF)">
+            <Download size={15} color="#DC2626" /> Export PDF
+          </button>
+          <button className="sv-btn-secondary" onClick={downloadCompleteDeliveryNotesExcel} title="Download Complete Delivery Notes (Excel)">
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
+          </button>
+          <button className="sv-btn-primary" onClick={handleOpenCreateModal}>
+            <Plus size={16} /> New Delivery Note
+          </button>
+        </div>
       </div>
 
       {feedback && (

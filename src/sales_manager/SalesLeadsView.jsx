@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
-import { Search, Filter, Plus, Circle, Edit, Trash2, Eye } from 'lucide-react';
+import { Search, Filter, Plus, Circle, Edit, Trash2, Eye, Download, FileSpreadsheet } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './SalesLeadsView.css';
 
 const priorityColors = {
@@ -109,6 +111,110 @@ export default function SalesLeadsView() {
   const avgDealValue = leadsList.length > 0 ? Math.round(totalPipelineValue / leadsList.length) : 0;
 
   const formatK = (num) => `Rs. ${Math.round(num / 1000)}k`;
+
+  // Complete PDF Export with Mathematical Footer Totals
+  const downloadCompleteLeadsPDF = () => {
+    const doc = new jsPDF('landscape');
+    const records = filteredLeads;
+    const totalFilteredVal = records.reduce((s, l) => {
+      const raw = typeof l.value === 'string' ? l.value.replace(/[^0-9.]/g, '') : String(l.value || 0);
+      return s + (Number(raw) || 0);
+    }, 0);
+
+    doc.setFillColor(30, 41, 59);
+    doc.rect(0, 0, 297, 24, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM - SALES LEADS REPORT (MANAGER LEDGER)', 14, 15);
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString()} | Total Leads: ${records.length} | Status Filter: ${statusFilter}`, 14, 31);
+
+    const tableData = records.map(l => {
+      const raw = typeof l.value === 'string' ? l.value.replace(/[^0-9.]/g, '') : String(l.value || 0);
+      return [
+        l.name || '—',
+        l.company || '—',
+        l.source || '—',
+        l.priority || 'Medium',
+        l.status || 'New',
+        `Rs. ${Number(raw || 0).toLocaleString()}`,
+        l.rep || 'Sales Team',
+        l.date || '—'
+      ];
+    });
+
+    try {
+      autoTable(doc, {
+        head: [['Lead Name', 'Company', 'Source', 'Priority', 'Status', 'Deal Value (PKR)', 'Assigned Rep', 'Date Added']],
+        body: tableData,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: `Rs. ${totalFilteredVal.toLocaleString()}`, styles: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105], fillColor: [241, 245, 249] } },
+          { content: `${records.length} Total Leads`, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
+        ]],
+        startY: 36,
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold' },
+        theme: 'grid'
+      });
+
+      doc.save(`Sales_Manager_Leads_Report_${new Date().toISOString().substring(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('Manager leads PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // Complete Excel Export with Summary Footer
+  const downloadCompleteLeadsExcel = () => {
+    const records = filteredLeads;
+    const totalFilteredVal = records.reduce((s, l) => {
+      const raw = typeof l.value === 'string' ? l.value.replace(/[^0-9.]/g, '') : String(l.value || 0);
+      return s + (Number(raw) || 0);
+    }, 0);
+
+    const headers = ['Lead Name', 'Company', 'Source', 'Priority', 'Status', 'Deal Value (PKR)', 'Assigned Rep', 'Date Added'];
+    const rows = records.map(l => {
+      const raw = typeof l.value === 'string' ? l.value.replace(/[^0-9.]/g, '') : String(l.value || 0);
+      return [
+        `"${(l.name || '').replace(/"/g, '""')}"`,
+        `"${(l.company || '').replace(/"/g, '""')}"`,
+        `"${(l.source || '').replace(/"/g, '""')}"`,
+        `"${l.priority || 'Medium'}"`,
+        `"${l.status || 'New'}"`,
+        Number(raw || 0),
+        `"${(l.rep || 'Sales Team').replace(/"/g, '""')}"`,
+        `"${l.date || ''}"`
+      ];
+    });
+
+    const summaryRow = [
+      '"TOTAL"',
+      `"Total Records: ${records.length}"`,
+      '""',
+      '""',
+      '""',
+      totalFilteredVal,
+      '""',
+      '""'
+    ];
+
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(r => r.join(',')),
+      summaryRow.join(',')
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Sales_Manager_Leads_Report_${new Date().toISOString().substring(0, 10)}.csv`;
+    link.click();
+  };
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingLead, setEditingLead] = useState(null);
@@ -231,10 +337,14 @@ export default function SalesLeadsView() {
           <h1>Lead Management</h1>
           <p>{leadsList.length} total leads · {filteredLeads.length} showing</p>
         </div>
-        <div className="leads-header-actions">
-          <button className="btn-filter">
-            <Filter size={16} />
-            Filter
+        <div className="leads-header-actions" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button className="btn-filter" onClick={downloadCompleteLeadsPDF} title="Download Complete Leads Report (PDF)">
+            <Download size={15} color="#DC2626" />
+            Export PDF
+          </button>
+          <button className="btn-filter" onClick={downloadCompleteLeadsExcel} title="Download Complete Leads Report (Excel)">
+            <FileSpreadsheet size={15} color="#059669" />
+            Export Excel
           </button>
           <button className="btn-add-lead" onClick={() => setIsAddModalOpen(true)}>
             <Plus size={18} />
@@ -386,6 +496,22 @@ export default function SalesLeadsView() {
               );
             })}
           </tbody>
+          {filteredLeads.length > 0 && (
+            <tfoot>
+              <tr style={{ background: '#F8FAFC', fontWeight: 700, borderTop: '2px solid #E2E8F0' }}>
+                <td colSpan={5} style={{ textAlign: 'right', padding: '12px', color: '#475569' }}>TOTAL PIPELINE VALUE:</td>
+                <td style={{ color: '#059669', padding: '12px', fontWeight: 800 }}>
+                  Rs. {filteredLeads.reduce((s, l) => {
+                    const raw = typeof l.value === 'string' ? l.value.replace(/[^0-9.]/g, '') : String(l.value || 0);
+                    return s + (Number(raw) || 0);
+                  }, 0).toLocaleString()}
+                </td>
+                <td colSpan={3} style={{ color: '#64748B', padding: '12px', fontSize: '0.85rem' }}>
+                  {filteredLeads.length} Leads
+                </td>
+              </tr>
+            </tfoot>
+          )}
         </table>
       </div>
 

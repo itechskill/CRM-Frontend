@@ -18,8 +18,12 @@ import {
   CheckCircle2,
   Building,
   Package,
-  FileCheck
+  FileCheck,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
 
 const STATUS_COLORS = {
@@ -117,6 +121,107 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       return matchesType && matchesSearch;
     });
   }, [productFiles, typeFilter, searchTerm]);
+
+  // Derived metrics
+  const blueFilesCount = useMemo(() => productFiles.filter(f => f.fileType === 'Blue').length, [productFiles]);
+  const greenFilesCount = useMemo(() => productFiles.filter(f => f.fileType === 'Green').length, [productFiles]);
+  const totalProductsCount = useMemo(() => {
+    return productFiles.reduce((sum, pf) => sum + (pf.products?.length || 0), 0);
+  }, [productFiles]);
+
+  // Complete PDF Export with Mathematical Footer Totals
+  const downloadCompleteProductFilesPDF = () => {
+    const doc = new jsPDF('landscape');
+    const records = filteredFiles;
+    const totalFilteredItems = records.reduce((s, pf) => s + (pf.products?.length || 0), 0);
+
+    doc.setFillColor(30, 41, 59);
+    doc.rect(0, 0, 297, 24, 'F');
+    doc.setFontSize(14);
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM - PRODUCT FILES LEDGER REPORT (BLUE & GREEN)', 14, 15);
+
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Generated: ${new Date().toLocaleString()} | Total Files: ${records.length} | Blue: ${blueFilesCount} | Green: ${greenFilesCount}`, 14, 31);
+
+    const tableData = records.map(pf => [
+      pf.fileNumber || '—',
+      `${pf.fileType} File`,
+      pf.customerName || '—',
+      pf.customerPONumber || '—',
+      pf.quotationNumber || '—',
+      pf.salesOrderNumber || '—',
+      `${pf.products?.length || 0} items`,
+      pf.status || 'Active'
+    ]);
+
+    try {
+      autoTable(doc, {
+        head: [['File #', 'Type', 'Customer Name', 'Customer PO #', 'Quotation Ref', 'Sales Order #', 'Items Count', 'Status']],
+        body: tableData,
+        foot: [[
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: `${totalFilteredItems} Items`, styles: { halign: 'center', fontStyle: 'bold', textColor: [5, 150, 105], fillColor: [241, 245, 249] } },
+          { content: `${records.length} Files`, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
+        ]],
+        startY: 36,
+        styles: { fontSize: 8, cellPadding: 3 },
+        headStyles: { fillColor: [51, 65, 85], textColor: 255, fontStyle: 'bold' },
+        theme: 'grid'
+      });
+
+      doc.save(`Product_Files_Ledger_${new Date().toISOString().substring(0, 10)}.pdf`);
+    } catch (err) {
+      console.error('Product Files PDF export error:', err);
+      alert('Failed to generate PDF. Please try again.');
+    }
+  };
+
+  // Complete Excel Export with Summary Footer
+  const downloadCompleteProductFilesExcel = () => {
+    const records = filteredFiles;
+    const totalFilteredItems = records.reduce((s, pf) => s + (pf.products?.length || 0), 0);
+
+    const headers = ['File Number', 'File Type', 'Customer Name', 'Customer PO #', 'Quotation Ref', 'Sales Order #', 'Items Count', 'Status', 'Notes'];
+    const rows = records.map(pf => [
+      `"${pf.fileNumber || ''}"`,
+      `"${pf.fileType || ''}"`,
+      `"${(pf.customerName || '').replace(/"/g, '""')}"`,
+      `"${pf.customerPONumber || ''}"`,
+      `"${pf.quotationNumber || ''}"`,
+      `"${pf.salesOrderNumber || ''}"`,
+      pf.products?.length || 0,
+      `"${pf.status || ''}"`,
+      `"${(pf.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const summaryRow = [
+      '"TOTAL"',
+      `"Total Files: ${records.length}"`,
+      '""',
+      '""',
+      '""',
+      '""',
+      totalFilteredItems,
+      '""',
+      '""'
+    ];
+
+    const csvContent = '\uFEFF' + [
+      headers.join(','),
+      ...rows.map(r => r.join(',')),
+      summaryRow.join(',')
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `Product_Files_Ledger_${new Date().toISOString().substring(0, 10)}.csv`;
+    link.click();
+  };
 
   const openCreate = (fileType = 'Blue') => {
     const defaultNum = `${fileType === 'Blue' ? 'BF' : 'GF'}-${String(productFiles.length + 1).padStart(4, '0')}`;
@@ -353,7 +458,13 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
           <h2 className="sv-title"><FolderPlus size={22} color="#2563EB" /> Product Files (Blue & Green)</h2>
           <p className="sv-subtitle">Job folders created per Customer PO to route through sales order, stock check, delivery, and billing</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
+          <button className="sv-btn-secondary" onClick={downloadCompleteProductFilesPDF} title="Download Complete Product Files (PDF)">
+            <Download size={15} color="#DC2626" /> Export PDF
+          </button>
+          <button className="sv-btn-secondary" onClick={downloadCompleteProductFilesExcel} title="Download Complete Product Files (Excel)">
+            <FileSpreadsheet size={15} color="#059669" /> Export Excel
+          </button>
           <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={() => openCreate('Blue')}>
             <Plus size={16} /> New Blue File
           </button>
@@ -364,10 +475,30 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       </div>
 
       {feedback && (
-        <div style={{ background: '#ECFDF5', color: '#065F46', padding: '10px 16px', borderRadius: '8px', border: '1px solid #A7F3D0', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div style={{ background: '#ECFDF5', color: '#065F46', padding: '10px 16px', borderRadius: '8px', border: '1px solid #A7F3D0', fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '14px' }}>
           <CheckCircle2 size={16} color="#059669" /> {feedback}
         </div>
       )}
+
+      {/* KPI Cards */}
+      <div className="sv-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Product Files</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>{productFiles.length}</div>
+        </div>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Blue Files (Regular)</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563EB', marginTop: '4px' }}>{blueFilesCount}</div>
+        </div>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Green Files (Special)</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>{greenFilesCount}</div>
+        </div>
+        <div className="sv-kpi-card" style={{ background: '#fff', border: '1px solid #E2E8F0', borderRadius: '12px', padding: '16px' }}>
+          <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Scope Items</div>
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#8B5CF6', marginTop: '4px' }}>{totalProductsCount}</div>
+        </div>
+      </div>
 
       {/* Filter & Search Bar */}
       <div className="sv-filters">
@@ -475,6 +606,19 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                 );
               })}
             </tbody>
+            {filteredFiles.length > 0 && (
+              <tfoot>
+                <tr style={{ background: '#F8FAFC', fontWeight: 700, borderTop: '2px solid #E2E8F0' }}>
+                  <td colSpan={5} style={{ textAlign: 'right', padding: '12px', color: '#475569' }}>TOTAL SCOPE ITEMS:</td>
+                  <td style={{ color: '#2563EB', padding: '12px', fontWeight: 800 }}>
+                    {filteredFiles.reduce((s, pf) => s + (pf.products?.length || 0), 0)} Items
+                  </td>
+                  <td colSpan={3} style={{ color: '#64748B', padding: '12px', fontSize: '0.85rem' }}>
+                    {filteredFiles.length} Product Files ({filteredFiles.filter(f => f.fileType === 'Blue').length} Blue, {filteredFiles.filter(f => f.fileType === 'Green').length} Green)
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       )}

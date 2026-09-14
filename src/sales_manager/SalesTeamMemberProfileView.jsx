@@ -303,8 +303,8 @@ export default function SalesTeamMemberProfileView({ memberId, onBack, initialBr
 
           <div className="stmp-kpi-card">
             <span className="stmp-kpi-lbl">Total Invoices</span>
-            <span className="stmp-kpi-val">{invoices.length}</span>
-            <span className="stmp-kpi-sub">Rs. {invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + (i.amount || 0), 0).toLocaleString()} Settled</span>
+            <span className="stmp-kpi-val">{performance.approvedInvoicesCount != null ? performance.approvedInvoicesCount : invoices.length}</span>
+            <span className="stmp-kpi-sub">Rs. {Number(performance.paidInvoicesAmount != null ? performance.paidInvoicesAmount : invoices.filter(i => i.status === 'Paid').reduce((s, i) => s + (i.amount || 0), 0)).toLocaleString()} Settled</span>
           </div>
 
           <div
@@ -320,7 +320,7 @@ export default function SalesTeamMemberProfileView({ memberId, onBack, initialBr
               Rs. {Number(performance.overdueAmount || 0).toLocaleString()}
             </span>
             <span className="stmp-kpi-sub" style={{ color: performance.overdueAmount > 0 ? '#DC2626' : '#64748B' }}>
-              {performance.overdueAmount > 0 ? 'Past payment/delivery due date' : 'Zero overdue balance'}
+              {performance.overdueAmount > 0 ? 'Past invoice due date' : 'Zero overdue balance'}
             </span>
           </div>
 
@@ -334,7 +334,7 @@ export default function SalesTeamMemberProfileView({ memberId, onBack, initialBr
               <span className="stmp-card-click-hint">View List →</span>
             </div>
             <span className="stmp-kpi-val" style={{ color: '#0284C7' }}>Rs. {Number(performance.receivables || 0).toLocaleString()}</span>
-            <span className="stmp-kpi-sub">Unpaid orders & invoices</span>
+            <span className="stmp-kpi-sub">Unpaid approved invoices</span>
           </div>
 
           <div className="stmp-kpi-card highlight" style={{ gridColumn: 'span 2' }}>
@@ -1271,86 +1271,48 @@ export default function SalesTeamMemberProfileView({ memberId, onBack, initialBr
                   {(() => {
                     // Compute breakdown rows
                     let items = [];
+                    const now = new Date();
                     if (breakdownType === 'overdue') {
                       invoices.forEach(inv => {
-                        const isPastDue = inv.dueDate && new Date(inv.dueDate) < new Date();
+                        const isApproved = ['Approved', 'Sent', 'Partially Paid', 'Overdue'].includes(inv.status);
+                        const isPastDue = inv.status === 'Overdue' || (inv.dueDate && new Date(inv.dueDate) < now);
                         const paid = Number(inv.paidAmount || 0);
                         const total = Number(inv.amount || 0);
-                        const rem = total - paid;
-                        if (inv.status === 'Overdue' || (inv.status !== 'Paid' && isPastDue)) {
+                        const rem = inv.outstandingAmount != null ? Number(inv.outstandingAmount) : (total - paid);
+                        if (isApproved && isPastDue && rem > 0 && inv.status !== 'Paid' && inv.status !== 'Cancelled') {
                           items.push({
                             id: inv._id,
-                            num: inv.invoiceNumber,
-                            type: 'Invoice',
+                            num: inv.invoiceNumber || '—',
+                            type: 'Approved Invoice',
                             customer: inv.clientName || inv.customerName || 'Client',
                             due: inv.dueDate,
                             total,
                             paid,
-                            rem: rem > 0 ? rem : total,
+                            rem,
                             status: inv.status || 'Overdue'
                           });
                         }
                       });
-                      if (items.length === 0) {
-                        orders.forEach(o => {
-                          const isPastDue = o.deliveryDate && new Date(o.deliveryDate) < new Date();
-                          const total = Number(o.netAmount || o.totalAmount || 0);
-                          const paid = (o.paymentStatus === 'Paid' || o.paymentStatus === 'Fully Paid') ? total : (o.paymentStatus === 'Partially Paid' ? Math.round(total / 2) : 0);
-                          const rem = total - paid;
-                          if (rem > 0 && isPastDue) {
-                            items.push({
-                              id: o._id,
-                              num: o.orderNumber,
-                              type: 'Sales Order',
-                              customer: o.clientName || 'Client',
-                              due: o.deliveryDate,
-                              total,
-                              paid,
-                              rem,
-                              status: 'Overdue'
-                            });
-                          }
-                        });
-                      }
                     } else {
                       invoices.forEach(inv => {
+                        const isApproved = ['Approved', 'Sent', 'Partially Paid', 'Overdue'].includes(inv.status);
                         const paid = Number(inv.paidAmount || 0);
                         const total = Number(inv.amount || 0);
-                        const rem = total - paid;
-                        if (inv.status !== 'Paid') {
+                        const rem = inv.outstandingAmount != null ? Number(inv.outstandingAmount) : (total - paid);
+                        if (isApproved && rem > 0 && inv.status !== 'Paid' && inv.status !== 'Cancelled') {
                           items.push({
                             id: inv._id,
-                            num: inv.invoiceNumber,
-                            type: 'Invoice',
+                            num: inv.invoiceNumber || '—',
+                            type: 'Approved Invoice',
                             customer: inv.clientName || inv.customerName || 'Client',
                             due: inv.dueDate,
                             total,
                             paid,
-                            rem: rem > 0 ? rem : total,
-                            status: inv.status || 'Pending'
+                            rem,
+                            status: inv.status || 'Approved'
                           });
                         }
                       });
-                      if (items.length === 0) {
-                        orders.forEach(o => {
-                          const total = Number(o.netAmount || o.totalAmount || 0);
-                          const paid = (o.paymentStatus === 'Paid' || o.paymentStatus === 'Fully Paid') ? total : (o.paymentStatus === 'Partially Paid' ? Math.round(total / 2) : 0);
-                          const rem = total - paid;
-                          if (rem > 0) {
-                            items.push({
-                              id: o._id,
-                              num: o.orderNumber,
-                              type: 'Sales Order',
-                              customer: o.clientName || 'Client',
-                              due: o.deliveryDate,
-                              total,
-                              paid,
-                              rem,
-                              status: o.paymentStatus || 'Pending'
-                            });
-                          }
-                        });
-                      }
                     }
 
                     if (breakdownSearch.trim()) {
