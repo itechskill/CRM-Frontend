@@ -351,9 +351,13 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
 
   // ── WORKFLOW: AUTOMATICALLY CREATE SALES ORDER FROM PRODUCT FILE ──
   const handleTriggerCreateSO = async (pf) => {
+    const linkedPO = customerPOs.find(p => p._id === (pf.customerPOId?._id || pf.customerPOId));
+    const linkedQuote = quotations.find(q => q._id === (pf.quotationId?._id || pf.quotationId));
+    const defaultAmount = linkedPO?.amount || linkedQuote?.netAmount || linkedQuote?.totalAmount || '';
+
     const summary = pf.products && pf.products.length
       ? pf.products.map(p => `${p.quantity}x ${p.name}`).join(', ')
-      : 'Product Items';
+      : (linkedQuote?.productSummary || 'Product Scope');
 
     const items = pf.products && pf.products.length
       ? pf.products.map(p => ({
@@ -362,7 +366,14 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
           unitPrice: 0,
           total: 0
         }))
-      : [{ description: 'Product Items', quantity: 1, unitPrice: 0, total: 0 }];
+      : (linkedQuote?.items && linkedQuote.items.length
+          ? linkedQuote.items.map(it => ({
+              description: it.description || '',
+              quantity: Number(it.quantity) || 1,
+              unitPrice: Number(it.unitPrice) || 0,
+              total: Number(it.total) || 0
+            }))
+          : [{ description: 'Product Items', quantity: 1, unitPrice: 0, total: 0 }]);
 
     setSoPreFillModal({
       productFile: pf,
@@ -370,11 +381,11 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       clientName: pf.customerName,
       fileNo: pf.fileNumber || '',
       fileType: pf.fileType || 'Blue',
-      customerPONumber: pf.customerPONumber || '',
-      customerPOId: pf.customerPOId?._id || pf.customerPOId || null,
-      quotationId: pf.quotationId?._id || pf.quotationId || null,
+      customerPONumber: pf.customerPONumber || linkedPO?.poNumber || '',
+      customerPOId: pf.customerPOId?._id || pf.customerPOId || linkedPO?._id || null,
+      quotationId: pf.quotationId?._id || pf.quotationId || linkedQuote?._id || null,
       productSummary: summary,
-      totalAmount: '',
+      totalAmount: defaultAmount,
       items: items
     });
   };
@@ -393,32 +404,26 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
         customerPONumber: soPreFillModal.customerPONumber,
         customerPOId: soPreFillModal.customerPOId || null,
         quotationId: soPreFillModal.quotationId || null,
-        productFileId: soPreFillModal.productFile._id,
         productSummary: soPreFillModal.productSummary,
+        totalAmount: net,
+        netAmount: net,
         items: soPreFillModal.items.map(item => ({
           ...item,
           unitPrice: net > 0 && soPreFillModal.items.length === 1 ? net : item.unitPrice,
-          total: net > 0 && soPreFillModal.items.length === 1 ? net : (item.quantity * item.unitPrice)
-        })),
-        totalAmount: net,
-        netAmount: net,
-        stockStatus: 'Available',
-        deliveryStatus: 'Not Delivered',
-        invoiceStatus: 'Not Invoiced',
-        paymentStatus: 'Pending',
-        status: 'Sales Order'
+          total: net > 0 && soPreFillModal.items.length === 1 ? net : ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0))
+        }))
       };
 
-      const { response, data } = await apiRequest('/api/sales-employee/orders', {
+      const { response, data } = await apiRequest(`/api/sales-employee/product-files/${soPreFillModal.productFile._id}/convert-to-order`, {
         method: 'POST',
         body: JSON.stringify(payload)
       });
 
       if (response.ok && data.success) {
-        setFeedback(`Sales Order ${data.data?.orderReference || data.data?.orderNumber} created from Product File.`);
+        setFeedback(data.message || `Sales Order ${data.data?.order?.orderReference || data.data?.order?.orderNumber} created! Automatically routed to Finance Department for Overdue verification.`);
         setSoPreFillModal(null);
         fetchFiles();
-        setTimeout(() => setFeedback(''), 3500);
+        setTimeout(() => setFeedback(''), 4500);
       } else {
         alert(data.message || 'Failed to create Sales Order.');
       }
@@ -575,25 +580,31 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <button
-                        onClick={() => handleTriggerCreateSO(pf)}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          background: '#EFF6FF',
-                          border: '1px solid #BFDBFE',
-                          color: '#2563EB',
-                          padding: '5px 10px',
-                          borderRadius: '6px',
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          cursor: 'pointer'
-                        }}
-                        title="Auto pre-fill and create Sales Order"
-                      >
-                        <ShoppingCart size={13} /> → Sales Order
-                      </button>
+                      {pf.status !== 'Completed' && !pf.salesOrderNumber ? (
+                        <button
+                          onClick={() => handleTriggerCreateSO(pf)}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            background: '#EFF6FF',
+                            border: '1px solid #BFDBFE',
+                            color: '#2563EB',
+                            padding: '5px 10px',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                          title="Auto pre-fill and create Sales Order"
+                        >
+                          <ShoppingCart size={13} /> → Sales Order
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <CheckCircle2 size={13} /> Converted {pf.salesOrderNumber ? `(${pf.salesOrderNumber})` : ''}
+                        </span>
+                      )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
@@ -960,9 +971,15 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
 
               <div className="sv-modal-actions">
                 <button className="sv-btn-cancel" onClick={() => setViewFile(null)}>Close</button>
-                <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={() => { setViewFile(null); handleTriggerCreateSO(viewFile); }}>
-                  <ShoppingCart size={14} /> Create Sales Order
-                </button>
+                {viewFile.status !== 'Completed' && !viewFile.salesOrderNumber ? (
+                  <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={() => { setViewFile(null); handleTriggerCreateSO(viewFile); }}>
+                    <ShoppingCart size={14} /> Create Sales Order
+                  </button>
+                ) : (
+                  <span style={{ fontSize: '0.85rem', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0 8px' }}>
+                    <CheckCircle2 size={15} /> Converted to Sales Order {viewFile.salesOrderNumber ? `(${viewFile.salesOrderNumber})` : ''}
+                  </span>
+                )}
                 <button className="sv-btn-primary" onClick={() => { setViewFile(null); openEdit(viewFile); }}>
                   <Edit2 size={14} /> Edit File
                 </button>

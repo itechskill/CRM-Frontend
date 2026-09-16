@@ -28,63 +28,7 @@ const assigneeOptions = [
   { initials: 'TB', name: 'Taylor' },
 ];
 
-const initialDeliverables = [
-  {
-    id: 1,
-    name: 'UI Component Library v2.0',
-    feedback: 'Looks great! Minor color adju...',
-    project: 'Nexus Platform',
-    assignee: 'PP',
-    assigneeName: 'Priya',
-    dueDate: 'Apr 30, 2025',
-    progress: 90,
-    status: 'In Review',
-  },
-  {
-    id: 2,
-    name: 'API Documentation Suite',
-    feedback: null,
-    project: 'DataSync Integration',
-    assignee: 'MJ',
-    assigneeName: 'Marcus',
-    dueDate: 'May 15, 2025',
-    progress: 45,
-    status: 'Pending',
-  },
-  {
-    id: 3,
-    name: 'Beta App Build 1.0',
-    feedback: 'Excellent work! Ready for inte...',
-    project: 'Mobile Commerce',
-    assignee: 'JK',
-    assigneeName: 'Jordan',
-    dueDate: 'Apr 20, 2025',
-    progress: 100,
-    status: 'Approved',
-  },
-  {
-    id: 4,
-    name: 'Security Audit Report',
-    feedback: null,
-    project: 'Cloud Migration',
-    assignee: 'TB',
-    assigneeName: 'Taylor',
-    dueDate: 'May 5, 2025',
-    progress: 20,
-    status: 'Pending',
-  },
-  {
-    id: 5,
-    name: 'Onboarding Flow Prototype',
-    feedback: 'Shipped to production ahead of schedule',
-    project: 'Nexus Platform',
-    assignee: 'SC',
-    assigneeName: 'Sarah',
-    dueDate: 'Apr 10, 2025',
-    progress: 100,
-    status: 'Delivered',
-  },
-];
+const initialDeliverables = [];
 
 function AddDeliverableModal({ onClose, onAddDeliverable }) {
   const [name, setName] = useState('');

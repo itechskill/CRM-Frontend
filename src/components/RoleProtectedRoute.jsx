@@ -15,22 +15,19 @@ export default function RoleProtectedRoute({
 }) {
   const rolesArray = Array.isArray(allowedRoles) ? allowedRoles : [allowedRoles];
 
-  // 1. Admin has system authority across all portals
-  const isAdmin = userRole === 'admin';
-
-  // 2. CEO has executive business access across all portals EXCEPT technical Admin
-  const isCEOAccessingBusinessPortal = userRole === 'ceo' && !rolesArray.includes('admin');
-
-  // 3. Direct role match for departmental roles
+  // 1. Role matches authorized portal list
   const isDirectRoleMatch = userRole && (
     rolesArray.includes(userRole) || 
     (userRole === 'hr' && (rolesArray.includes('hr') || rolesArray.includes('hr_manager'))) ||
     (userRole === 'hr_manager' && (rolesArray.includes('hr') || rolesArray.includes('hr_manager'))) ||
-    (userRole === 'accountant' && (rolesArray.includes('accountant') || rolesArray.includes('finance'))) ||
-    (userRole === 'administration' && rolesArray.includes('administration'))
+    (userRole === 'accountant' && (rolesArray.includes('accountant') || rolesArray.includes('accounts'))) ||
+    (userRole === 'finance' && (rolesArray.includes('finance') || rolesArray.includes('accounts'))) ||
+    (userRole === 'support' && rolesArray.includes('support')) ||
+    (userRole === 'administration' && rolesArray.includes('administration')) ||
+    ((userRole === 'sales_member' || userRole === 'sales_rep' || userRole === 'sales_person') && (rolesArray.includes('employee') || rolesArray.includes('sales_member') || rolesArray.includes('sales_rep') || rolesArray.includes('sales_person')))
   );
 
-  const isAuthorized = isAdmin || isCEOAccessingBusinessPortal || isDirectRoleMatch;
+  const isAuthorized = isDirectRoleMatch;
 
   if (!isAuthorized) {
     return (

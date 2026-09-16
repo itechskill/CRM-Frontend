@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiRequest } from '../../utils/api';
-import { Plus, FileCheck, Edit2, Eye, Trash2, X, Save, Search, Calendar, User, DollarSign, UploadCloud, Link2, Download, FileSpreadsheet } from 'lucide-react';
+import { Plus, FileCheck, Edit2, Eye, Trash2, X, Save, Search, Calendar, User, DollarSign, UploadCloud, Link2, Download, FileSpreadsheet, FolderPlus, CheckCircle2 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
@@ -42,6 +42,13 @@ export default function SalesCustomerPOsView() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [feedback, setFeedback] = useState('');
+
+  // Convert to Product File modal state
+  const [convertModalPO, setConvertModalPO] = useState(null);
+  const [convertFileType, setConvertFileType] = useState('Blue');
+  const [convertFileNumber, setConvertFileNumber] = useState('');
+  const [convertNotes, setConvertNotes] = useState('');
+  const [convertingToFile, setConvertingToFile] = useState(false);
 
   const fetchPOs = useCallback(async () => {
     setLoading(true);
@@ -258,6 +265,48 @@ export default function SalesCustomerPOsView() {
     }
   };
 
+  const handleOpenConvertToFile = (po) => {
+    setConvertModalPO(po);
+    setConvertFileType('Blue');
+    setConvertFileNumber('');
+    setConvertNotes(po.notes || '');
+    setError('');
+  };
+
+  const handleConfirmConvertToFile = async (e) => {
+    e.preventDefault();
+    if (!convertModalPO) return;
+    setConvertingToFile(true);
+    setError('');
+    setFeedback('');
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/customer-pos/${convertModalPO._id}/convert-to-file`, {
+        method: 'POST',
+        body: JSON.stringify({
+          fileType: convertFileType,
+          fileNumber: convertFileNumber,
+          notes: convertNotes
+        })
+      });
+      if (response.ok && data.success) {
+        setFeedback(data.message || `Customer PO successfully converted to ${convertFileType} Product File!`);
+        setCustomerPOs(prev => prev.map(p => p._id === convertModalPO._id ? {
+          ...p,
+          status: 'Processed',
+          productFileId: data.data?.file?._id
+        } : p));
+        setConvertModalPO(null);
+        setTimeout(() => setFeedback(''), 4000);
+      } else {
+        setError(data.message || 'Failed to convert Customer PO to Product File.');
+      }
+    } catch (err) {
+      setError(err.message || 'Server error converting Customer PO to Product File.');
+    } finally {
+      setConvertingToFile(false);
+    }
+  };
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -373,6 +422,31 @@ export default function SalesCustomerPOsView() {
                   </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      {po.status !== 'Processed' ? (
+                        <button
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#2563EB',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '4px 10px',
+                            borderRadius: '5px',
+                            fontSize: '0.72rem',
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => handleOpenConvertToFile(po)}
+                          title="Convert Customer PO to Product File"
+                        >
+                          <FolderPlus size={12} /> Convert to File
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.72rem', color: '#8B5CF6', fontWeight: 600 }}>
+                          Processed
+                        </span>
+                      )}
                       <button className="sv-btn-action-icon" onClick={() => setViewPO(po)} title="View Details"><Eye size={14} /></button>
                       <button className="sv-btn-action-icon" onClick={() => openEdit(po)} title="Edit PO"><Edit2 size={14} /></button>
                       <button className="sv-btn-action-icon" onClick={() => setDeleteTarget(po)} title="Delete PO" style={{ color: '#EF4444' }}><Trash2 size={14} /></button>
@@ -442,6 +516,19 @@ export default function SalesCustomerPOsView() {
 
               <div className="sv-modal-actions">
                 <button className="sv-btn-cancel" onClick={() => setViewPO(null)}>Close</button>
+                {viewPO.status !== 'Processed' && (
+                  <button
+                    className="sv-btn-primary"
+                    style={{ background: '#2563EB' }}
+                    onClick={() => {
+                      const target = viewPO;
+                      setViewPO(null);
+                      handleOpenConvertToFile(target);
+                    }}
+                  >
+                    <FolderPlus size={14} /> Convert to Product File
+                  </button>
+                )}
                 <button className="sv-btn-primary" onClick={() => { setViewPO(null); openEdit(viewPO); }}>
                   <Edit2 size={14} /> Edit PO
                 </button>
@@ -515,6 +602,75 @@ export default function SalesCustomerPOsView() {
                 <button type="button" className="sv-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="sv-btn-primary" disabled={saving}>
                   <Save size={15} /> {saving ? 'Saving...' : 'Save Customer PO'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONVERT CUSTOMER PO TO PRODUCT FILE MODAL */}
+      {convertModalPO && (
+        <div className="sv-modal-overlay" onClick={() => setConvertModalPO(null)}>
+          <div className="sv-modal" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FolderPlus size={20} color="#2563EB" />
+                <h3 style={{ margin: 0 }}>Convert to Product File</h3>
+              </div>
+              <button onClick={() => setConvertModalPO(null)}><X size={18} /></button>
+            </div>
+
+            {error && (
+              <div className="sv-error" style={{ background: '#FEF2F2', color: '#991B1B', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', border: '1px solid #FECACA', marginBottom: '14px' }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmConvertToFile} className="sv-form">
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', marginBottom: '14px' }}>
+                <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>Customer Purchase Order Linkage</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#1E293B', marginTop: '2px' }}>
+                  PO #: {convertModalPO.poNumber} — {convertModalPO.customerName}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#059669', fontWeight: 700, marginTop: '4px' }}>
+                  Amount: Rs. {Number(convertModalPO.amount || 0).toLocaleString()} PKR {convertModalPO.quotationNumber ? `(Quotation: ${convertModalPO.quotationNumber})` : ''}
+                </div>
+              </div>
+
+              <div className="sv-grid-2">
+                <div className="sv-field">
+                  <label>File Type *</label>
+                  <select value={convertFileType} onChange={e => setConvertFileType(e.target.value)}>
+                    <option value="Blue">Blue File (Standard / Routine Scope)</option>
+                    <option value="Green">Green File (Special / Custom Requirements)</option>
+                    <option value="Yellow">Yellow File (Urgent / Express Track)</option>
+                  </select>
+                </div>
+                <div className="sv-field">
+                  <label>File Number</label>
+                  <input
+                    value={convertFileNumber}
+                    onChange={e => setConvertFileNumber(e.target.value)}
+                    placeholder="Auto-generated if empty (e.g. 1016 Green)"
+                  />
+                </div>
+              </div>
+
+              <div className="sv-field">
+                <label>Production / Job Instructions</label>
+                <textarea
+                  rows={3}
+                  value={convertNotes}
+                  onChange={e => setConvertNotes(e.target.value)}
+                  placeholder="Job specifications, routing instructions, special packaging..."
+                />
+              </div>
+
+              <div className="sv-modal-actions">
+                <button type="button" className="sv-btn-cancel" onClick={() => setConvertModalPO(null)}>Cancel</button>
+                <button type="submit" className="sv-btn-primary" style={{ background: '#2563EB' }} disabled={convertingToFile}>
+                  <FolderPlus size={15} /> {convertingToFile ? 'Converting...' : 'Confirm & Move to Product File'}
                 </button>
               </div>
             </form>

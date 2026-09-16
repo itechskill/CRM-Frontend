@@ -27,7 +27,10 @@ import {
   FileSpreadsheet,
   Boxes,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  Send,
+  ShieldCheck,
+  Ban
 } from 'lucide-react';
 import './SalesViews.css';
 
@@ -56,6 +59,11 @@ const PAYMENT_COLORS = {
 
 const STATUS_COLORS = {
   'Sales Order': '#10B981',
+  'Pending Finance Overdue Check': '#D97706',
+  'Sales Order Rejected due to overdue amount': '#DC2626',
+  'Rejected': '#DC2626',
+  'Finance Approved': '#059669',
+  'Sent to Support': '#2563EB',
   'Confirmed': '#3B82F6',
   'Processing': '#8B5CF6',
   'Shipped': '#F59E0B',
@@ -88,7 +96,7 @@ const EMPTY_FORM = {
 export default function SalesOrdersView() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editO, setEditO] = useState(null);
@@ -206,6 +214,24 @@ export default function SalesOrdersView() {
       alert('Error creating Proforma Invoice.');
     } finally {
       setCreatingPI(false);
+    }
+  };
+
+  const handleSendToFinance = async (order) => {
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/orders/${order._id}/send-to-finance`, {
+        method: 'POST',
+        body: JSON.stringify({ notes: 'Order sent to Finance for customer overdue verification.' })
+      });
+      if (response.ok && data.success) {
+        setFeedback(data.message || `Sales Order ${order.orderReference || order.orderNumber} routed to Finance for Overdue verification!`);
+        fetchOrders();
+        setTimeout(() => setFeedback(''), 4000);
+      } else {
+        alert(data.message || 'Failed to send order to Finance.');
+      }
+    } catch (err) {
+      alert('Server error sending order to Finance.');
     }
   };
 
@@ -712,7 +738,13 @@ export default function SalesOrdersView() {
     }
   };
 
-  const statuses = ['all', 'Sales Order', 'Confirmed', 'Processing', 'Delivered', 'Cancelled'];
+  const orderTabs = [
+    { id: 'active', label: 'All Sales Orders' },
+    { id: 'pending_finance', label: 'In Finance Review' },
+    { id: 'finance_approved', label: 'Finance Approved (In Support)' },
+    { id: 'rejected', label: 'Rejected Orders' },
+    { id: 'all', label: 'All Orders (History)' }
+  ];
 
   return (
     <div className="sv-container">
@@ -746,9 +778,9 @@ export default function SalesOrdersView() {
           <input placeholder="Search Order Reference, Customer, Sale Person, Product Summary, File-No#..." value={searchTerm} onChange={e => { setSearchTerm(e.target.value); setCurrentPage(1); }} />
         </div>
         <div className="sv-status-tabs">
-          {statuses.map(s => (
-            <button key={s} className={`sv-tab ${filter === s ? 'active' : ''}`} onClick={() => { setFilter(s); setCurrentPage(1); }}>
-              {s === 'all' ? 'All' : s}
+          {orderTabs.map(t => (
+            <button key={t.id} className={`sv-tab ${filter === t.id ? 'active' : ''}`} onClick={() => { setFilter(t.id); setCurrentPage(1); }}>
+              {t.label}
             </button>
           ))}
         </div>
@@ -774,35 +806,39 @@ export default function SalesOrdersView() {
               </tr>
             </thead>
             <tbody>
-              {paginatedOrders.length === 0 ? (
-                <tr><td colSpan={11} className="sv-empty">No sales orders found matching your search.</td></tr>
+              {filteredOrders.length === 0 ? (
+                <tr>
+                  <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
+                    No sales orders match your selected filters.
+                  </td>
+                </tr>
               ) : paginatedOrders.map(o => {
-                const orderRef = o.orderReference || o.orderNumber || '—';
-                const customer = o.clientName || o.customerName || '—';
-                const salePerson = o.salePerson || o.createdBy?.fullName || 'Sales Rep';
-                const fileNo = o.fileNo || o.fileNumber || '—';
-                const productSummary = o.productSummary || '—';
-                const total = o.totalAmount || o.netAmount || 0;
+                const total = o.netAmount || o.totalAmount || 0;
                 const status = o.status || 'Sales Order';
-                const badgeColor = STATUS_COLORS[status] || '#10B981';
+                const badgeColor = STATUS_COLORS[status] || '#64748B';
+                const dateStr = o.creationDate
+                  ? new Date(o.creationDate).toLocaleDateString('en-GB')
+                  : (o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB') : '—');
+                const productSummary = o.productSummary || (o.items && o.items[0]?.description) || '—';
+                const isSentToSupport = o.workflowStatus && !['Sales Order Created', 'Pending Finance Approval', 'Finance Approved', 'Finance Rejected'].includes(o.workflowStatus);
+                const isBlockedByFinance = o.requiresFinanceApproval && o.workflowStatus !== 'Finance Approved';
 
                 return (
                   <tr key={o._id}>
-                    <td className="sv-name" style={{ fontWeight: 700, color: '#1E293B', whiteSpace: 'nowrap' }}>{orderRef}</td>
-                    <td style={{ whiteSpace: 'nowrap', fontSize: '0.8rem', color: '#64748B' }}>
-                      {o.creationDate ? new Date(o.creationDate).toLocaleDateString('en-GB') : (o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB') : '—')}
+                    <td>
+                      <span className="sv-ref" onClick={() => setViewOrder(o)} title="Click to view details">
+                        {o.orderReference || o.orderNumber || '—'}
+                      </span>
                     </td>
-                    <td style={{ fontWeight: 600, color: '#0F172A' }}>{customer}</td>
-                    <td>{salePerson}</td>
+                    <td style={{ whiteSpace: 'nowrap', color: '#64748B' }}>{dateStr}</td>
+                    <td style={{ fontWeight: 600 }}>{o.clientName}</td>
+                    <td style={{ color: '#475569' }}>{o.salePerson || '—'}</td>
                     <td>
                       {(() => {
-                        const fileNo = o.fileNo || o.fileNumber || '';
-                        const fileType = o.fileType || '';
-                        if (!fileNo && !fileType) return <span style={{ color: '#94A3B8' }}>—</span>;
-                        const combined = `${fileNo} ${fileType}`.toLowerCase();
-                        const isGreen = combined.includes('green');
-                        const color = isGreen ? '#059669' : '#2563EB';
+                        const fileNo = o.fileNo || '';
+                        const isGreen = (o.fileType === 'Green') || (fileNo && fileNo.toLowerCase().includes('green')) || (fileNo && fileNo.startsWith('G'));
                         const bg = isGreen ? '#ECFDF5' : '#EFF6FF';
+                        const color = isGreen ? '#065F46' : '#1E40AF';
                         const border = isGreen ? '#A7F3D0' : '#BFDBFE';
                         const dotColor = isGreen ? '#10B981' : '#3B82F6';
                         const colorName = isGreen ? 'Green File' : 'Blue File';
@@ -824,6 +860,21 @@ export default function SalesOrdersView() {
                       <span className="sv-badge" style={{ background: badgeColor + '18', color: badgeColor, border: `1px solid ${badgeColor}33` }}>
                         {status}
                       </span>
+                      {o.status === 'Pending Finance Overdue Check' && (
+                        <div style={{ marginTop: '4px', fontSize: '0.72rem', color: '#D97706', fontWeight: 700 }}>
+                          ⏳ Dept: Finance (Overdue Check)
+                        </div>
+                      )}
+                      {(o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount' || o.workflowStatus === 'Finance Rejected') && (
+                        <div style={{ marginTop: '4px', fontSize: '0.72rem', color: '#DC2626', fontWeight: 700, background: '#FEF2F2', padding: '3px 6px', borderRadius: '4px', border: '1px solid #FECACA' }}>
+                          ✗ Rejected: {o.financeRejectionReason || o.rejectionReason || 'Overdue balance exists'}
+                        </div>
+                      )}
+                      {(o.workflowStatus === 'Finance Approved' || o.departmentResponsible === 'Support' || isSentToSupport) && (
+                        <div style={{ marginTop: '4px', fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
+                          ✓ Finance Approved → Support Queue
+                        </div>
+                      )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <button
@@ -859,6 +910,28 @@ export default function SalesOrdersView() {
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
+                        <button
+                          className="sv-btn-action-icon"
+                          onClick={() => handleSendToFinance(o)}
+                          disabled={o.departmentResponsible === 'Finance' || o.workflowStatus === 'Finance Approved' || o.departmentResponsible === 'Support'}
+                          title={
+                            o.workflowStatus === 'Finance Approved' || o.departmentResponsible === 'Support'
+                              ? 'Finance Approved (Moved to Support for DN)'
+                              : o.departmentResponsible === 'Finance'
+                                ? 'Awaiting Finance Overdue Approval'
+                                : (o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount' || o.workflowStatus === 'Finance Rejected')
+                                  ? 'Resend to Finance for Overdue Verification'
+                                  : 'Send Order to Finance (for Overdue Verification)'
+                          }
+                          style={{
+                            color: o.departmentResponsible === 'Finance' || o.workflowStatus === 'Finance Approved' ? '#94A3B8' : ((o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount') ? '#DC2626' : '#059669'),
+                            background: o.departmentResponsible === 'Finance' || o.workflowStatus === 'Finance Approved' ? '#F1F5F9' : ((o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount') ? '#FEF2F2' : '#ECFDF5'),
+                            border: (o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount') ? '1px solid #FECACA' : undefined,
+                            fontWeight: 700
+                          }}
+                        >
+                          <ShieldCheck size={14} />
+                        </button>
                         <button
                           className="sv-btn-action-icon"
                           onClick={() => handleOpenProformaModal(o)}
@@ -995,10 +1068,51 @@ export default function SalesOrdersView() {
                 </div>
               )}
 
+              {/* Rejection Alert Banner */}
+              {(viewOrder.status === 'Rejected' || viewOrder.status === 'Sales Order Rejected due to overdue amount' || viewOrder.workflowStatus === 'Finance Rejected') && (
+                <div style={{ background: '#FEF2F2', border: '1px solid #FECACA', borderRadius: '8px', padding: '12px 14px', marginBottom: '16px', display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                  <Ban size={18} color="#DC2626" style={{ marginTop: '2px', flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontWeight: 800, color: '#DC2626', fontSize: '0.88rem' }}>Sales Order Rejected by Finance</div>
+                    <div style={{ fontSize: '0.82rem', color: '#991B1B', marginTop: '2px' }}>
+                      <strong>Reason:</strong> {viewOrder.financeRejectionReason || 'Customer has outstanding overdue balance.'}
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#B91C1C', marginTop: '4px' }}>
+                      Department Responsible: <strong>Sales</strong> — Resolve overdue balance with customer and click "Resend to Finance".
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="sv-modal-actions" style={{ marginTop: '16px' }}>
                 <button className="sv-btn-cancel" onClick={() => setViewOrder(null)}>Close</button>
                 <button className="sv-btn-cancel" style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} onClick={() => handleDownloadSinglePDF(viewOrder)}>
                   <Download size={14} color="#2563EB" /> Download PDF
+                </button>
+                <button
+                  className="sv-btn-primary"
+                  style={{
+                    backgroundColor: (viewOrder.workflowStatus === 'Finance Approved' || viewOrder.departmentResponsible === 'Finance' || viewOrder.departmentResponsible === 'Support')
+                      ? '#94A3B8'
+                      : ((viewOrder.status === 'Rejected' || viewOrder.status === 'Sales Order Rejected due to overdue amount') ? '#DC2626' : '#059669'),
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '6px'
+                  }}
+                  disabled={viewOrder.workflowStatus === 'Finance Approved' || viewOrder.departmentResponsible === 'Finance' || viewOrder.departmentResponsible === 'Support'}
+                  onClick={() => {
+                    handleSendToFinance(viewOrder);
+                    setViewOrder(null);
+                  }}
+                >
+                  <ShieldCheck size={14} />
+                  {viewOrder.workflowStatus === 'Finance Approved' || viewOrder.departmentResponsible === 'Support'
+                    ? 'Finance Approved (In Support Queue)'
+                    : viewOrder.departmentResponsible === 'Finance'
+                      ? 'In Finance Overdue Review'
+                      : (viewOrder.status === 'Rejected' || viewOrder.status === 'Sales Order Rejected due to overdue amount' || viewOrder.workflowStatus === 'Finance Rejected')
+                        ? 'Resend to Finance (Overdue Check)'
+                        : 'Send to Finance (Overdue Check)'}
                 </button>
                 <button className="sv-btn-primary" onClick={() => { setViewOrder(null); openEdit(viewOrder); }}>
                   <Edit2 size={14} /> Edit Order

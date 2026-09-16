@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
 
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
@@ -57,7 +59,9 @@
   --font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
 }
 
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -474,10 +478,25 @@ body {
   justify-content: center;
 }
 
-.kpi-icon-wrapper.blue { background-color: var(--primary-light); color: var(--primary); }
-.kpi-icon-wrapper.green { background-color: var(--success-bg); color: var(--success); }
-.kpi-icon-wrapper.amber { background-color: var(--warning-bg); color: var(--warning); }
-.kpi-icon-wrapper.purple { background-color: var(--purple-bg); color: var(--purple); }
+.kpi-icon-wrapper.blue {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.kpi-icon-wrapper.green {
+  background-color: var(--success-bg);
+  color: var(--success);
+}
+
+.kpi-icon-wrapper.amber {
+  background-color: var(--warning-bg);
+  color: var(--warning);
+}
+
+.kpi-icon-wrapper.purple {
+  background-color: var(--purple-bg);
+  color: var(--purple);
+}
 
 .kpi-badge {
   display: flex;
@@ -712,10 +731,25 @@ body {
   font-weight: 600;
 }
 
-.status-tag.won { background-color: var(--success-bg); color: var(--success-text); }
-.status-tag.progress { background-color: var(--primary-light); color: var(--primary); }
-.status-tag.proposal { background-color: var(--warning-bg); color: var(--warning-text); }
-.status-tag.lost { background-color: var(--danger-bg); color: var(--danger-text); }
+.status-tag.won {
+  background-color: var(--success-bg);
+  color: var(--success-text);
+}
+
+.status-tag.progress {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.status-tag.proposal {
+  background-color: var(--warning-bg);
+  color: var(--warning-text);
+}
+
+.status-tag.lost {
+  background-color: var(--danger-bg);
+  color: var(--danger-text);
+}
 
 /* Modal Backdrop */
 .modal-overlay {
@@ -778,7 +812,8 @@ body {
   color: var(--text-primary);
 }
 
-.form-input, .form-select {
+.form-input,
+.form-select {
   padding: 10px 14px;
   border: 1px solid var(--card-border);
   border-radius: var(--radius-sm);
@@ -787,7 +822,8 @@ body {
   transition: all 0.2s ease;
 }
 
-.form-input:focus, .form-select:focus {
+.form-input:focus,
+.form-select:focus {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
@@ -813,19 +849,37 @@ body {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.98); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Responsiveness */
 @media (max-width: 1200px) {
-  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
-  .analytics-grid { grid-template-columns: 1fr; }
-  .bottom-grid { grid-template-columns: 1fr; }
+  .kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .analytics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 768px) {
-  html, body, #root {
+
+  html,
+  body,
+  #root {
     overflow: hidden;
   }
 
@@ -903,10 +957,22 @@ body {
   }
 
   /* Content grids */
-  .kpi-grid { grid-template-columns: 1fr; }
-  .header, .employee-header, .sales-header, .project-header, .hr-header, .acc-header, .mkt-header, .ceo-header, .admin-side-header {
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .header,
+  .employee-header,
+  .sales-header,
+  .project-header,
+  .hr-header,
+  .acc-header,
+  .mkt-header,
+  .ceo-header,
+  .admin-side-header {
     padding: 0 16px !important;
   }
+
   .content-area {
     padding: 14px 14px 32px !important;
     height: calc(100vh - 65px) !important;
@@ -918,6 +984,7 @@ body {
   .admin-side-menu-toggle {
     display: flex !important;
   }
+
   .desktop-only {
     display: none !important;
   }

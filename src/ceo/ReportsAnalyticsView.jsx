@@ -14,7 +14,7 @@ export default function ReportsAnalyticsView() {
     <div className="ceo-view-container">
       <div className="ceo-card-panel">
         <div className="ceo-card-title">
-          <span>Executive Reports & Strategic Dossiers</span>
+          <span>Executive Reports & Strategic Reports</span>
         </div>
         <div className="ceo-reports-list">
           {reports.map((r, idx) => (

@@ -761,6 +761,30 @@ export default function SalesPaymentsView() {
                     </div>
                   </div>
                 )}
+
+                {selectedInvoice && invoiceRemaining > 0 && (
+                  <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setForm(p => ({ ...p, amount: invoiceRemaining, paymentType: 'Full' }));
+                      }}
+                      style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ✓ Auto-Fill Full Remaining Balance
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const half = Math.round(invoiceRemaining / 2);
+                        setForm(p => ({ ...p, amount: half, paymentType: 'Partial' }));
+                      }}
+                      style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF', padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      ½ Auto-Fill 50% Balance
+                    </button>
+                  </div>
+                )}
               </div>
 
               {/* PAYMENT TYPE & CALCULATORS */}

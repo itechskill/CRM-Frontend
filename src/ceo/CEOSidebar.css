@@ -148,6 +148,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   padding: 11px 14px;
   border-radius: 10px;
   color: #94A3B8;
@@ -155,6 +156,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  width: 100%;
 }
 
 .ceo-menu-item:hover {
@@ -181,6 +183,7 @@
 
 .ceo-menu-item svg {
   transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .ceo-menu-item:hover svg {
@@ -193,6 +196,14 @@
   gap: 12px;
   white-space: nowrap;
   overflow: hidden;
+  flex: 1;
+  min-width: 0;
+}
+
+.ceo-menu-left span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ceo-menu-badge {
@@ -203,6 +214,8 @@
   padding: 2px 9px;
   border-radius: 999px;
   white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
   transition: background-color 0.2s ease, color 0.2s ease;
 }
 

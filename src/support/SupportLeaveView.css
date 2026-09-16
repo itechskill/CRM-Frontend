@@ -1,0 +1,282 @@
+.emp-leave-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+.emp-leave-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.emp-leave-header h2 {
+  margin: 0;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0F172A;
+}
+
+.emp-leave-header p {
+  margin: 4px 0 0 0;
+  font-size: 0.88rem;
+  color: #64748B;
+}
+
+.emp-leave-btn-primary {
+  background: #6366F1;
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+  transition: all 0.2s ease;
+}
+
+.emp-leave-btn-primary:hover {
+  background: #4F46E5;
+  transform: translateY(-1px);
+}
+
+.emp-leave-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.emp-leave-stat-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+}
+
+.emp-leave-stat-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.emp-leave-stat-icon.green { background: #DCFCE7; color: #16A34A; }
+.emp-leave-stat-icon.amber { background: #FEF3C7; color: #D97706; }
+.emp-leave-stat-icon.blue { background: #EFF6FF; color: #2563EB; }
+.emp-leave-stat-icon.red { background: #FEE2E2; color: #EF4444; }
+
+.emp-leave-stat-val {
+  display: block;
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #0F172A;
+  line-height: 1.2;
+}
+
+.emp-leave-stat-lbl {
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: #64748B;
+}
+
+.emp-leave-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: 1px solid #E2E8F0;
+  padding-bottom: 4px;
+}
+
+.emp-leave-tab {
+  background: none;
+  border: none;
+  padding: 8px 16px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #64748B;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.emp-leave-tab.active {
+  background: #EFF6FF;
+  color: #2563EB;
+}
+
+.emp-leave-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.emp-leave-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.emp-leave-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.emp-leave-table th {
+  background: #F8FAFC;
+  padding: 12px 18px;
+  text-align: left;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 1px solid #E2E8F0;
+}
+
+.emp-leave-table td {
+  padding: 14px 18px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+
+.emp-status-badge {
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.emp-status-badge.pending { background: #FEF3C7; color: #B45309; }
+.emp-status-badge.approved { background: #DCFCE7; color: #15803D; }
+.emp-status-badge.rejected { background: #FEE2E2; color: #B91C1C; }
+.emp-status-badge.present { background: #DCFCE7; color: #15803D; }
+.emp-status-badge.absent { background: #FEE2E2; color: #B91C1C; }
+.emp-status-badge.late { background: #FEF3C7; color: #B45309; }
+.emp-status-badge.on-leave { background: #EFF6FF; color: #1D4ED8; }
+
+.emp-proof-badge {
+  background: #F1F5F9;
+  color: #475569;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.emp-leave-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1200;
+  backdrop-filter: blur(4px);
+}
+
+.emp-leave-modal {
+  background: #FFFFFF;
+  width: 500px;
+  max-width: 92vw;
+  border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+  overflow: hidden;
+}
+
+.emp-leave-modal-header {
+  padding: 16px 20px;
+  background: #F8FAFC;
+  border-bottom: 1px solid #E2E8F0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.emp-leave-modal-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.emp-modal-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  color: #94A3B8;
+  cursor: pointer;
+}
+
+.emp-leave-modal-body {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.emp-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.emp-form-group label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #334155;
+}
+
+.emp-form-input {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #CBD5E1;
+  font-size: 0.88rem;
+  outline: none;
+}
+
+.emp-form-input:focus {
+  border-color: #6366F1;
+}
+
+.emp-leave-alert {
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+}
+
+.emp-leave-alert.error { background: #FEE2E2; color: #991B1B; }
+.emp-leave-alert.success { background: #DCFCE7; color: #166534; }
+
+.emp-leave-modal-footer {
+  padding: 14px 20px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.emp-leave-btn-secondary {
+  background: #FFFFFF;
+  border: 1px solid #CBD5E1;
+  color: #475569;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}

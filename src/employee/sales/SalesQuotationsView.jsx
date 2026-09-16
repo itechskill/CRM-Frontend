@@ -41,6 +41,8 @@ const STATUS_COLORS = {
   Sent: '#0284C7',
   'Under Review': '#8B5CF6',
   Accepted: '#10B981',
+  'Converted to Sales Order': '#059669',
+  Converted: '#059669',
   Rejected: '#EF4444',
   Expired: '#F59E0B'
 };
@@ -71,7 +73,7 @@ const EMPTY_FORM = {
 export default function SalesQuotationsView() {
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewMode, setViewMode] = useState('cards'); // 'cards' | 'table'
   const [showModal, setShowModal] = useState(false);
@@ -85,6 +87,7 @@ export default function SalesQuotationsView() {
   const [deleting, setDeleting] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [recordingPO, setRecordingPO] = useState(false);
+  const [convertingId, setConvertingId] = useState(null);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
@@ -107,7 +110,20 @@ export default function SalesQuotationsView() {
     fetchQ();
   }, [fetchQ]);
 
-  // Real KPI calculations
+  const [poModalQuote, setPoModalQuote] = useState(null);
+  const [poNumberInput, setPoNumberInput] = useState('');
+  const [poDateInput, setPoDateInput] = useState(new Date().toISOString().split('T')[0]);
+  const [poNotesInput, setPoNotesInput] = useState('');
+  const [convertingToPO, setConvertingToPO] = useState(false);
+
+  // Real KPI calculations - strictly adhering to Pending Workflow Model
+  // Active quotations exclude converted records (to Sales Order or Customer PO)
+  const activeQuotes = useMemo(() => quotations.filter(q => q.status !== 'Converted to Sales Order' && q.status !== 'Converted' && q.status !== 'Converted to Customer PO'), [quotations]);
+  const activeValue = useMemo(() => activeQuotes.reduce((sum, q) => sum + (Number(q.netAmount !== undefined ? q.netAmount : (q.totalAmount || 0))), 0), [activeQuotes]);
+
+  const convertedQuotes = useMemo(() => quotations.filter(q => q.status === 'Converted to Sales Order' || q.status === 'Converted' || q.status === 'Converted to Customer PO'), [quotations]);
+  const convertedValue = useMemo(() => convertedQuotes.reduce((sum, q) => sum + (Number(q.netAmount !== undefined ? q.netAmount : (q.totalAmount || 0))), 0), [convertedQuotes]);
+
   const acceptedQuotes = useMemo(() => quotations.filter(q => q.status === 'Accepted'), [quotations]);
   const acceptedValue = useMemo(() => acceptedQuotes.reduce((sum, q) => sum + (Number(q.netAmount !== undefined ? q.netAmount : (q.totalAmount || 0))), 0), [acceptedQuotes]);
 
@@ -115,13 +131,95 @@ export default function SalesQuotationsView() {
   const pendingValue = useMemo(() => pendingQuotes.reduce((sum, q) => sum + (Number(q.netAmount !== undefined ? q.netAmount : (q.totalAmount || 0))), 0), [pendingQuotes]);
 
   const totalVolume = useMemo(() => quotations.reduce((sum, q) => sum + (Number(q.netAmount !== undefined ? q.netAmount : (q.totalAmount || 0))), 0), [quotations]);
-  const avgValue = useMemo(() => quotations.length ? Math.round(totalVolume / quotations.length) : 0, [totalVolume, quotations.length]);
-  const conversionRate = useMemo(() => quotations.length ? ((acceptedQuotes.length / quotations.length) * 100).toFixed(1) : '0.0', [acceptedQuotes.length, quotations.length]);
+  const avgValue = useMemo(() => activeQuotes.length ? Math.round(activeValue / activeQuotes.length) : 0, [activeValue, activeQuotes.length]);
+  const conversionRate = useMemo(() => quotations.length ? ((convertedQuotes.length / quotations.length) * 100).toFixed(1) : '0.0', [convertedQuotes.length, quotations.length]);
+
+  // Convert Quotation to Customer PO handler
+  const handleOpenConvertToPO = (quote) => {
+    setPoModalQuote(quote);
+    setPoNumberInput('');
+    setPoDateInput(new Date().toISOString().split('T')[0]);
+    setPoNotesInput('');
+  };
+
+  const handleConfirmConvertToPO = async (e) => {
+    e.preventDefault();
+    if (!poModalQuote) return;
+    setConvertingToPO(true);
+    setError('');
+    setFeedback('');
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/quotations/${poModalQuote._id}/convert-to-po`, {
+        method: 'POST',
+        body: JSON.stringify({
+          poNumber: poNumberInput,
+          poDate: poDateInput,
+          notes: poNotesInput
+        })
+      });
+      if (response.ok && data.success) {
+        setFeedback(data.message || 'Quotation successfully converted to Customer PO!');
+        setQuotations(prev => prev.map(q => q._id === poModalQuote._id ? {
+          ...q,
+          status: 'Converted to Customer PO',
+          customerPOId: data.data?.po?._id
+        } : q));
+        setPoModalQuote(null);
+        setTimeout(() => setFeedback(''), 4000);
+      } else {
+        setError(data.message || 'Failed to convert quotation to Customer PO.');
+      }
+    } catch (e) {
+      setError(e.message || 'Error converting quotation to Customer PO.');
+    } finally {
+      setConvertingToPO(false);
+    }
+  };
+
+  // Convert Quotation to Sales Order handler (removes quotation from active list instantly)
+  const handleConvertToOrder = async (quote) => {
+    if (convertingId) return;
+    setConvertingId(quote._id);
+    setError('');
+    setFeedback('');
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/quotations/${quote._id}/convert-to-order`, {
+        method: 'POST'
+      });
+      if (response.ok && data.success) {
+        setFeedback(data.message || 'Quotation successfully converted to Sales Order!');
+        setQuotations(prev => prev.map(q => q._id === quote._id ? {
+          ...q,
+          status: 'Converted to Sales Order',
+          salesOrderId: data.data?.order?._id,
+          salesOrderNumber: data.data?.order?.orderNumber
+        } : q));
+        if (viewQ && viewQ._id === quote._id) {
+          setViewQ({
+            ...viewQ,
+            status: 'Converted to Sales Order',
+            salesOrderId: data.data?.order?._id,
+            salesOrderNumber: data.data?.order?.orderNumber
+          });
+        }
+      } else {
+        setError(data.message || 'Failed to convert quotation to Sales Order.');
+      }
+    } catch (e) {
+      setError(e.message || 'Error converting quotation to Sales Order.');
+    } finally {
+      setConvertingId(null);
+    }
+  };
 
   // Comprehensive search matching exact PDF columns and status filters
   const filteredQuotations = useMemo(() => {
     let list = quotations;
-    if (filter === 'pending') {
+    if (filter === 'active') {
+      list = list.filter(q => q.status !== 'Converted to Sales Order' && q.status !== 'Converted' && q.status !== 'Converted to Customer PO');
+    } else if (filter === 'converted') {
+      list = list.filter(q => q.status === 'Converted to Sales Order' || q.status === 'Converted' || q.status === 'Converted to Customer PO');
+    } else if (filter === 'pending') {
       list = list.filter(q => ['Quotation', 'Draft', 'Sent', 'Under Review'].includes(q.status));
     } else if (filter === 'accepted' || filter === 'Accepted') {
       list = list.filter(q => q.status === 'Accepted');
@@ -892,15 +990,15 @@ export default function SalesQuotationsView() {
 
   const statuses = ['all', 'Quotation', 'Draft', 'Sent', 'Under Review', 'Accepted', 'Rejected', 'Expired'];
 
-  // Summary KPI values
+  // Summary KPI values - pending workflow model
   const filterTabs = [
-    { id: 'all', label: 'All Quotations', count: quotations.length },
-    { id: 'pending', label: 'Pending', count: pendingQuotes.length },
-    { id: 'accepted', label: 'Converted to PO', count: acceptedQuotes.length },
+    { id: 'active', label: 'Active Quotations', count: activeQuotes.length },
+    { id: 'converted', label: 'Converted to Orders', count: convertedQuotes.length },
+    { id: 'all', label: 'All Quotations (History)', count: quotations.length },
+    { id: 'pending', label: 'Pending Proposal', count: pendingQuotes.length },
+    { id: 'accepted', label: 'Accepted PO', count: acceptedQuotes.length },
     { id: 'Draft', label: 'Draft', count: quotations.filter(q => q.status === 'Draft').length },
-    { id: 'Sent', label: 'Sent', count: quotations.filter(q => q.status === 'Sent').length },
-    { id: 'Under Review', label: 'Under Review', count: quotations.filter(q => q.status === 'Under Review').length },
-    { id: 'Rejected', label: 'Rejected', count: quotations.filter(q => q.status === 'Rejected').length }
+    { id: 'Sent', label: 'Sent', count: quotations.filter(q => q.status === 'Sent').length }
   ];
 
   return (
@@ -978,16 +1076,16 @@ export default function SalesQuotationsView() {
         </div>
       )}
 
-      {/* Modern KPI Cards Grid with Real PKR & Conversion Values */}
+      {/* Modern KPI Cards Grid strictly adhering to Pending Workflow Model */}
       <div className="quote-kpi-grid">
         <div className="quote-kpi-card">
           <div className="quote-kpi-icon" style={{ background: '#EFF6FF', color: '#2563EB' }}>
             <FileText size={22} />
           </div>
           <div className="quote-kpi-content">
-            <div className="quote-kpi-label">Total Quotations</div>
-            <div className="quote-kpi-value">{quotations.length}</div>
-            <div className="quote-kpi-sub">Rs. {totalVolume.toLocaleString()} PKR Volume</div>
+            <div className="quote-kpi-label">Active Quotations</div>
+            <div className="quote-kpi-value">{activeQuotes.length}</div>
+            <div className="quote-kpi-sub">Rs. {activeValue.toLocaleString()} PKR Active Volume</div>
           </div>
         </div>
 
@@ -996,10 +1094,10 @@ export default function SalesQuotationsView() {
             <CheckCircle2 size={22} />
           </div>
           <div className="quote-kpi-content">
-            <div className="quote-kpi-label">Converted to PO</div>
-            <div className="quote-kpi-value" style={{ color: '#059669' }}>{acceptedQuotes.length}</div>
+            <div className="quote-kpi-label">Converted to Orders</div>
+            <div className="quote-kpi-value" style={{ color: '#059669' }}>{convertedQuotes.length}</div>
             <div className="quote-kpi-sub">
-              Rs. {acceptedValue.toLocaleString()} PKR · {conversionRate}% Converted
+              Rs. {convertedValue.toLocaleString()} PKR · {conversionRate}% Converted
             </div>
           </div>
         </div>
@@ -1009,10 +1107,10 @@ export default function SalesQuotationsView() {
             <Clock size={22} />
           </div>
           <div className="quote-kpi-content">
-            <div className="quote-kpi-label">Pending Quotations</div>
+            <div className="quote-kpi-label">Pending Proposals</div>
             <div className="quote-kpi-value" style={{ color: '#7C3AED' }}>{pendingQuotes.length}</div>
             <div className="quote-kpi-sub">
-              Rs. {pendingValue.toLocaleString()} PKR · Awaiting PO
+              Rs. {pendingValue.toLocaleString()} PKR · Awaiting PO/SO
             </div>
           </div>
         </div>
@@ -1022,7 +1120,7 @@ export default function SalesQuotationsView() {
             <DollarSign size={22} />
           </div>
           <div className="quote-kpi-content">
-            <div className="quote-kpi-label">Avg Quotation Value</div>
+            <div className="quote-kpi-label">Avg Active Value</div>
             <div className="quote-kpi-value" style={{ color: '#0F172A' }}>Rs. {avgValue.toLocaleString()}</div>
             <div className="quote-kpi-sub">PKR average commercial proposal</div>
           </div>
@@ -1146,6 +1244,35 @@ export default function SalesQuotationsView() {
                     </span>
 
                     <div className="quote-card-actions">
+                      {q.status !== 'Converted to Customer PO' && q.status !== 'Converted to Sales Order' && q.status !== 'Converted' ? (
+                        <button
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#059669',
+                            color: '#FFFFFF',
+                            border: 'none',
+                            padding: '4px 10px',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: 700,
+                            cursor: 'pointer',
+                            boxShadow: '0 1px 2px rgba(5,150,105,0.2)'
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenConvertToPO(q);
+                          }}
+                          title="Convert Quotation to Customer Purchase Order (PO)"
+                        >
+                          <FileCheck size={13} /> Convert to PO
+                        </button>
+                      ) : (
+                        <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <CheckCircle2 size={13} /> {q.status === 'Converted to Customer PO' ? 'Converted to PO' : 'Converted'}
+                        </span>
+                      )}
                       <button
                         className="sv-btn-action-icon"
                         style={{ color: '#2563EB', background: '#EFF6FF' }}
@@ -1153,15 +1280,6 @@ export default function SalesQuotationsView() {
                         title="Download PDF"
                       >
                         <Download size={14} />
-                      </button>
-                      <button
-                        className="sv-btn-action-icon"
-                        style={{ color: '#059669', background: '#ECFDF5' }}
-                        onClick={() => handleRecordCustomerPO(q)}
-                        disabled={recordingPO}
-                        title="Record Customer PO"
-                      >
-                        <FileCheck size={14} />
                       </button>
                       <button
                         className="sv-btn-action-icon"
@@ -1286,6 +1404,31 @@ export default function SalesQuotationsView() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        {q.status !== 'Converted to Customer PO' && q.status !== 'Converted to Sales Order' && q.status !== 'Converted' ? (
+                          <button
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: '#059669',
+                              color: '#FFFFFF',
+                              border: 'none',
+                              padding: '4px 10px',
+                              borderRadius: '5px',
+                              fontSize: '0.72rem',
+                              fontWeight: 700,
+                              cursor: 'pointer'
+                            }}
+                            onClick={() => handleOpenConvertToPO(q)}
+                            title="Convert Quotation to Customer PO"
+                          >
+                            <FileCheck size={12} /> Convert to PO
+                          </button>
+                        ) : (
+                          <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>
+                            {q.status === 'Converted to Customer PO' ? 'Converted to PO' : 'Converted'}
+                          </span>
+                        )}
                         <button
                           className="sv-btn-action-icon"
                           style={{ color: '#2563EB', background: '#EFF6FF' }}
@@ -1293,15 +1436,6 @@ export default function SalesQuotationsView() {
                           title="Download Quotation PDF"
                         >
                           <Download size={14} />
-                        </button>
-                        <button
-                          className="sv-btn-action-icon"
-                          style={{ color: '#059669', background: '#ECFDF5' }}
-                          onClick={() => handleRecordCustomerPO(q)}
-                          disabled={recordingPO}
-                          title="Record Customer PO"
-                        >
-                          <FileCheck size={14} />
                         </button>
                         <button className="sv-btn-action-icon" onClick={() => setViewQ(q)} title="View Details"><Eye size={14} /></button>
                         <button className="sv-btn-action-icon" onClick={() => openEdit(q)} title="Edit Quotation"><Edit2 size={14} /></button>
@@ -1459,20 +1593,29 @@ export default function SalesQuotationsView() {
 
               <div className="sv-modal-actions" style={{ marginTop: '16px' }}>
                 <button className="sv-btn-cancel" onClick={() => setViewQ(null)}>Close</button>
+                {viewQ.status !== 'Converted to Customer PO' && viewQ.status !== 'Converted to Sales Order' && viewQ.status !== 'Converted' ? (
+                  <button
+                    className="sv-btn-primary"
+                    style={{ background: '#059669' }}
+                    onClick={() => {
+                      const target = viewQ;
+                      setViewQ(null);
+                      handleOpenConvertToPO(target);
+                    }}
+                  >
+                    <FileCheck size={14} /> Convert to Customer PO
+                  </button>
+                ) : (
+                  <span style={{ fontSize: '0.85rem', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0 8px' }}>
+                    <CheckCircle2 size={16} /> {viewQ.status === 'Converted to Customer PO' ? 'Converted to Customer PO' : `Converted to Sales Order ${viewQ.salesOrderNumber ? `(${viewQ.salesOrderNumber})` : ''}`}
+                  </span>
+                )}
                 <button
                   className="sv-btn-primary"
                   style={{ background: '#2563EB' }}
                   onClick={() => handleDownloadSinglePDF(viewQ)}
                 >
                   <Download size={14} /> Download PDF
-                </button>
-                <button
-                  className="sv-btn-primary"
-                  style={{ background: '#059669' }}
-                  onClick={() => handleRecordCustomerPO(viewQ)}
-                  disabled={recordingPO}
-                >
-                  <FileCheck size={14} /> {recordingPO ? 'Recording PO...' : 'Record Customer PO'}
                 </button>
                 <button className="sv-btn-primary" onClick={() => { setViewQ(null); openEdit(viewQ); }}>
                   <Edit2 size={14} /> Edit Quote
@@ -1941,6 +2084,76 @@ export default function SalesQuotationsView() {
                 <button type="button" className="sv-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="sv-btn-primary" disabled={saving}>
                   <Save size={15} /> {saving ? 'Saving...' : 'Save Quotation'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CONVERT QUOTATION TO CUSTOMER PO MODAL */}
+      {poModalQuote && (
+        <div className="sv-modal-overlay" onClick={() => setPoModalQuote(null)}>
+          <div className="sv-modal" style={{ maxWidth: '560px' }} onClick={e => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <FileCheck size={20} color="#059669" />
+                <h3 style={{ margin: 0 }}>Convert to Customer Purchase Order (PO)</h3>
+              </div>
+              <button onClick={() => setPoModalQuote(null)}><X size={18} /></button>
+            </div>
+            
+            {error && (
+              <div className="sv-error" style={{ background: '#FEF2F2', color: '#991B1B', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', border: '1px solid #FECACA', marginBottom: '14px' }}>
+                {error}
+              </div>
+            )}
+
+            <form onSubmit={handleConfirmConvertToPO} className="sv-form">
+              <div style={{ background: '#F8FAFC', padding: '12px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', marginBottom: '14px' }}>
+                <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600, textTransform: 'uppercase' }}>Quotation Linkage</div>
+                <div style={{ fontSize: '1rem', fontWeight: 800, color: '#1E293B', marginTop: '2px' }}>
+                  {poModalQuote.orderReference || poModalQuote.quotationNumber} — {poModalQuote.clientName || poModalQuote.customerName}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: '#059669', fontWeight: 700, marginTop: '4px' }}>
+                  Amount: Rs. {Number(poModalQuote.netAmount !== undefined ? poModalQuote.netAmount : (poModalQuote.totalAmount || 0)).toLocaleString()} PKR
+                </div>
+              </div>
+
+              <div className="sv-grid-2">
+                <div className="sv-field">
+                  <label>Customer PO Number</label>
+                  <input
+                    value={poNumberInput}
+                    onChange={e => setPoNumberInput(e.target.value)}
+                    placeholder="Auto-generated if empty (e.g. CPO-0001)"
+                  />
+                </div>
+                <div className="sv-field">
+                  <label>PO Date</label>
+                  <input
+                    type="date"
+                    value={poDateInput}
+                    onChange={e => setPoDateInput(e.target.value)}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="sv-field">
+                <label>Notes / PO Scope</label>
+                <textarea
+                  rows={3}
+                  value={poNotesInput}
+                  onChange={e => setPoNotesInput(e.target.value)}
+                  placeholder="Customer purchase order terms, references, and acceptance notes..."
+                />
+              </div>
+
+              <div className="sv-modal-actions">
+                <button type="button" className="sv-btn-cancel" onClick={() => setPoModalQuote(null)}>Cancel</button>
+                <button type="submit" className="sv-btn-primary" style={{ background: '#059669' }} disabled={convertingToPO}>
+                  <FileCheck size={15} /> {convertingToPO ? 'Converting...' : 'Confirm & Move to Customer PO'}
                 </button>
               </div>
             </form>

@@ -17,14 +17,7 @@ const settingsNavItems = [
   { key: 'language', label: 'Language & Region', icon: Globe },
 ];
 
-const initialNotifications = [
-  { key: 'taskDeadlines', title: 'Task Deadlines', desc: 'Get reminded when tasks are due soon', enabled: true },
-  { key: 'taskAssigned', title: 'Task Assigned', desc: 'When a new task is assigned to you', enabled: true },
-  { key: 'commentsOnTasks', title: 'Comments on Tasks', desc: 'When someone comments on your tasks', enabled: true },
-  { key: 'weeklyDigest', title: 'Weekly Digest', desc: 'Summary of your week every Monday morning', enabled: false },
-  { key: 'approvalStatus', title: 'Approval Status', desc: 'When your completed tasks are approved or rejected', enabled: true },
-  { key: 'projectUpdates', title: 'Project Updates', desc: "General updates from projects you're part of", enabled: false },
-];
+const initialNotifications = [];
 
 export default function EmployeeSettingsView() {
   const [activeSection, setActiveSection] = useState('notifications');

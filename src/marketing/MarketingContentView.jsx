@@ -21,13 +21,7 @@ const socialPlatforms = [
   { name: 'Company Blog (SEO)', followers: '62K Readers', impressions: '120K/mo', engagement: '8.4%', icon: Globe, color: '#EC4899' },
 ];
 
-const initialPosts = [
-  { id: 'POST-101', title: '🚀 Unveiling Fortline CRM 2.0 Enterprise Infrastructure', platform: 'LinkedIn Corporate', author: 'Clara Novak', date: '2026-08-22 10:00 AM', status: 'Scheduled', impressions: '-', engagement: '-' },
-  { id: 'POST-102', title: 'Top 5 AI Automation Strategies for Modern Sales Managers', platform: 'Company Blog', author: 'Marcus Chen', date: '2026-08-19 02:30 PM', status: 'Published', impressions: '14,200', engagement: '6.4%' },
-  { id: 'POST-103', title: 'Join our upcoming Live Webinar: Scaling B2B Revenue Funnels', platform: 'Twitter / X Tech', author: 'Sarah Mitchell', date: '2026-08-18 09:15 AM', status: 'Published', impressions: '8,900', engagement: '4.1%' },
-  { id: 'POST-104', title: 'Customer Success Case Study: How Proxima Scaled Sales 200%', platform: 'LinkedIn Corporate', author: 'Clara Novak', date: '2026-08-16 11:00 AM', status: 'Published', impressions: '22,400', engagement: '7.2%' },
-  { id: 'POST-105', title: 'Why Real-Time Financial Ledgering is Essential for Startups', platform: 'Company Blog', author: 'Alex Vance', date: '2026-08-25 04:00 PM', status: 'Scheduled', impressions: '-', engagement: '-' },
-];
+const initialPosts = [];
 
 export default function MarketingContentView({ isModalOpen, onCloseModal }) {
   const [posts, setPosts] = useState(initialPosts);

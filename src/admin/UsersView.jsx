@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { User, ShieldCheck, UserX, Search, Plus, MoreHorizontal, Trash2, Pencil, Eye, KeyRound, X } from 'lucide-react';
+import { User, ShieldCheck, UserX, Search, Plus, MoreHorizontal, Trash2, Pencil, Eye, KeyRound, X, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import EmployeeDirectoryModal from '../components/EmployeeDirectoryModal';
 import './UsersView.css';
@@ -33,23 +33,49 @@ const departmentOptions = [
 ];
 
 function EditUserModal({ user, onClose, onSave }) {
+  const [email, setEmail] = useState(user.email || '');
   const [role, setRole] = useState(user.role || 'employee');
   const [department, setDepartment] = useState(user.department || '');
   const [status, setStatus] = useState(user.status === 'Active' || user.status === 'active' ? 'active' : 'suspended');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+
+    // Email format validation
+    const trimmedEmail = email.trim().toLowerCase();
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      setErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
     setSaving(true);
 
     try {
-      // Role Update
+      const targetId = user.rawId || user.id;
+
+      // 1. Email Update (Admin endpoint)
+      if (trimmedEmail !== (user.email || '').toLowerCase()) {
+        const emailRes = await apiRequest(`/api/admin/users/${targetId}/email`, {
+          method: 'PATCH',
+          body: JSON.stringify({ email: trimmedEmail })
+        });
+        if (!emailRes.response.ok || !emailRes.data.success) {
+          setErrorMsg(emailRes.data.message || 'Failed to update user email.');
+          setSaving(false);
+          return;
+        }
+      }
+
+      // 2. Role Update
       if (role !== user.role) {
-        const rRes = await apiRequest(`/api/admin/users/${user.rawId || user.id}/role`, {
+        const rRes = await apiRequest(`/api/admin/users/${targetId}/role`, {
           method: 'PATCH',
           body: JSON.stringify({ role })
         });
@@ -60,31 +86,31 @@ function EditUserModal({ user, onClose, onSave }) {
         }
       }
 
-      // Department Update
+      // 3. Department Update
       if (department !== user.department) {
-        await apiRequest(`/api/admin/users/${user.rawId || user.id}/department`, {
+        await apiRequest(`/api/admin/users/${targetId}/department`, {
           method: 'PATCH',
           body: JSON.stringify({ department })
         });
       }
 
-      // Status Update
+      // 4. Status Update
       const oldStatusNorm = user.status === 'Active' || user.status === 'active' ? 'active' : 'suspended';
       if (status !== oldStatusNorm) {
-        await apiRequest(`/api/admin/users/${user.rawId || user.id}/status`, {
+        await apiRequest(`/api/admin/users/${targetId}/status`, {
           method: 'PATCH',
           body: JSON.stringify({ status })
         });
       }
 
-      // Password Update if provided
+      // 5. Password Reset if provided
       if (newPassword) {
-        const pRes = await apiRequest(`/api/admin/users/${user.rawId || user.id}/password`, {
+        const pRes = await apiRequest(`/api/admin/users/${targetId}/reset-password`, {
           method: 'PATCH',
           body: JSON.stringify({ newPassword, confirmPassword })
         });
         if (!pRes.response.ok || !pRes.data.success) {
-          setErrorMsg(pRes.data.message || 'Failed to update password.');
+          setErrorMsg(pRes.data.message || 'Failed to reset password.');
           setSaving(false);
           return;
         }
@@ -101,9 +127,9 @@ function EditUserModal({ user, onClose, onSave }) {
 
   return (
     <div className="modal-overlay">
-      <div className="modal-content">
+      <div className="modal-content" style={{ maxWidth: '480px' }}>
         <div className="modal-header">
-          <h2>Edit User & Access Control</h2>
+          <h2>Edit User &amp; Access Control</h2>
           <button type="button" className="close-btn" onClick={onClose}>
             <X size={18} />
           </button>
@@ -112,8 +138,8 @@ function EditUserModal({ user, onClose, onSave }) {
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             {errorMsg && (
-              <div style={{ padding: '8px 12px', background: '#FEE2E2', color: '#B91C1C', borderRadius: '8px', fontSize: '0.84rem' }}>
-                {errorMsg}
+              <div style={{ padding: '10px 14px', background: '#FEE2E2', color: '#B91C1C', borderRadius: '8px', fontSize: '0.84rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <AlertCircle size={16} /> {errorMsg}
               </div>
             )}
 
@@ -123,8 +149,24 @@ function EditUserModal({ user, onClose, onSave }) {
               </span>
               <div>
                 <h4>{user.name}</h4>
-                <span>{user.email}</span>
+                <span style={{ color: '#64748B', fontSize: '0.8rem' }}>User ID: {user.rawId || user.id}</span>
               </div>
+            </div>
+
+            <div className="form-group">
+              <label>Email Address</label>
+              <input
+                type="email"
+                className="form-input"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="user@example.com"
+                required
+                style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '10px 12px', fontSize: '0.88rem' }}
+              />
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                Updating email preserves historical records, orders, and assigned permissions.
+              </span>
             </div>
 
             <div className="form-group">
@@ -154,27 +196,40 @@ function EditUserModal({ user, onClose, onSave }) {
               </select>
             </div>
 
-            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid #E2E8F0' }}>
-              <h4 style={{ margin: '0 0 10px 0', fontSize: '0.9rem', color: '#0F172A' }}>Reset Password (Optional)</h4>
+            <div style={{ marginTop: '10px', paddingTop: '12px', borderTop: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                <h4 style={{ margin: 0, fontSize: '0.88rem', color: '#0F172A', fontWeight: 700 }}>Reset Password (Optional)</h4>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />} {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+
               <div className="form-group">
                 <label>New Password</label>
                 <input
-                  type="password"
+                  type={showPassword ? 'text' : 'password'}
                   className="form-input"
-                  placeholder="Min 8 chars, upper, lower, number, special"
+                  placeholder="Min 8 chars, 1 uppercase, 1 lowercase, 1 number, 1 special"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
+                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '10px 12px', fontSize: '0.88rem' }}
                 />
               </div>
+
               {newPassword && (
-                <div className="form-group">
-                  <label>Confirm Password</label>
+                <div className="form-group" style={{ marginTop: '8px' }}>
+                  <label>Confirm New Password</label>
                   <input
-                    type="password"
+                    type={showPassword ? 'text' : 'password'}
                     className="form-input"
-                    placeholder="Confirm new password"
+                    placeholder="Repeat new password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '10px 12px', fontSize: '0.88rem' }}
                   />
                 </div>
               )}
@@ -195,12 +250,166 @@ function EditUserModal({ user, onClose, onSave }) {
   );
 }
 
+function ResetPasswordModal({ user, onClose, onSuccess }) {
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+
+  const hasLength = newPassword.length >= 8;
+  const hasUpper = /[A-Z]/.test(newPassword);
+  const hasLower = /[a-z]/.test(newPassword);
+  const hasNumber = /[0-9]/.test(newPassword);
+  const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword);
+  const isMatch = newPassword && newPassword === confirmPassword;
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setErrorMsg('');
+    setSuccessMsg('');
+
+    if (!hasLength || !hasUpper || !hasLower || !hasNumber || !hasSpecial) {
+      setErrorMsg('Password does not meet all complexity requirements.');
+      return;
+    }
+
+    if (!isMatch) {
+      setErrorMsg('Passwords do not match.');
+      return;
+    }
+
+    setSaving(true);
+
+    try {
+      const targetId = user.rawId || user.id;
+      const res = await apiRequest(`/api/admin/users/${targetId}/reset-password`, {
+        method: 'PATCH',
+        body: JSON.stringify({ newPassword, confirmPassword })
+      });
+
+      if (res.response.ok && res.data.success) {
+        setSuccessMsg(res.data.message || 'Password reset successfully!');
+        setTimeout(() => {
+          if (onSuccess) onSuccess();
+          onClose();
+        }, 1200);
+      } else {
+        setErrorMsg(res.data.message || 'Failed to reset password.');
+      }
+    } catch (err) {
+      setErrorMsg('Error resetting password.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const isCeo = user.role === 'ceo';
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-content" style={{ maxWidth: '440px' }}>
+        <div className="modal-header">
+          <h2>
+            <KeyRound size={18} style={{ display: 'inline', marginRight: '6px', verticalAlign: 'middle' }} />
+            Reset Password {isCeo ? '(CEO Account)' : ''}
+          </h2>
+          <button type="button" className="close-btn" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
+            {errorMsg && (
+              <div style={{ padding: '10px 14px', background: '#FEE2E2', color: '#B91C1C', borderRadius: '8px', fontSize: '0.84rem' }}>
+                {errorMsg}
+              </div>
+            )}
+            {successMsg && (
+              <div style={{ padding: '10px 14px', background: '#DCFCE7', color: '#15803D', borderRadius: '8px', fontSize: '0.84rem' }}>
+                {successMsg}
+              </div>
+            )}
+
+            <div className="edit-user-identity" style={{ paddingBottom: '10px' }}>
+              <span className="edit-user-avatar" style={{ background: user.avatarBg }}>
+                {user.initials}
+              </span>
+              <div>
+                <h4>{user.name}</h4>
+                <span style={{ color: '#64748B', fontSize: '0.8rem' }}>{user.email} • {(user.role || '').toUpperCase()}</span>
+              </div>
+            </div>
+
+            <div className="form-group">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <label>New Password</label>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                >
+                  {showPassword ? <EyeOff size={14} /> : <Eye size={14} />} {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="form-input"
+                placeholder="Enter new password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '10px 12px', fontSize: '0.88rem' }}
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Confirm New Password</label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="form-input"
+                placeholder="Confirm new password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '10px 12px', fontSize: '0.88rem' }}
+              />
+            </div>
+
+            {/* Complexity requirements checklist */}
+            <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', fontSize: '0.75rem', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <span style={{ fontWeight: 700, color: '#334155' }}>Password Requirements:</span>
+              <span style={{ color: hasLength ? '#16A34A' : '#94A3B8' }}>• At least 8 characters long</span>
+              <span style={{ color: hasUpper ? '#16A34A' : '#94A3B8' }}>• At least 1 uppercase letter (A-Z)</span>
+              <span style={{ color: hasLower ? '#16A34A' : '#94A3B8' }}>• At least 1 lowercase letter (a-z)</span>
+              <span style={{ color: hasNumber ? '#16A34A' : '#94A3B8' }}>• At least 1 number (0-9)</span>
+              <span style={{ color: hasSpecial ? '#16A34A' : '#94A3B8' }}>• At least 1 special character (!@#$%^&amp;*...)</span>
+            </div>
+          </div>
+
+          <div className="modal-footer">
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
+              Cancel
+            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'Resetting...' : 'Reset Password'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function UsersView({ onOpenInviteModal }) {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [openMenuId, setOpenMenuId] = useState(null);
   const [editingUser, setEditingUser] = useState(null);
+  const [resettingUser, setResettingUser] = useState(null);
   const [viewingProfileId, setViewingProfileId] = useState(null);
   const menuRef = useRef(null);
 
@@ -368,7 +577,7 @@ export default function UsersView({ onOpenInviteModal }) {
       </div>
 
       {/* Users Data Table Section */}
-      <div className="data-table-container">
+      <div className="data-table-container" style={{ overflow: 'visible' }}>
         <div className="table-header-toolbar" style={{ padding: '20px 24px' }}>
           <div className="global-search" style={{ width: '280px' }}>
             <Search size={16} className="global-search-icon" />
@@ -398,117 +607,142 @@ export default function UsersView({ onOpenInviteModal }) {
           </thead>
           <tbody>
             {filteredUsers.length > 0 ? (
-              filteredUsers.map(user => (
-                <tr key={user.id}>
-                  <td style={{ paddingLeft: '24px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        backgroundColor: user.avatarBg,
-                        color: 'white',
-                        fontWeight: 700,
-                        fontSize: '0.85rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexShrink: 0
-                      }}>
-                        {user.initials}
+              filteredUsers.map((user, idx) => {
+                const isNearBottom = idx >= filteredUsers.length - 2;
+                return (
+                  <tr key={user.id}>
+                    <td style={{ paddingLeft: '24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <div style={{
+                          width: '38px',
+                          height: '38px',
+                          borderRadius: '50%',
+                          backgroundColor: user.avatarBg,
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.85rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          {user.initials}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                          <span style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.9rem' }}>{user.name}</span>
+                          <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{user.email}</span>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column' }}>
-                        <span style={{ fontWeight: 700, color: '#0F172A', fontSize: '0.9rem' }}>{user.name}</span>
-                        <span style={{ fontSize: '0.8rem', color: '#94A3B8' }}>{user.email}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td style={{ color: '#475569', fontWeight: 600, fontSize: '0.85rem' }}>
-                    <span style={{ textTransform: 'capitalize' }}>{user.role.replace('_', ' ')}</span>
-                  </td>
-                  <td>
-                    <span style={{
-                      backgroundColor: '#F1F5F9',
-                      color: '#475569',
-                      padding: '4px 12px',
-                      borderRadius: '20px',
-                      fontSize: '0.78rem',
-                      fontWeight: 600,
-                      display: 'inline-block'
-                    }}>
-                      {user.department}
-                    </span>
-                  </td>
-                  <td>
-                    <span style={{
-                      backgroundColor: user.status === 'Active' ? '#DCFCE7' : '#FEF3C7',
-                      color: user.status === 'Active' ? '#15803D' : '#B45309',
-                      padding: '4px 10px',
-                      borderRadius: '20px',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '6px'
-                    }}>
+                    </td>
+                    <td style={{ color: '#475569', fontWeight: 600, fontSize: '0.85rem' }}>
+                      <span style={{ textTransform: 'capitalize' }}>{user.role.replace('_', ' ')}</span>
+                    </td>
+                    <td>
                       <span style={{
-                        width: '6px',
-                        height: '6px',
-                        borderRadius: '50%',
-                        backgroundColor: user.status === 'Active' ? '#16A34A' : '#D97706'
-                      }}></span>
-                      {user.status}
-                    </span>
-                  </td>
-                  <td style={{ color: '#64748B', fontSize: '0.85rem' }}>{user.joined}</td>
-                  <td style={{ textAlign: 'right', paddingRight: '24px', position: 'relative' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' }}>
-                      <button
-                        className="icon-btn"
-                        title="View Profile"
-                        style={{ padding: '6px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid #CBD5E1', borderRadius: '6px', cursor: 'pointer', background: 'white' }}
-                        onClick={() => setViewingProfileId(user.id)}
-                      >
-                        <Eye size={14} /> Profile
-                      </button>
-
-                      <button
-                        className="icon-btn"
-                        style={{ width: '32px', height: '32px', border: 'none', background: 'transparent', cursor: 'pointer' }}
-                        onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
-                      >
-                        <MoreHorizontal size={16} color="#94A3B8" />
-                      </button>
-
-                      {openMenuId === user.id && (
-                        <div
-                          className="row-menu"
-                          ref={menuRef}
-                          style={{ position: 'absolute', right: '24px', top: '100%', zIndex: 100, background: 'white', border: '1px solid #E2E8F0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', padding: '6px' }}
+                        backgroundColor: '#F1F5F9',
+                        color: '#475569',
+                        padding: '4px 12px',
+                        borderRadius: '20px',
+                        fontSize: '0.78rem',
+                        fontWeight: 600,
+                        display: 'inline-block'
+                      }}>
+                        {user.department}
+                      </span>
+                    </td>
+                    <td>
+                      <span style={{
+                        backgroundColor: user.status === 'Active' ? '#DCFCE7' : '#FEF3C7',
+                        color: user.status === 'Active' ? '#15803D' : '#B45309',
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '0.78rem',
+                        fontWeight: 700,
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        <span style={{
+                          width: '6px',
+                          height: '6px',
+                          borderRadius: '50%',
+                          backgroundColor: user.status === 'Active' ? '#16A34A' : '#D97706'
+                        }}></span>
+                        {user.status}
+                      </span>
+                    </td>
+                    <td style={{ color: '#64748B', fontSize: '0.85rem' }}>{user.joined}</td>
+                    <td style={{ textAlign: 'right', paddingRight: '24px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px', position: 'relative' }}>
+                        <button
+                          className="icon-btn"
+                          title="View Details"
+                          style={{ padding: '6px 10px', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px', border: '1px solid #CBD5E1', borderRadius: '6px', cursor: 'pointer', background: 'white' }}
+                          onClick={() => setViewingProfileId(user.id)}
                         >
-                          <button
-                            className="row-menu-item"
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
-                            onClick={() => {
-                              setEditingUser(user);
-                              setOpenMenuId(null);
+                          <Eye size={14} /> View Details
+                        </button>
+
+                        <button
+                          className="icon-btn"
+                          title="Actions"
+                          style={{ width: '32px', height: '32px', border: 'none', background: 'transparent', cursor: 'pointer' }}
+                          onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
+                        >
+                          <MoreHorizontal size={16} color="#94A3B8" />
+                        </button>
+
+                        {openMenuId === user.id && (
+                          <div
+                            className={`row-menu ${isNearBottom ? 'row-menu-up' : ''}`}
+                            ref={menuRef}
+                            style={{
+                              position: 'absolute',
+                              right: '0',
+                              ...(isNearBottom ? { bottom: '100%', top: 'auto', marginBottom: '8px' } : { top: '100%', marginTop: '8px' }),
+                              zIndex: 1000,
+                              background: 'white',
+                              border: '1px solid #E2E8F0',
+                              borderRadius: '8px',
+                              boxShadow: '0 8px 24px rgba(0,0,0,0.14)',
+                              padding: '6px',
+                              minWidth: '180px'
                             }}
                           >
-                            <Pencil size={14} /> Edit Role / Details
-                          </button>
-                          <button
-                            className="row-menu-item row-menu-item-danger"
-                            style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.85rem', color: '#EF4444' }}
-                            onClick={() => handleDelete(user.id, user.name)}
-                          >
-                            <Trash2 size={14} /> Delete Account
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+                            <button
+                              className="row-menu-item"
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.85rem' }}
+                              onClick={() => {
+                                setEditingUser(user);
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              <Pencil size={14} /> Edit Role / Details
+                            </button>
+                            <button
+                              className="row-menu-item"
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.85rem', color: '#2563EB' }}
+                              onClick={() => {
+                                setResettingUser(user);
+                                setOpenMenuId(null);
+                              }}
+                            >
+                              <KeyRound size={14} /> Reset Password
+                            </button>
+                            <button
+                              className="row-menu-item row-menu-item-danger"
+                              style={{ display: 'flex', alignItems: 'center', gap: '8px', width: '100%', padding: '8px 10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '0.85rem', color: '#EF4444' }}
+                              onClick={() => handleDelete(user.id, user.name)}
+                            >
+                              <Trash2 size={14} /> Delete Account
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan="6" style={{ textAlign: 'center', padding: '40px', color: '#94A3B8' }}>
@@ -525,6 +759,14 @@ export default function UsersView({ onOpenInviteModal }) {
           user={editingUser}
           onClose={() => setEditingUser(null)}
           onSave={fetchUsers}
+        />
+      )}
+
+      {resettingUser && (
+        <ResetPasswordModal
+          user={resettingUser}
+          onClose={() => setResettingUser(null)}
+          onSuccess={fetchUsers}
         />
       )}
 

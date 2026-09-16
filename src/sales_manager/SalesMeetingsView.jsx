@@ -23,68 +23,7 @@ function buildMonthGrid(year, month) {
   return cells;
 }
 
-const initialMeetings = [
-  {
-    id: 1,
-    dateKey: toDateKey(today.getFullYear(), today.getMonth(), 10),
-    title: 'BuildCo Industries — Kickoff Call',
-    status: 'Scheduled',
-    time: '2:00 PM · 45 min',
-    contact: 'Rachel Okafor',
-    location: 'Zoom',
-    tag: 'Kickoff',
-    client: 'BuildCo Industries',
-    rep: 'Angela Torres',
-  },
-  {
-    id: 2,
-    dateKey: toDateKey(today.getFullYear(), today.getMonth(), 12),
-    title: 'Nexus Dynamics — Platform Demo',
-    status: 'Scheduled',
-    time: '10:00 AM · 90 min',
-    contact: 'David Park',
-    location: 'Zoom',
-    tag: 'Demo',
-    client: 'Nexus Dynamics',
-    rep: 'Priya Sharma',
-  },
-  {
-    id: 3,
-    dateKey: toDateKey(today.getFullYear(), today.getMonth(), 13),
-    title: 'Starlight Ventures — Contract Review',
-    status: 'Scheduled',
-    time: '1:00 PM · 60 min',
-    contact: 'David Miller',
-    location: 'Google Meet',
-    tag: 'Contract',
-    client: 'Starlight Ventures',
-    rep: 'Angela Torres',
-  },
-  {
-    id: 4,
-    dateKey: toDateKey(today.getFullYear(), today.getMonth(), 18),
-    title: 'Proxima Labs — Renewal Discussion',
-    status: 'Scheduled',
-    time: '11:30 AM · 30 min',
-    contact: 'Eric Vance',
-    location: 'Phone',
-    tag: 'Renewal',
-    client: 'Proxima Labs',
-    rep: 'James Carter',
-  },
-  {
-    id: 5,
-    dateKey: toDateKey(today.getFullYear(), today.getMonth(), 20),
-    title: 'Apex Software — Onboarding',
-    status: 'Scheduled',
-    time: '3:00 PM · 45 min',
-    contact: 'Elena Rostova',
-    location: 'Zoom',
-    tag: 'Onboarding',
-    client: 'Apex Software',
-    rep: 'Priya Sharma',
-  },
-];
+const initialMeetings = [];
 
 const teamAvailability = [
   { id: 1, name: 'Angela Torres', initials: 'AT', avatarBg: '#2563EB', status: 'Available' },

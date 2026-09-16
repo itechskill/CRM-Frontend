@@ -4,7 +4,7 @@ import {
   LayoutGrid,
   TrendingUp,
   FolderKanban,
-  DollarSign,
+  Wallet,
   Users,
   PieChart,
   ChevronLeft,
@@ -32,11 +32,22 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
     { id: 'business_overview', label: 'Business Overview', icon: TrendingUp },
-    { id: 'projects_performance', label: 'Performance', icon: FolderKanban, badge: 'Live' },
-    { id: 'sales_finance', label: 'Sales & Finance', icon: DollarSign },
-    { id: 'team_performance', label: 'Team Performance', icon: Users },
-    { id: 'reports_analytics', label: 'Reports & Analytics', icon: PieChart },
-    { id: 'profile', label: 'My Profile', icon: User },
+    { id: 'sales_finance', label: 'Sales & Finance', icon: Calculator },
+  ];
+
+  const orgNav = [
+    { id: 'org_users', label: 'All Users Directory', icon: Users },
+    { id: 'org_dept_sales', label: 'Sales Department', icon: TrendingUp },
+    { id: 'org_dept_support', label: 'Support & Ops', icon: Briefcase },
+    { id: 'org_dept_accounts', label: 'Accounts Dept', icon: Calculator },
+    { id: 'org_dept_finance', label: 'Finance Dept', icon: Wallet },
+    { id: 'org_dept_hr', label: 'HR Department', icon: Heart },
+    { id: 'org_ranking', label: 'Performance Ranking', icon: Crown },
+    { id: 'org_monthly', label: 'Monthly Reports', icon: PieChart },
+  ];
+
+  const accountNav = [
+    { id: 'profile', label: 'My Profile', icon: User }
   ];
 
   return (
@@ -91,19 +102,60 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
               );
             })}
           </div>
+
+          {!collapsed && <div className="ceo-menu-title" style={{ marginTop: '16px' }}>ORGANIZATION MONITORING</div>}
+          <div className="ceo-menu-section">
+            {orgNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <div
+                  key={item.id}
+                  className={`ceo-menu-item ${isActive ? 'active' : ''}`}
+                  onClick={() => handleSetActiveTab(item.id)}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <div className="ceo-menu-left">
+                    <Icon size={18} />
+                    {!collapsed && <span>{item.label}</span>}
+                  </div>
+                  {!collapsed && item.badge && (
+                    <span className="ceo-menu-badge" style={{ backgroundColor: '#2563EB', color: '#FFF' }}>{item.badge}</span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {!collapsed && <div className="ceo-menu-title" style={{ marginTop: '16px' }}>ACCOUNT</div>}
+          <div className="ceo-menu-section">
+            {accountNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <div
+                  key={item.id}
+                  className={`ceo-menu-item ${isActive ? 'active' : ''}`}
+                  onClick={() => handleSetActiveTab(item.id)}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <div className="ceo-menu-left">
+                    <Icon size={18} />
+                    {!collapsed && <span>{item.label}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* User Footer & Optional Portal Switcher for Admin/CEO */}
+        {/* User Footer */}
         <div className="ceo-sidebar-footer" style={{ marginTop: 'auto', borderTop: '1px solid #334155', padding: '12px 16px' }}>
           <div className="ceo-user-card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
             <div
-              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: (userRole === 'admin' || userRole === 'ceo') ? 'pointer' : 'default', flex: 1 }}
-              onClick={() => {
-                if (userRole === 'admin' || userRole === 'ceo') {
-                  setShowRoleMenu(!showRoleMenu);
-                }
-              }}
-              title={(userRole === 'admin' || userRole === 'ceo') ? 'Click to Switch Portal' : undefined}
+              style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', flex: 1 }}
+              onClick={() => handleSetActiveTab('profile')}
+              title="Manage Profile"
             >
               <div className="ceo-user-avatar" style={{ backgroundColor: '#6366F1', color: '#FFF', fontWeight: 'bold', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 {currentUser?.profileImage ? (
@@ -132,84 +184,6 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
               <LogOut size={16} color="#EF4444" />
             </div>
           </div>
-
-          {(userRole === 'admin' || userRole === 'ceo') && showRoleMenu && (
-            <div className="ceo-role-dropdown" style={{ bottom: '70px' }}>
-              <div className="ceo-role-dropdown-header">Switch Portal</div>
-
-              <div
-                className={`ceo-role-item ${currentRole === 'ceo' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onSwitchRole('ceo'); setShowRoleMenu(false); }}
-              >
-                <span>CEO</span>
-                <Crown size={16} color="#818CF8" />
-              </div>
-
-              <div
-                className={`ceo-role-item ${currentRole === 'administration' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onSwitchRole('administration'); setShowRoleMenu(false); }}
-              >
-                <span>Administration</span>
-                <Briefcase size={16} color="#38BDF8" />
-              </div>
-
-              <div
-                className={`ceo-role-item ${currentRole === 'admin' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onSwitchRole('admin'); setShowRoleMenu(false); }}
-              >
-                <span>Admin</span>
-                <ShieldCheck size={16} color="#60A5FA" />
-              </div>
-
-              <div
-                className={`ceo-role-item ${currentRole === 'hr' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onSwitchRole('hr'); setShowRoleMenu(false); }}
-              >
-                <span>HR</span>
-                <Heart size={16} color="#A78BFA" />
-              </div>
-
-              <div
-                className={`ceo-role-item ${currentRole === 'sales_manager' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onSwitchRole('sales_manager'); setShowRoleMenu(false); }}
-              >
-                <span>Sales Manager</span>
-                <UserCheck size={16} color="#F472B6" />
-              </div>
-
-              <div
-                className={`ceo-role-item ${currentRole === 'project_manager' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onSwitchRole('project_manager'); setShowRoleMenu(false); }}
-              >
-                <span>Project Manager</span>
-                <FolderKanban size={16} color="#34D399" />
-              </div>
-
-              <div
-                className={`ceo-role-item ${currentRole === 'marketing' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onSwitchRole('marketing'); setShowRoleMenu(false); }}
-              >
-                <span>Marketing</span>
-                <Megaphone size={16} color="#EC4899" />
-              </div>
-
-              <div
-                className={`ceo-role-item ${currentRole === 'accountant' || currentRole === 'finance' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onSwitchRole('accountant'); setShowRoleMenu(false); }}
-              >
-                <span>Finance</span>
-                <Calculator size={16} color="#2563EB" />
-              </div>
-
-              <div
-                className={`ceo-role-item ${currentRole === 'employee' ? 'active' : ''}`}
-                onClick={(e) => { e.stopPropagation(); onSwitchRole('employee'); setShowRoleMenu(false); }}
-              >
-                <span>Employee</span>
-                <User size={16} color="#38BDF8" />
-              </div>
-            </div>
-          )}
         </div>
       </aside>
     </>

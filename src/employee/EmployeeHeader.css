@@ -243,6 +243,15 @@
 }
 
 /* Mobile responsive */
+@media (max-width: 1024px) {
+  .finance-header-search {
+    width: 140px !important;
+  }
+  .finance-header-actions-group span {
+    display: none;
+  }
+}
+
 @media (max-width: 768px) {
   .employee-header {
     padding: 0 16px;
@@ -257,8 +266,8 @@
     display: none;
   }
 
-  .employee-search-box {
-    display: none;
+  .employee-search-box, .finance-header-search {
+    display: none !important;
   }
 
   .employee-header-right {

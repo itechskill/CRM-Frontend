@@ -25,19 +25,11 @@ import { API_BASE, authHeaders, apiRequest } from './utils/api';
 // 1. Admin Components (src/admin/)
 import Sidebar from './admin/Sidebar';
 import Header from './admin/Header';
-import KpiCard from './admin/KpiCard';
-import RevenueChart from './admin/RevenueChart';
-import PipelineDonutChart from './admin/PipelineDonutChart';
-import DealsOverviewChart from './admin/DealsOverviewChart';
-import RecentActivity from './admin/RecentActivity';
+import AdminDashboard from './admin/AdminDashboard';
 import UsersView from './admin/UsersView';
 import InviteUserModal from './admin/InviteUserModal';
-import ClientsView from './admin/ClientsView';
 import AddClientModal from './admin/AddClientModal';
-import ProjectsView from './admin/ProjectsView';
 import NewProjectModal from './admin/NewProjectModal';
-import FinanceView from './admin/FinanceView';
-import ReportsView from './admin/ReportsView';
 import SettingsView from './admin/SettingsView';
 import RegistrationRequestsView from './admin/RegistrationRequestsView';
 import CreateCEOAccountView from './admin/CreateCEOAccountView';
@@ -124,7 +116,6 @@ import AccountantDashboard from './accountant/AccountantDashboard';
 import AccountantInvoicesView from './accountant/AccountantInvoicesView';
 import AccountantExpensesView from './accountant/AccountantExpensesView';
 import AccountantPayrollView from './accountant/AccountantPayrollView';
-import AccountantAccountsView from './accountant/AccountantAccountsView';
 import AccountantMaintenanceView from './accountant/AccountantMaintenanceView';
 import AccountantReportsView from './accountant/AccountantReportsView';
 import AccountantNotificationsView from './accountant/AccountantNotificationsView';
@@ -151,6 +142,7 @@ import ProjectsPerformanceView from './ceo/ProjectsPerformanceView';
 import SalesFinanceView from './ceo/SalesFinanceView';
 import TeamPerformanceView from './ceo/TeamPerformanceView';
 import ReportsAnalyticsView from './ceo/ReportsAnalyticsView';
+import OrgOverview from './ceo/org/OrgOverview';
 
 // 9. Administration Components (src/administration/)
 import AdministrationSidebar from './administration/AdministrationSidebar';
@@ -163,179 +155,40 @@ import AdministrationCompanyResourcesView from './administration/AdministrationC
 import AdministrationReportsView from './administration/AdministrationReportsView';
 import ProfileView from './components/ProfileView';
 
+// 10. Support Department Components (src/support/)
+import SupportSidebar from './support/SupportSidebar';
+import SupportHeader from './support/SupportHeader';
+import SupportDashboard from './support/SupportDashboard';
+import SupportOrdersView from './support/SupportOrdersView';
+import SupportInventoryView from './support/SupportInventoryView';
+import SupportDeliveryNotesView from './support/SupportDeliveryNotesView';
+import SupportLeaveView from './support/SupportLeaveView';
+
+// 11. Accounts Department Components (src/accounts/)
+import AccountsSidebar from './accounts/AccountsSidebar';
+import AccountsHeader from './accounts/AccountsHeader';
+import AccountsDashboard from './accounts/AccountsDashboard';
+import AccountsOrdersReadyView from './accounts/AccountsOrdersReadyView';
+import AccountsInvoicesView from './accounts/AccountsInvoicesView';
+import AccountsLeaveView from './accounts/AccountsLeaveView';
+
+// 12. Finance Department Components (src/finance_dept/)
+import FinanceSidebar from './finance_dept/FinanceSidebar';
+import FinanceHeader from './finance_dept/FinanceHeader';
+import FinanceDashboard from './finance_dept/FinanceDashboard';
+import FinanceInvoicesView from './finance_dept/FinanceInvoicesView';
+import FinancePaymentsView from './finance_dept/FinancePaymentsView';
+import FinanceReceivablesView from './finance_dept/FinanceReceivablesView';
+import FinanceReportsView from './finance_dept/FinanceReportsView';
+import FinanceLeaveView from './finance_dept/FinanceLeaveView';
+
 import { Users, ShieldCheck, UserX } from 'lucide-react';
 
-const initialUsersList = [
-  {
-    id: 1,
-    name: 'Sarah Mitchell',
-    email: 'sarah.mitchell@nexus.io',
-    initials: 'SM',
-    avatarBg: '#2563EB',
-    role: 'Sales Manager',
-    department: 'Sales',
-    status: 'Active',
-    lastActive: 'Just now',
-    joined: 'Jan 12, 2023'
-  },
-  {
-    id: 2,
-    name: 'Daniel Torres',
-    email: 'd.torres@nexus.io',
-    initials: 'DT',
-    avatarBg: '#10B981',
-    role: 'Project Lead',
-    department: 'Operations',
-    status: 'Active',
-    lastActive: '5m ago',
-    joined: 'Mar 4, 2022'
-  },
-  {
-    id: 3,
-    name: 'Aisha Nkosi',
-    email: 'aisha.n@nexus.io',
-    initials: 'AN',
-    avatarBg: '#F59E0B',
-    role: 'Account Executive',
-    department: 'Sales',
-    status: 'Active',
-    lastActive: '1h ago',
-    joined: 'Jun 18, 2023'
-  }
-];
+const initialUsersList = [];
 
-const initialClientsList = [
-  {
-    id: 1,
-    name: 'Proxima Labs',
-    country: 'USA',
-    initials: 'PL',
-    avatarBg: '#2563EB',
-    industry: 'Technology',
-    contactName: 'Eric Vance',
-    contactEmail: 'e.vance@proxima.io',
-    revenueYtd: 'Rs. 148,000',
-    dealsCount: 4,
-    status: 'Active'
-  },
-  {
-    id: 2,
-    name: 'BuildCo Industries',
-    country: 'Germany',
-    initials: 'BC',
-    avatarBg: '#10B981',
-    industry: 'Construction',
-    contactName: 'Rachel Okafor',
-    contactEmail: 'r.okafor@buildco.com',
-    revenueYtd: 'Rs. 112,000',
-    dealsCount: 2,
-    status: 'Active'
-  },
-  {
-    id: 3,
-    name: 'Starlight Ventures',
-    country: 'UK',
-    initials: 'SV',
-    avatarBg: '#F59E0B',
-    industry: 'Finance & VC',
-    contactName: 'David Miller',
-    contactEmail: 'd.miller@starlight.io',
-    revenueYtd: 'Rs. 210,000',
-    dealsCount: 7,
-    status: 'Active'
-  },
-  {
-    id: 4,
-    name: 'Nexus Dynamics',
-    country: 'Canada',
-    initials: 'NX',
-    avatarBg: '#EF4444',
-    industry: 'Logistics',
-    contactName: 'Sophia Martinez',
-    contactEmail: 's.martinez@nexusdyn.com',
-    revenueYtd: 'Rs. 85,000',
-    dealsCount: 1,
-    status: 'At Risk'
-  }
-];
+const initialClientsList = [];
 
-const initialProjectsList = [
-  {
-    id: 1,
-    name: 'Proxima Platform Migration',
-    client: 'Proxima Labs',
-    leadName: 'Daniel Torres',
-    leadInitials: 'DT',
-    leadBg: '#2563EB',
-    progress: 78,
-    budgetSpent: 'Rs. 34K',
-    budgetTotal: 'Rs. 42K',
-    budgetRatio: 80,
-    dueDate: 'Feb 28, 2025',
-    priority: 'High',
-    status: 'On Track'
-  },
-  {
-    id: 2,
-    name: 'BuildCo ERP Integration',
-    client: 'BuildCo Industries',
-    leadName: 'Sarah Mitchell',
-    leadInitials: 'SM',
-    leadBg: '#10B981',
-    progress: 45,
-    budgetSpent: 'Rs. 22K',
-    budgetTotal: 'Rs. 28K',
-    budgetRatio: 78,
-    dueDate: 'Jan 15, 2025',
-    priority: 'Critical',
-    status: 'At Risk'
-  },
-  {
-    id: 3,
-    name: 'TechFlow Analytics Engine',
-    client: 'TechFlow Inc',
-    leadName: 'Clara Novak',
-    leadInitials: 'CN',
-    leadBg: '#F59E0B',
-    progress: 90,
-    budgetSpent: 'Rs. 17K',
-    budgetTotal: 'Rs. 20K',
-    budgetRatio: 85,
-    dueDate: 'Dec 31, 2024',
-    priority: 'Medium',
-    status: 'On Track'
-  },
-  {
-    id: 4,
-    name: 'Starlight Security Audit',
-    client: 'Starlight Ventures',
-    leadName: 'Liam Chen',
-    leadInitials: 'LC',
-    leadBg: '#8B5CF6',
-    progress: 60,
-    budgetSpent: 'Rs. 45K',
-    budgetTotal: 'Rs. 60K',
-    budgetRatio: 75,
-    dueDate: 'Mar 20, 2025',
-    priority: 'Medium',
-    status: 'On Track'
-  },
-  {
-    id: 5,
-    name: 'Apex Infrastructure Scale',
-    client: 'Apex Software',
-    leadName: 'Elena Rostova',
-    leadInitials: 'ER',
-    leadBg: '#EC4899',
-    progress: 25,
-    budgetSpent: 'Rs. 12K',
-    budgetTotal: 'Rs. 50K',
-    budgetRatio: 24,
-    dueDate: 'Apr 10, 2025',
-    priority: 'High',
-    status: 'Delayed'
-  }
-];
+const initialProjectsList = [];
 
 export default function App() {
   migrateLegacyAuth();
@@ -385,6 +238,11 @@ export default function App() {
   const [isAccModalOpen, setIsAccModalOpen] = useState(false);
   const [isMktModalOpen, setIsMktModalOpen] = useState(false);
   const [portalSearch, setPortalSearch] = useState('');
+
+  // Departmental cross-view navigation pre-fill state
+  const [supportOrderForDN, setSupportOrderForDN] = useState(null);
+  const [dnOrderForInvoice, setDnOrderForInvoice] = useState(null);
+  const [financeInvoiceForPayment, setFinanceInvoiceForPayment] = useState(null);
 
   const [currentUser, setCurrentUser] = useState(cachedUser);
   const [backendVerifiedRole, setBackendVerifiedRole] = useState(initialVerifiedRole);
@@ -490,8 +348,9 @@ export default function App() {
       setViewPortal(role);
     }
     setCurrentRole(role);
-    setActiveTab('dashboard');
-    setActiveTabStorage('dashboard');
+    const defTab = (role === 'sales_member' || role === 'sales_rep') ? 'my_leads' : 'dashboard';
+    setActiveTab(defTab);
+    setActiveTabStorage(defTab);
     setIsSidebarOpen(false);
     setPortalSearch('');
   };
@@ -593,8 +452,8 @@ export default function App() {
   };
 
   const knownRoles = [
-    'employee', 'sales_manager', 'project_manager', 'admin',
-    'hr', 'accountant', 'marketing', 'ceo', 'administration'
+    'employee', 'sales_member', 'sales_rep', 'sales_person', 'sales_manager', 'project_manager', 'admin',
+    'hr', 'accountant', 'marketing', 'ceo', 'administration', 'support', 'finance'
   ];
 
   const effectiveRole = knownRoles.includes(currentRole)
@@ -609,13 +468,27 @@ export default function App() {
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
         'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'
       ],
+      sales_member: [
+        'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
+        'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders'
+      ],
+      sales_person: [
+        'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
+        'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders'
+      ],
+      sales_rep: [
+        'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
+        'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'
+      ],
+      support: ['dashboard', 'leave', 'support_orders', 'inventory', 'delivery_notes', 'profile'],
       sales_manager: ['dashboard', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
-      admin: ['dashboard', 'clients', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'projects', 'finance', 'reports', 'settings', 'profile'],
+      admin: ['dashboard', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
-      accountant: ['dashboard', 'invoices', 'expenses', 'payroll', 'accounts', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
+      accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
+      finance: ['dashboard', 'leave', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'finance_reports', 'reports', 'profile'],
       marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'],
-      ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile'],
+      ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile', 'org_users', 'org_dept_sales', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile']
     };
 
@@ -626,8 +499,9 @@ export default function App() {
       validTabs.length > 0 &&
       !validTabs.includes(activeTab)
     ) {
-      setActiveTab('dashboard');
-      setActiveTabStorage('dashboard');
+      const fallback = (effectiveRole === 'sales_member' || effectiveRole === 'sales_rep') ? 'my_leads' : 'dashboard';
+      setActiveTab(fallback);
+      setActiveTabStorage(fallback);
     }
   }, [effectiveRole, activeTab]);
 
@@ -735,10 +609,10 @@ export default function App() {
   return (
     <div className="app-container">
       {/* ----------------- EMPLOYEE SIDE ----------------- */}
-      {effectiveRole === 'employee' && (
+      {(effectiveRole === 'employee' || effectiveRole === 'sales_member' || effectiveRole === 'sales_rep' || effectiveRole === 'sales_person') && (
         <RoleProtectedRoute
           userRole={backendVerifiedRole}
-          allowedRoles="employee"
+          allowedRoles={['employee', 'sales_member', 'sales_rep', 'sales_person']}
           onReturnToDashboard={() => setCurrentRole(backendVerifiedRole)}
         >
           <EmployeeSidebar
@@ -922,55 +796,8 @@ export default function App() {
             />
 
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['clients', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'projects', 'finance', 'reports', 'settings', 'profile'].includes(activeTab)) && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                  <div className="kpi-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', marginBottom: '0' }}>
-                    <KpiCard
-                      title="Total Users"
-                      value="3,847"
-                      change="+ 12.5%"
-                      isPositive={true}
-                      subtext="Registered accounts"
-                      icon={Users}
-                      colorTheme="blue"
-                    />
-                    <KpiCard
-                      title="Active Users"
-                      value="3,521"
-                      change="+ 8.2%"
-                      isPositive={true}
-                      subtext="Active within 30 days"
-                      icon={ShieldCheck}
-                      colorTheme="green"
-                    />
-                    <KpiCard
-                      title="Inactive / Pending"
-                      value="326"
-                      change="- 2.1%"
-                      isPositive={false}
-                      subtext="Pending invitations"
-                      icon={UserX}
-                      colorTheme="purple"
-                    />
-                  </div>
-
-                  <div className="analytics-grid">
-                    <RevenueChart />
-                    <PipelineDonutChart />
-                  </div>
-
-                  <div className="bottom-grid">
-                    <DealsOverviewChart />
-                    <RecentActivity onViewAll={() => setActiveTab('clients')} />
-                  </div>
-                </div>
-              )}
-
-              {activeTab === 'clients' && (
-                <ClientsView
-                  clientsList={clientsList}
-                  onOpenAddClientModal={() => setIsAddClientModalOpen(true)}
-                />
+              {(activeTab === 'dashboard' || (!['registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && (
+                <AdminDashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />
               )}
 
               {activeTab === 'registration_requests' && (
@@ -981,20 +808,11 @@ export default function App() {
 
               {activeTab === 'users' && (
                 <UsersView
-                  usersList={usersList}
                   onOpenInviteModal={() => setIsInviteModalOpen(true)}
                 />
               )}
 
-              {activeTab === 'projects' && (
-                <ProjectsView
-                  projectsList={projectsList}
-                  onOpenNewProjectModal={() => setIsNewProjectModalOpen(true)}
-                />
-              )}
-
-              {activeTab === 'finance' && <FinanceView />}
-              {activeTab === 'reports' && <ReportsView />}
+              {activeTab.startsWith('org_') && <OrgOverview activeTab={activeTab} setActiveTab={handleSetActiveTab} />}
               {activeTab === 'settings' && <SettingsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
@@ -1043,14 +861,14 @@ export default function App() {
         </RoleProtectedRoute>
       )}
 
-      {/* ----------------- ACCOUNTANT SIDE ----------------- */}
-      {effectiveRole === 'accountant' && (
+      {/* ----------------- SUPPORT DEPARTMENT PORTAL ----------------- */}
+      {effectiveRole === 'support' && (
         <RoleProtectedRoute
           userRole={backendVerifiedRole}
-          allowedRoles="accountant"
+          allowedRoles={['support', 'admin', 'ceo']}
           onReturnToDashboard={() => setCurrentRole(backendVerifiedRole)}
         >
-          <AccountantSidebar
+          <SupportSidebar
             activeTab={activeTab}
             setActiveTab={handleSetActiveTab}
             currentRole={currentRole}
@@ -1062,28 +880,90 @@ export default function App() {
             onLogout={handleLogout}
           />
           <div className="main-wrapper">
-            <AccountantHeader
+            <SupportHeader
               activeTab={activeTab}
+              currentUser={currentUser}
               onMenuToggle={() => setIsSidebarOpen(true)}
-              onOpenPrimaryAction={() => setIsAccModalOpen(true)}
               searchQuery={portalSearch}
               onSearchChange={setPortalSearch}
+              onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['invoices', 'expenses', 'payroll', 'accounts', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'].includes(activeTab)) && (
-                <AccountantDashboard
+              {(activeTab === 'dashboard' || !['leave', 'support_orders', 'inventory', 'delivery_notes', 'profile'].includes(activeTab)) && (
+                <SupportDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
-                  onOpenInvoiceModal={() => { setActiveTab('invoices'); setIsAccModalOpen(true); }}
-                  onOpenExpenseModal={() => { setActiveTab('expenses'); setIsAccModalOpen(true); }}
-                  isModalOpen={isAccModalOpen}
-                  onCloseModal={() => setIsAccModalOpen(false)}
+                />
+              )}
+              {activeTab === 'leave' && <SupportLeaveView />}
+              {activeTab === 'support_orders' && (
+                <SupportOrdersView
+                  onNavigateDeliveryNotes={(order) => {
+                    setSupportOrderForDN(order);
+                    setActiveTab('delivery_notes');
+                  }}
+                />
+              )}
+              {activeTab === 'inventory' && <SupportInventoryView />}
+              {activeTab === 'delivery_notes' && (
+                <SupportDeliveryNotesView
+                  initialSelectedOrder={supportOrderForDN}
+                  onClearSelectedOrder={() => setSupportOrderForDN(null)}
+                />
+              )}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
+            </main>
+          </div>
+        </RoleProtectedRoute>
+      )}
+
+      {/* ----------------- ACCOUNTS DEPARTMENT PORTAL ----------------- */}
+      {effectiveRole === 'accountant' && (
+        <RoleProtectedRoute
+          userRole={backendVerifiedRole}
+          allowedRoles={['accountant', 'admin', 'ceo']}
+          onReturnToDashboard={() => setCurrentRole(backendVerifiedRole)}
+        >
+          <AccountsSidebar
+            activeTab={activeTab}
+            setActiveTab={handleSetActiveTab}
+            currentRole={currentRole}
+            userRole={backendVerifiedRole}
+            currentUser={currentUser}
+            onSwitchRole={handleSwitchRole}
+            isMobileOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+            onLogout={handleLogout}
+          />
+          <div className="main-wrapper">
+            <AccountsHeader
+              activeTab={activeTab}
+              currentUser={currentUser}
+              onMenuToggle={() => setIsSidebarOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
+              onNavigateTab={(tab) => handleSetActiveTab(tab)}
+            />
+            <main className="content-area">
+              {(activeTab === 'dashboard' || !['leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'].includes(activeTab)) && (
+                <AccountsDashboard
+                  currentUser={currentUser}
+                  onNavigateTab={(tab) => setActiveTab(tab)}
+                />
+              )}
+              {activeTab === 'leave' && <AccountsLeaveView />}
+              {activeTab === 'orders_ready' && (
+                <AccountsOrdersReadyView
+                  onNavigateCreateInvoice={(order) => {
+                    setDnOrderForInvoice(order);
+                    setActiveTab('invoices');
+                  }}
                 />
               )}
               {activeTab === 'invoices' && (
-                <AccountantInvoicesView
-                  isModalOpen={isAccModalOpen}
-                  onCloseModal={() => setIsAccModalOpen(false)}
+                <AccountsInvoicesView
+                  initialOrder={dnOrderForInvoice}
+                  onClearInitialOrder={() => setDnOrderForInvoice(null)}
                 />
               )}
               {activeTab === 'expenses' && (
@@ -1098,12 +978,7 @@ export default function App() {
                   onCloseModal={() => setIsAccModalOpen(false)}
                 />
               )}
-              {activeTab === 'accounts' && (
-                <AccountantAccountsView
-                  isModalOpen={isAccModalOpen}
-                  onCloseModal={() => setIsAccModalOpen(false)}
-                />
-              )}
+
               {activeTab === 'maintenance' && (
                 <AccountantMaintenanceView
                   isModalOpen={isAccModalOpen}
@@ -1118,6 +993,70 @@ export default function App() {
               )}
               {activeTab === 'acc_notifications' && <AccountantNotificationsView />}
               {activeTab === 'acc_settings' && <AccountantSettingsView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
+            </main>
+          </div>
+        </RoleProtectedRoute>
+      )}
+
+      {/* ----------------- FINANCE DEPARTMENT PORTAL ----------------- */}
+      {effectiveRole === 'finance' && (
+        <RoleProtectedRoute
+          userRole={backendVerifiedRole}
+          allowedRoles={['finance', 'admin', 'ceo']}
+          onReturnToDashboard={() => setCurrentRole(backendVerifiedRole)}
+        >
+          <FinanceSidebar
+            activeTab={activeTab}
+            setActiveTab={handleSetActiveTab}
+            currentRole={currentRole}
+            userRole={backendVerifiedRole}
+            currentUser={currentUser}
+            onSwitchRole={handleSwitchRole}
+            isMobileOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+            onLogout={handleLogout}
+          />
+          <div className="main-wrapper">
+            <FinanceHeader
+              activeTab={activeTab}
+              currentUser={currentUser}
+              onMenuToggle={() => setIsSidebarOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
+              onNavigateTab={(tab) => handleSetActiveTab(tab)}
+            />
+            <main className="content-area">
+              {(activeTab === 'dashboard' || !['leave', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
+                <FinanceDashboard
+                  currentUser={currentUser}
+                  onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                />
+              )}
+              {activeTab === 'leave' && <FinanceLeaveView />}
+              {activeTab === 'finance_invoices' && (
+                <FinanceInvoicesView
+                  onNavigatePayment={(inv) => {
+                    setFinanceInvoiceForPayment(inv);
+                    handleSetActiveTab('customer_payments');
+                  }}
+                />
+              )}
+              {(activeTab === 'customer_payments' || activeTab === 'finance_payments') && (
+                <FinancePaymentsView
+                  initialInvoice={financeInvoiceForPayment}
+                  onClearInitialInvoice={() => setFinanceInvoiceForPayment(null)}
+                />
+              )}
+              {(activeTab === 'receivables' || activeTab === 'finance_receivables') && (
+                <FinanceReceivablesView
+                  onNavigatePayment={(inv) => {
+                    setFinanceInvoiceForPayment(inv);
+                    handleSetActiveTab('customer_payments');
+                  }}
+                />
+              )}
+              {(activeTab === 'finance_reports' || activeTab === 'reports') && <FinanceReportsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
@@ -1214,12 +1153,13 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile'].includes(activeTab)) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
+              {(activeTab === 'dashboard' || (!['business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
               {activeTab === 'business_overview' && <BusinessOverviewView />}
               {activeTab === 'projects_performance' && <ProjectsPerformanceView />}
               {activeTab === 'sales_finance' && <SalesFinanceView />}
               {activeTab === 'team_performance' && <TeamPerformanceView />}
               {activeTab === 'reports_analytics' && <ReportsAnalyticsView />}
+              {activeTab.startsWith('org_') && <OrgOverview activeTab={activeTab} setActiveTab={handleSetActiveTab} />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>

@@ -20,6 +20,7 @@ import {
   Megaphone,
   Crown,
   Briefcase,
+  TrendingUp,
   LogOut
 } from 'lucide-react';
 import './ProjectSidebar.css';
@@ -233,6 +234,28 @@ export default function ProjectSidebar({ activeTab, setActiveTab, currentRole, u
               >
                 <span>Sales Manager</span>
                 <UserCheck size={16} color="#F472B6" />
+              </div>
+
+              <div 
+                style={{
+                  padding: '8px 12px',
+                  borderRadius: '6px',
+                  color: (currentRole === 'sales_member' || currentRole === 'sales_rep') ? '#3B82F6' : '#94A3B8',
+                  backgroundColor: (currentRole === 'sales_member' || currentRole === 'sales_rep') ? '#1E293B' : 'transparent',
+                  cursor: 'pointer',
+                  fontSize: '0.85rem',
+                  fontWeight: 500,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+                onClick={() => {
+                  onSwitchRole('sales_member');
+                  setShowRoleMenu(false);
+                }}
+              >
+                <span>Sales Person</span>
+                <TrendingUp size={16} color="#10B981" />
               </div>
 
               <div 

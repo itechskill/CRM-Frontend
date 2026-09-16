@@ -52,10 +52,46 @@ export const ROLE_CONFIG = {
     portalName: 'Finance / Accountant Portal',
     defaultTab: 'dashboard'
   },
+  hr: {
+    backendRole: 'hr',
+    frontendRole: 'hr',
+    portalName: 'HR Manager Portal',
+    defaultTab: 'dashboard'
+  },
+  sales_member: {
+    backendRole: 'sales_member',
+    frontendRole: 'sales_member',
+    portalName: 'Sales Person Portal',
+    defaultTab: 'my_leads'
+  },
+  sales_rep: {
+    backendRole: 'sales_rep',
+    frontendRole: 'sales_member',
+    portalName: 'Sales Person Portal',
+    defaultTab: 'my_leads'
+  },
+  sales_person: {
+    backendRole: 'sales_person',
+    frontendRole: 'sales_member',
+    portalName: 'Sales Person Portal',
+    defaultTab: 'my_leads'
+  },
   employee: {
     backendRole: 'employee',
     frontendRole: 'employee',
     portalName: 'Employee Portal',
+    defaultTab: 'dashboard'
+  },
+  support: {
+    backendRole: 'support',
+    frontendRole: 'support',
+    portalName: 'Support Department Portal',
+    defaultTab: 'dashboard'
+  },
+  finance: {
+    backendRole: 'finance',
+    frontendRole: 'finance',
+    portalName: 'Finance Department Portal',
     defaultTab: 'dashboard'
   }
 };

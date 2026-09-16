@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import {
   PieChart,
   Download,
@@ -12,27 +13,52 @@ import {
 } from 'lucide-react';
 import './AccountantViews.css';
 
-const pnlData = {
-  revenue: [
-    { item: 'Software License Revenue', amount: 384000 },
-    { item: 'Consulting & Implementation', amount: 125000 },
-    { item: 'Support & SLA Subscriptions', amount: 48000 },
-  ],
-  cogs: [
-    { item: 'Cloud Server Infrastructure', amount: 34500 },
-    { item: 'Third-party API & Licenses', amount: 14000 },
-  ],
-  operatingExpenses: [
-    { item: 'Salaries, Wages & Benefits', amount: 185400 },
-    { item: 'Sales & Marketing Campaigns', amount: 28200 },
-    { item: 'Office Rent & Facilities', amount: 19800 },
-    { item: 'Legal, Audit & Accounting', amount: 11400 },
-  ]
-};
-
 export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
-  const [reportType, setReportType] = useState('pnl');
+const [reportType, setReportType] = useState('pnl');
   const [period, setPeriod] = useState('FY2026');
+  const [reportData, setReportData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchReports = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/finance/reports/full');
+        if (response.ok && data.success) {
+          setReportData(data.data);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReports();
+  }, []);
+
+  const rev = reportData?.revenue || 0;
+  const maintenance = reportData?.maintenanceCost || 0;
+  const cats = reportData?.expenseCategories || {};
+  
+  const cogsTotal = maintenance + (cats.Software || 0);
+  const opexTotal = (cats.Salaries || 0) + (cats.Marketing || 0) + (cats.Travel || 0) + (cats.OfficeSupplies || 0) + (cats.Utilities || 0) + (cats.Other || 0);
+
+  const pnlData = {
+    revenue: [
+      { item: 'Total Paid Invoices', amount: rev }
+    ],
+    cogs: [
+      { item: 'Building & Maintenance', amount: maintenance },
+      { item: 'Software & Cloud', amount: cats.Software || 0 }
+    ],
+    operatingExpenses: [
+      { item: 'Salaries & Payroll', amount: cats.Salaries || 0 },
+      { item: 'Marketing & Ads', amount: cats.Marketing || 0 },
+      { item: 'Travel & Dining', amount: cats.Travel || 0 },
+      { item: 'Office Supplies', amount: cats.OfficeSupplies || 0 },
+      { item: 'Utilities', amount: cats.Utilities || 0 },
+      { item: 'Other Expenses', amount: cats.Other || 0 }
+    ]
+  };
 
   const totalRevenue = pnlData.revenue.reduce((s, r) => s + r.amount, 0);
   const totalCogs = pnlData.cogs.reduce((s, c) => s + c.amount, 0);
@@ -60,6 +86,10 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
     link.click();
     document.body.removeChild(link);
   };
+
+  if (loading) {
+    return <div style={{ padding: '40px', textAlign: 'center', color: '#64748B' }}>Loading financial reports...</div>;
+  }
 
   return (
     <div className="acc-view-container">
@@ -159,7 +189,7 @@ export default function AccountantReportsView({ isModalOpen, onCloseModal }) {
             <div className="acc-kpi-icon blue"><TrendingUp size={18} /></div>
           </div>
           <div className="acc-kpi-value">Rs. {grossProfit.toLocaleString()}</div>
-          <div className="acc-kpi-subtitle">{Math.round((grossProfit / totalRevenue) * 100)}% gross margin</div>
+          <div className="acc-kpi-subtitle">{totalRevenue > 0 ? Math.round((grossProfit / totalRevenue) * 100) : 0}% gross margin</div>
         </div>
 
         <div className="acc-kpi-card">

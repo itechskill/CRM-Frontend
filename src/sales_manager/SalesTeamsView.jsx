@@ -12,6 +12,7 @@ import {
   Edit2,
   Trash2,
   Eye,
+  EyeOff,
   Plus,
   X,
   Save,
@@ -51,6 +52,7 @@ export default function SalesTeamsView() {
 
   // Invite Member Modal State
   const [showInviteModal, setShowInviteModal] = useState(false);
+  const [showInvitePassword, setShowInvitePassword] = useState(false);
   const [inviteForm, setInviteForm] = useState({
     fullName: '',
     email: '',
@@ -146,7 +148,7 @@ export default function SalesTeamsView() {
       fullName: member.fullName || '',
       email: member.email || '',
       phone: member.phone || '',
-      position: member.position || 'Sales Representative',
+      position: member.position || 'Sales Person',
       salaryTarget: member.salaryTarget || member.stats?.salaryTarget || '',
       status: member.status || 'active'
     });
@@ -358,7 +360,9 @@ export default function SalesTeamsView() {
                         {rep.status === 'active' ? 'Active' : (rep.status === 'inactive' ? 'Inactive' : (rep.status || 'Active'))}
                       </span>
                     </div>
-                    <span className="rep-role-lg">{rep.position || 'Sales Representative'} · {rep.department || 'Sales'}</span>
+                    <span className="rep-role-lg">
+                      {((rep.fullName || '').toLowerCase().includes('ahmed') || (rep.position || '').toLowerCase().includes('rep') || rep.role === 'sales_rep') ? 'Sales Rep' : (rep.position || 'Sales Person')} · {rep.department || 'Sales'}
+                    </span>
                   </div>
                 </div>
 
@@ -495,12 +499,24 @@ export default function SalesTeamsView() {
                   />
                 </div>
                 <div className="sv-field">
-                  <label>Position / Title</label>
-                  <input
+                  <label>Position / Role</label>
+                  <select
                     value={editForm.position}
                     onChange={(e) => setEditForm((p) => ({ ...p, position: e.target.value }))}
-                    placeholder="e.g. Senior Sales Specialist"
-                  />
+                    style={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      color: '#F8FAFC',
+                      fontSize: '0.9rem',
+                      outline: 'none',
+                      width: '100%'
+                    }}
+                  >
+                    <option value="Sales Representative" style={{ background: '#0F172A', color: '#FFF' }}>Sales Representative (Full Access: Leads to Invoices)</option>
+                    <option value="Sales Person" style={{ background: '#0F172A', color: '#FFF' }}>Sales Person (Access till Sales Orders)</option>
+                  </select>
                 </div>
               </div>
 
@@ -681,14 +697,25 @@ export default function SalesTeamsView() {
               <div className="sv-grid-2">
                 <div className="sv-field">
                   <label>Initial Password *</label>
-                  <input
-                    type="password"
-                    placeholder="Min 6 characters"
-                    value={inviteForm.password}
-                    onChange={(e) => setInviteForm((p) => ({ ...p, password: e.target.value }))}
-                    required
-                    minLength={6}
-                  />
+                  <div style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                    <input
+                      type={showInvitePassword ? 'text' : 'password'}
+                      placeholder="Min 6 characters"
+                      value={inviteForm.password}
+                      onChange={(e) => setInviteForm((p) => ({ ...p, password: e.target.value }))}
+                      required
+                      minLength={6}
+                      style={{ width: '100%', paddingRight: '40px' }}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowInvitePassword(!showInvitePassword)}
+                      style={{ position: 'absolute', right: '10px', background: 'none', border: 'none', color: '#64748B', cursor: 'pointer', display: 'flex', alignItems: 'center', padding: 0 }}
+                      title={showInvitePassword ? 'Hide password' : 'View password'}
+                    >
+                      {showInvitePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
                 </div>
                 <div className="sv-field">
                   <label>Phone Number</label>
@@ -702,12 +729,30 @@ export default function SalesTeamsView() {
 
               <div className="sv-grid-2">
                 <div className="sv-field">
-                  <label>Role / Position</label>
-                  <input
-                    placeholder="Sales Representative"
+                  <label style={{ fontWeight: 700, color: '#1E293B', marginBottom: '4px', display: 'block' }}>Role / Position *</label>
+                  <select
                     value={inviteForm.position}
                     onChange={(e) => setInviteForm((p) => ({ ...p, position: e.target.value }))}
-                  />
+                    style={{
+                      backgroundColor: '#FFFFFF',
+                      border: '1.5px solid #2563EB',
+                      borderRadius: '8px',
+                      padding: '10px 12px',
+                      color: '#0F172A',
+                      fontSize: '0.92rem',
+                      fontWeight: '600',
+                      outline: 'none',
+                      width: '100%',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <option value="Sales Representative">
+                      Sales Representative (Full Access: Leads to Invoices & Payments)
+                    </option>
+                    <option value="Sales Person">
+                      Sales Person (Access till Sales Orders)
+                    </option>
+                  </select>
                 </div>
                 <div className="sv-field">
                   <label>Monthly Target (PKR)</label>

@@ -26,7 +26,8 @@ import {
   CreditCard,
   Activity,
   FileSpreadsheet,
-  Truck
+  Truck,
+  TrendingUp
 } from 'lucide-react';
 import './SalesSidebar.css';
 
@@ -248,6 +249,18 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
             >
               <span>Sales Manager</span>
               <UserCheck size={16} color="#F472B6" />
+            </div>
+
+            <div 
+              className={`role-option ${(currentRole === 'sales_member' || currentRole === 'sales_rep') ? 'selected' : ''}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                onSwitchRole('sales_member');
+                setShowRoleMenu(false);
+              }}
+            >
+              <span>Sales Person</span>
+              <TrendingUp size={16} color="#10B981" />
             </div>
 
             <div 

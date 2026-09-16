@@ -144,17 +144,11 @@ export function setActiveTabStorage(tab) {
 
 import { getFrontendRole } from '../config/roleConfig';
 
-/** Admin/CEO may preview other portals; everyone else uses backend role only. */
+/** User remains strictly in their authorized portal environment. */
 export function resolveDisplayPortal(backendRole, frontendRole) {
-  const role = (backendRole || '').toLowerCase();
-  if (role === 'admin' || role === 'ceo') {
-    const saved = getViewPortal();
-    if (saved) return getFrontendRole(saved);
-  }
   return frontendRole;
 }
 
 export function canSwitchPortal(backendRole) {
-  const role = (backendRole || '').toLowerCase();
-  return role === 'admin' || role === 'ceo';
+  return false;
 }

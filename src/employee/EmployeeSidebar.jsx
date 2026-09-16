@@ -58,7 +58,20 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
     if (onClose) onClose();
   };
 
-  const isSalesDept = (currentUser?.department || '').trim().toLowerCase() === 'sales';
+  const isAhmedAnjum = (currentUser?.fullName || '').toLowerCase().includes('ahmed') ||
+    (currentUser?.email || '').toLowerCase().includes('quote@fortline.net') ||
+    (currentUser?.email || '').toLowerCase().includes('ahmed');
+
+  const isSalesRep = isAhmedAnjum ||
+    (currentUser?.position || '').toLowerCase() === 'sales representative' ||
+    (currentUser?.position || '').toLowerCase() === 'sales rep' ||
+    currentUser?.role === 'sales_rep';
+
+  const isSalesDept = (currentUser?.department || '').trim().toLowerCase() === 'sales' || 
+    currentRole === 'sales_member' || 
+    currentRole === 'sales_person' || 
+    currentRole === 'sales_rep' || 
+    isSalesRep;
 
   const generalNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
@@ -75,7 +88,8 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
     { id: 'leave', label: 'Leave & Attendance', icon: CalendarX },
   ];
 
-  const salesNav = [
+  // Full Sales Representative navigation (All 13 stages for Ahmed Anjum & Sales Representatives)
+  const fullSalesRepNav = [
     { id: 'my_leads', label: 'My Leads', icon: Users },
     { id: 'my_deals', label: 'Deals Pipeline', icon: TrendingUp },
     { id: 'my_quotations', label: 'Quotations', icon: FileText },
@@ -84,12 +98,24 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
     { id: 'my_orders', label: 'Sales Orders', icon: Briefcase },
     { id: 'proforma_invoices', label: 'Proforma Invoices', icon: FileSpreadsheet },
     { id: 'delivery_notes', label: 'Delivery Notes', icon: Truck },
-    { id: 'my_invoices', label: 'Invoices', icon: Calculator },
+    { id: 'my_invoices', label: 'Invoices & Billing', icon: FileText },
     { id: 'my_payments', label: 'Customer Payments', icon: DollarSign },
-    { id: 'followups', label: 'Follow-ups', icon: Phone },
-    { id: 'sales_targets', label: 'Sales Targets', icon: Target },
-    { id: 'sales_activities', label: 'Activity Log', icon: ClipboardList },
+    { id: 'followups', label: 'Client Follow-ups', icon: Phone },
+    { id: 'sales_targets', label: 'Targets & Quotas', icon: Target },
+    { id: 'sales_activities', label: 'Sales Activities', icon: ClipboardList },
   ];
+
+  // Streamlined workflow for Sales Person (only has access up to Sales Orders)
+  const salesPersonNav = [
+    { id: 'my_leads', label: 'My Leads', icon: Users },
+    { id: 'my_deals', label: 'Deals Pipeline', icon: TrendingUp },
+    { id: 'my_quotations', label: 'Quotations', icon: FileText },
+    { id: 'customer_pos', label: 'Customer POs', icon: FileCheck },
+    { id: 'product_files', label: 'Product Files', icon: FolderKanban },
+    { id: 'my_orders', label: 'Sales Orders', icon: Briefcase },
+  ];
+
+  const salesNav = isSalesRep ? fullSalesRepNav : salesPersonNav;
 
   const bottomNav = [
     { id: 'notifications', label: 'Notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : undefined, badgeColor: '#38BDF8' },
@@ -117,7 +143,9 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
               <div className="employee-brand-info">
                 <span className="employee-brand-name">Fortline CRM</span>
                 <span className="employee-brand-subtitle">
-                  {isSalesDept ? 'SALES MEMBER PORTAL' : 'EMPLOYEE PORTAL'}
+                  {isSalesRep
+                    ? 'SALES REP PORTAL'
+                    : (isSalesDept ? 'SALES PERSON PORTAL' : 'EMPLOYEE PORTAL')}
                 </span>
               </div>
             )}
@@ -238,10 +266,12 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
             {(!collapsed || isMobileOpen) && (
               <div className="employee-user-info" style={{ display: 'flex', flexDirection: 'column' }}>
                 <span className="employee-user-name" style={{ color: '#FFFFFF', fontSize: '0.825rem', fontWeight: 600 }}>
-                  {currentUser?.fullName || (isSalesDept ? 'Sales Member' : 'Employee')}
+                  {currentUser?.fullName || (isSalesDept ? 'Sales Person' : 'Employee')}
                 </span>
                 <span className="employee-user-role" style={{ color: '#94A3B8', fontSize: '0.72rem' }}>
-                  {currentUser?.position || (isSalesDept ? 'Sales Representative' : (currentUser?.department ? `${currentUser.department} Dept` : 'Employee'))}
+                  {isSalesRep
+                    ? 'Sales Rep'
+                    : (isSalesDept ? 'Sales Person' : (currentUser?.position || (currentUser?.department ? `${currentUser.department} Dept` : 'Employee')))}
                 </span>
               </div>
             )}
@@ -256,6 +286,92 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
               <LogOut size={16} color="#EF4444" />
             </div>
           </div>
+
+          {(userRole === 'admin' || userRole === 'ceo') && showRoleMenu && (
+            <div className="employee-role-dropdown" style={{ bottom: '70px' }}>
+              <div className="employee-role-dropdown-header">Switch Portal</div>
+
+              <div
+                className={`employee-role-item ${currentRole === 'ceo' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('ceo'); setShowRoleMenu(false); }}
+              >
+                <span>CEO</span>
+                <Crown size={16} color="#818CF8" />
+              </div>
+
+              <div
+                className={`employee-role-item ${currentRole === 'administration' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('administration'); setShowRoleMenu(false); }}
+              >
+                <span>Administration</span>
+                <Briefcase size={16} color="#38BDF8" />
+              </div>
+
+              <div
+                className={`employee-role-item ${currentRole === 'admin' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('admin'); setShowRoleMenu(false); }}
+              >
+                <span>Admin</span>
+                <ShieldCheck size={16} color="#60A5FA" />
+              </div>
+
+              <div
+                className={`employee-role-item ${currentRole === 'hr' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('hr'); setShowRoleMenu(false); }}
+              >
+                <span>HR Manager</span>
+                <Heart size={16} color="#A78BFA" />
+              </div>
+
+              <div
+                className={`employee-role-item ${currentRole === 'sales_manager' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('sales_manager'); setShowRoleMenu(false); }}
+              >
+                <span>Sales Manager</span>
+                <UserCheck size={16} color="#F472B6" />
+              </div>
+
+              <div
+                className={`employee-role-item ${(currentRole === 'sales_member' || currentRole === 'sales_rep') ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('sales_member'); setShowRoleMenu(false); }}
+              >
+                <span>Sales Person</span>
+                <TrendingUp size={16} color="#10B981" />
+              </div>
+
+              <div
+                className={`employee-role-item ${currentRole === 'project_manager' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('project_manager'); setShowRoleMenu(false); }}
+              >
+                <span>Project Manager</span>
+                <FolderKanban size={16} color="#34D399" />
+              </div>
+
+              <div
+                className={`employee-role-item ${currentRole === 'marketing' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('marketing'); setShowRoleMenu(false); }}
+              >
+                <span>Marketing</span>
+                <Megaphone size={16} color="#EC4899" />
+              </div>
+
+              <div
+                className={`employee-role-item ${currentRole === 'accountant' || currentRole === 'finance' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('accountant'); setShowRoleMenu(false); }}
+              >
+                <span>Finance</span>
+                <Calculator size={16} color="#2563EB" />
+              </div>
+
+              <div
+                className={`employee-role-item ${currentRole === 'employee' ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('employee'); setShowRoleMenu(false); }}
+              >
+                <span>Employee</span>
+                <User size={16} color="#38BDF8" />
+              </div>
+            </div>
+          )}
         </div>
       </aside>
     </>

@@ -18,7 +18,8 @@ import {
   Calculator,
   Megaphone,
   LogOut,
-  FolderKanban
+  FolderKanban,
+  TrendingUp
 } from 'lucide-react';
 import './AdministrationSidebar.css';
 
@@ -192,6 +193,14 @@ export default function AdministrationSidebar({ activeTab, setActiveTab, current
               >
                 <span>Sales Manager</span>
                 <UserCheck size={16} color="#F472B6" />
+              </div>
+
+              <div
+                className={`admin-side-role-item ${(currentRole === 'sales_member' || currentRole === 'sales_rep') ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('sales_member'); setShowRoleMenu(false); }}
+              >
+                <span>Sales Person</span>
+                <TrendingUp size={16} color="#10B981" />
               </div>
 
               <div

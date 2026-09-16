@@ -25,7 +25,7 @@ export default function ProfileView({ currentUser, onUpdateCurrentUser }) {
   const [saving, setSaving] = useState(false);
   const [alert, setAlert] = useState(null);
 
-  const [editForm, setEditForm] = useState({ fullName: '', phone: '' });
+  const [editForm, setEditForm] = useState({ fullName: '', email: '', phone: '' });
   const [pwForm, setPwForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [showPwSection, setShowPwSection] = useState(false);
   const [showCurrentPw, setShowCurrentPw] = useState(false);
@@ -41,7 +41,11 @@ export default function ProfileView({ currentUser, onUpdateCurrentUser }) {
       const { response, data } = await apiRequest('/api/users/me');
       if (response.ok && data.success) {
         setProfile(data.data);
-        setEditForm({ fullName: data.data.fullName || '', phone: data.data.phone || '' });
+        setEditForm({
+          fullName: data.data.fullName || '',
+          email: data.data.email || '',
+          phone: data.data.phone || ''
+        });
       }
     } catch (e) {
       console.error('Fetch profile error:', e);
@@ -62,17 +66,58 @@ export default function ProfileView({ currentUser, onUpdateCurrentUser }) {
       showAlert('error', 'Full name is required.');
       return;
     }
+
+    const trimmedEmail = editForm.email.trim().toLowerCase();
+    const emailRegex = /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,})+$/;
+    if (!emailRegex.test(trimmedEmail)) {
+      showAlert('error', 'Please enter a valid email address.');
+      return;
+    }
+
     setSaving(true);
     try {
-      const payload = { fullName: editForm.fullName.trim(), phone: editForm.phone.trim() };
+      const payload = {
+        fullName: editForm.fullName.trim(),
+        email: trimmedEmail,
+        phone: editForm.phone.trim()
+      };
 
       if (showPwSection && pwForm.newPassword) {
-        if (!pwForm.currentPassword) { showAlert('error', 'Current password is required.'); setSaving(false); return; }
-        if (pwForm.newPassword !== pwForm.confirmPassword) { showAlert('error', 'New passwords do not match.'); setSaving(false); return; }
-        if (pwForm.newPassword.length < 8) { showAlert('error', 'New password must be at least 8 characters long.'); setSaving(false); return; }
-        if (!/[A-Z]/.test(pwForm.newPassword)) { showAlert('error', 'New password must contain at least one uppercase letter.'); setSaving(false); return; }
-        if (!/[0-9]/.test(pwForm.newPassword)) { showAlert('error', 'New password must contain at least one number.'); setSaving(false); return; }
-        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwForm.newPassword)) { showAlert('error', 'New password must contain at least one special character.'); setSaving(false); return; }
+        if (!pwForm.currentPassword) {
+          showAlert('error', 'Current password is required to set a new password.');
+          setSaving(false);
+          return;
+        }
+        if (pwForm.newPassword !== pwForm.confirmPassword) {
+          showAlert('error', 'New passwords do not match.');
+          setSaving(false);
+          return;
+        }
+        if (pwForm.newPassword.length < 8) {
+          showAlert('error', 'New password must be at least 8 characters long.');
+          setSaving(false);
+          return;
+        }
+        if (!/[A-Z]/.test(pwForm.newPassword)) {
+          showAlert('error', 'New password must contain at least one uppercase letter.');
+          setSaving(false);
+          return;
+        }
+        if (!/[a-z]/.test(pwForm.newPassword)) {
+          showAlert('error', 'New password must contain at least one lowercase letter.');
+          setSaving(false);
+          return;
+        }
+        if (!/[0-9]/.test(pwForm.newPassword)) {
+          showAlert('error', 'New password must contain at least one number.');
+          setSaving(false);
+          return;
+        }
+        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pwForm.newPassword)) {
+          showAlert('error', 'New password must contain at least one special character.');
+          setSaving(false);
+          return;
+        }
         payload.currentPassword = pwForm.currentPassword;
         payload.newPassword = pwForm.newPassword;
       }
@@ -269,7 +314,18 @@ export default function ProfileView({ currentUser, onUpdateCurrentUser }) {
               </button>
             ) : (
               <div style={{ display: 'flex', gap: '8px' }}>
-                <button className="profile-cancel-btn" onClick={() => { setEditing(false); setShowPwSection(false); setEditForm({ fullName: profile.fullName || '', phone: profile.phone || '' }); }}>
+                <button
+                  className="profile-cancel-btn"
+                  onClick={() => {
+                    setEditing(false);
+                    setShowPwSection(false);
+                    setEditForm({
+                      fullName: profile.fullName || '',
+                      email: profile.email || '',
+                      phone: profile.phone || ''
+                    });
+                  }}
+                >
                   <X size={14} /> Cancel
                 </button>
                 <button className="profile-save-btn" onClick={handleSaveProfile} disabled={saving}>
@@ -313,10 +369,19 @@ export default function ProfileView({ currentUser, onUpdateCurrentUser }) {
               </div>
 
               <div className="profile-form-group">
-                <label><Mail size={14} /> Email Address</label>
-                <input type="email" className="profile-input" value={profile.email} disabled
-                  style={{ opacity: 0.6, cursor: 'not-allowed' }} />
-                <span className="profile-input-hint">Email cannot be changed from here.</span>
+                <label><Mail size={14} /> Email Address *</label>
+                <input
+                  type="email"
+                  className="profile-input"
+                  value={editForm.email}
+                  onChange={e => setEditForm({ ...editForm, email: e.target.value })}
+                  disabled={profile.role !== 'admin' && profile.role !== 'ceo'}
+                  style={profile.role !== 'admin' && profile.role !== 'ceo' ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
+                  placeholder="name@example.com"
+                />
+                <span className="profile-input-hint" style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  {profile.role !== 'admin' && profile.role !== 'ceo' ? 'Contact an administrator to change your email address.' : 'Updating your email preserves all historical system activities and records.'}
+                </span>
               </div>
 
               <div className="profile-form-group">
@@ -346,7 +411,7 @@ export default function ProfileView({ currentUser, onUpdateCurrentUser }) {
               {showPwSection && (
                 <div className="profile-pw-section">
                   <div className="profile-form-group">
-                    <label>Current Password</label>
+                    <label>Current Password *</label>
                     <div style={{ position: 'relative' }}>
                       <input
                         type={showCurrentPw ? 'text' : 'password'}
@@ -367,14 +432,14 @@ export default function ProfileView({ currentUser, onUpdateCurrentUser }) {
                   </div>
 
                   <div className="profile-form-group">
-                    <label>New Password (Min 8 chars, 1 uppercase, 1 number, 1 special char)</label>
+                    <label>New Password (Min 8 chars, uppercase, lowercase, number, special char)</label>
                     <div style={{ position: 'relative' }}>
                       <input
                         type={showNewPw ? 'text' : 'password'}
                         className="profile-input"
                         value={pwForm.newPassword}
                         onChange={e => setPwForm({ ...pwForm, newPassword: e.target.value })}
-                        placeholder="Min 8 chars, 1 upper, 1 num, 1 special"
+                        placeholder="Min 8 chars, 1 upper, 1 lower, 1 num, 1 special"
                         style={{ paddingRight: '40px' }}
                       />
                       <button

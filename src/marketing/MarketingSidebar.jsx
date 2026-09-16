@@ -20,7 +20,8 @@ import {
   Calculator,
   LogOut,
   Crown,
-  Briefcase
+  Briefcase,
+  TrendingUp
 } from 'lucide-react';
 import './MarketingSidebar.css';
 
@@ -229,6 +230,14 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
               >
                 <span>Sales Manager</span>
                 <UserCheck size={16} color="#F472B6" />
+              </div>
+
+              <div
+                className={`mkt-role-item ${(currentRole === 'sales_member' || currentRole === 'sales_rep') ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('sales_member'); setShowRoleMenu(false); }}
+              >
+                <span>Sales Person</span>
+                <TrendingUp size={16} color="#10B981" />
               </div>
 
               <div

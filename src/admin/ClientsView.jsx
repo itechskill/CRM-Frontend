@@ -2,73 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, Plus, MoreHorizontal, Pencil, Trash2, X } from 'lucide-react';
 import './ClientsView.css';
 
-const initialClientsData = [
-  {
-    id: 1,
-    name: 'Proxima Labs',
-    country: 'USA',
-    initials: 'PL',
-    avatarBg: '#2563EB',
-    industry: 'Technology',
-    contactName: 'Eric Vance',
-    contactEmail: 'e.vance@proxima.io',
-    revenueYtd: 'Rs. 148,000',
-    dealsCount: 4,
-    status: 'Active'
-  },
-  {
-    id: 2,
-    name: 'BuildCo Industries',
-    country: 'Germany',
-    initials: 'BC',
-    avatarBg: '#10B981',
-    industry: 'Construction',
-    contactName: 'Rachel Okafor',
-    contactEmail: 'r.okafor@buildco.com',
-    revenueYtd: 'Rs. 112,000',
-    dealsCount: 2,
-    status: 'Active'
-  },
-  {
-    id: 3,
-    name: 'Starlight Ventures',
-    country: 'UK',
-    initials: 'SV',
-    avatarBg: '#F59E0B',
-    industry: 'Finance & VC',
-    contactName: 'David Miller',
-    contactEmail: 'd.miller@starlight.io',
-    revenueYtd: 'Rs. 210,000',
-    dealsCount: 7,
-    status: 'Active'
-  },
-  {
-    id: 4,
-    name: 'Nexus Dynamics',
-    country: 'Canada',
-    initials: 'NX',
-    avatarBg: '#EF4444',
-    industry: 'Logistics',
-    contactName: 'Sophia Martinez',
-    contactEmail: 's.martinez@nexusdyn.com',
-    revenueYtd: 'Rs. 85,000',
-    dealsCount: 1,
-    status: 'At Risk'
-  },
-  {
-    id: 5,
-    name: 'Apex Software',
-    country: 'USA',
-    initials: 'AS',
-    avatarBg: '#8B5CF6',
-    industry: 'Cloud Services',
-    contactName: 'James Reed',
-    contactEmail: 'j.reed@apexsoft.io',
-    revenueYtd: 'Rs. 320,000',
-    dealsCount: 5,
-    status: 'Active'
-  }
-];
+const initialClientsData = [];
 
 const industryOptions = [
   'Technology', 'Construction', 'Finance & VC', 'Logistics',

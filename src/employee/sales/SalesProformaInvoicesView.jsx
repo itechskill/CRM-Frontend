@@ -511,6 +511,25 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
     }
   };
 
+  const handleApproveProforma = async (pi) => {
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/proforma-invoices/${pi._id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: 'Approved' })
+      });
+      if (response.ok && data.success) {
+        setFeedback(`Proforma Invoice ${pi.proformaNumber} approved by customer! It is now visible in Delivery Notes.`);
+        fetchProformas();
+        setTimeout(() => setFeedback(''), 4000);
+      } else {
+        alert(data.message || 'Failed to approve proforma invoice.');
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error approving proforma invoice.');
+    }
+  };
+
   // Download Proforma Invoice PDF
   const handleDownloadPDF = (pi) => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -1090,6 +1109,26 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+                        {pi.status !== 'Approved' && (
+                          <button
+                            className="sv-btn-action-icon"
+                            onClick={() => handleApproveProforma(pi)}
+                            title="Mark Approved by Customer"
+                            style={{ color: '#059669', background: '#ECFDF5' }}
+                          >
+                            <CheckCircle2 size={13} />
+                          </button>
+                        )}
+                        {pi.status === 'Approved' && (
+                          <button
+                            className="sv-btn-action-icon"
+                            onClick={() => onNavigateDeliveryNotes ? onNavigateDeliveryNotes(pi) : null}
+                            title="Create Delivery Note from Approved Proforma"
+                            style={{ color: '#0284C7', background: '#F0F9FF' }}
+                          >
+                            <Truck size={13} />
+                          </button>
+                        )}
                         <button
                           className="sv-btn-action-icon"
                           onClick={() => handleDownloadPDF(pi)}
@@ -1797,6 +1836,30 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
                 <button className="sv-btn-cancel" onClick={() => setViewProforma(null)}>
                   Close
                 </button>
+                {viewProforma.status !== 'Approved' && (
+                  <button
+                    className="sv-btn-primary"
+                    style={{ background: '#059669', borderColor: '#059669' }}
+                    onClick={() => {
+                      handleApproveProforma(viewProforma);
+                      setViewProforma(null);
+                    }}
+                  >
+                    <CheckCircle2 size={14} /> Approve Proforma (Customer Accepted)
+                  </button>
+                )}
+                {viewProforma.status === 'Approved' && (
+                  <button
+                    className="sv-btn-primary"
+                    style={{ background: '#0284C7', borderColor: '#0284C7' }}
+                    onClick={() => {
+                      if (onNavigateDeliveryNotes) onNavigateDeliveryNotes(viewProforma);
+                      setViewProforma(null);
+                    }}
+                  >
+                    <Truck size={14} /> Create Delivery Note
+                  </button>
+                )}
                 <button
                   className="sv-btn-primary"
                   onClick={() => handleDownloadPDF(viewProforma)}
