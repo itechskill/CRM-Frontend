@@ -22,6 +22,7 @@ import {
   Crown,
   Briefcase,
   Wrench,
+  TrendingUp,
 } from 'lucide-react';
 import './AccountantSidebar.css';
 
@@ -231,6 +232,14 @@ export default function AccountantSidebar({ activeTab, setActiveTab, currentRole
               >
                 <span>Sales Manager</span>
                 <UserCheck size={16} color="#F472B6" />
+              </div>
+
+              <div
+                className={`acc-role-item ${(currentRole === 'sales_member' || currentRole === 'sales_rep') ? 'active' : ''}`}
+                onClick={(e) => { e.stopPropagation(); onSwitchRole('sales_member'); setShowRoleMenu(false); }}
+              >
+                <span>Sales Person</span>
+                <TrendingUp size={16} color="#10B981" />
               </div>
 
               <div

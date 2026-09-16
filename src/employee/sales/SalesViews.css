@@ -81,7 +81,8 @@
   color: #0F172A;
 }
 
-.sv-filters {
+.sv-filters,
+.sv-top-bar {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -149,7 +150,8 @@
 }
 
 /* Tables */
-.sv-table-wrap {
+.sv-table-wrap,
+.sv-table-card {
   background-color: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 14px;

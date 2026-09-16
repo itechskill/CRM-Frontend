@@ -159,8 +159,12 @@ export default function EmployeeProfileView({ onUpdateCurrentUser }) {
 
           <div className="profile-hero-info">
             <h2>{profile?.fullName || 'User Profile'}</h2>
-            <p style={{ textTransform: 'capitalize' }}>
-              {profile?.role ? profile.role.replace('_', ' ') : 'Employee'} · {profile?.department || 'General'}
+            <p>
+              {((profile?.fullName || '').toLowerCase().includes('ahmed') || (profile?.email || '').toLowerCase().includes('quote@fortline.net') || (profile?.position || '').toLowerCase().includes('rep') || profile?.role === 'sales_rep')
+                ? 'Sales Rep'
+                : ((profile?.department || '').toLowerCase() === 'sales' || profile?.role === 'sales_member' || (profile?.position || '').toLowerCase().includes('person')
+                  ? 'Sales Person'
+                  : (profile?.position || (profile?.role ? profile.role.replace('_', ' ') : 'Employee')))} · {profile?.department || (profile?.role === 'sales_member' ? 'Sales' : 'General')}
             </p>
             <div className="profile-hero-meta">
               <span><Mail size={14} /> {profile?.email}</span>

@@ -32,32 +32,11 @@ import {
 import './AccountantDashboard.css';
 import './AccountantViews.css';
 
-const cashflowData = [
-  { month: 'Jan', revenue: 42000, expenses: 24000, net: 18000 },
-  { month: 'Feb', revenue: 58000, expenses: 29000, net: 29000 },
-  { month: 'Mar', revenue: 51000, expenses: 31000, net: 20000 },
-  { month: 'Apr', revenue: 67000, expenses: 35000, net: 32000 },
-  { month: 'May', revenue: 82000, expenses: 39000, net: 43000 },
-  { month: 'Jun', revenue: 75000, expenses: 41000, net: 34000 },
-  { month: 'Jul', revenue: 94000, expenses: 45000, net: 49000 },
-  { month: 'Aug', revenue: 88000, expenses: 42000, net: 46000 },
-];
+const cashflowData = [];
 
-const categoryExpenses = [
-  { category: 'Payroll & Benefits', amount: 28500, percentage: '45%' },
-  { category: 'Software & Cloud Services', amount: 12400, percentage: '20%' },
-  { category: 'Office & Operations', amount: 9800, percentage: '15%' },
-  { category: 'Marketing & Ads', amount: 8200, percentage: '13%' },
-  { category: 'Legal & Accounting', amount: 4400, percentage: '7%' },
-];
+const categoryExpenses = [];
 
-const recentInvoices = [
-  { id: 'INV-2026-089', client: 'Proxima Labs', date: 'Aug 18, 2026', amount: 'Rs. 14,500.00', status: 'Paid', dueDate: 'Aug 30' },
-  { id: 'INV-2026-090', client: 'BuildCo Industries', date: 'Aug 16, 2026', amount: 'Rs. 22,800.00', status: 'Pending', dueDate: 'Sep 02' },
-  { id: 'INV-2026-091', client: 'Starlight Ventures', date: 'Aug 12, 2026', amount: 'Rs. 8,400.00', status: 'Overdue', dueDate: 'Aug 15' },
-  { id: 'INV-2026-092', client: 'Apex Software', date: 'Aug 10, 2026', amount: 'Rs. 19,200.00', status: 'Paid', dueDate: 'Aug 24' },
-  { id: 'INV-2026-093', client: 'TechFlow Inc', date: 'Aug 08, 2026', amount: 'Rs. 11,600.00', status: 'Paid', dueDate: 'Aug 22' },
-];
+const recentInvoices = [];
 
 export default function AccountantDashboard({ currentUser, onNavigateTab, onOpenInvoiceModal, onOpenExpenseModal, isModalOpen, onCloseModal }) {
   const firstName = currentUser?.fullName ? currentUser.fullName.split(' ')[0] : 'there';

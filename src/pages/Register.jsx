@@ -10,8 +10,7 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
     phone: '',
     password: '',
     confirmPassword: '',
-    role: 'employee',
-    department: 'Sales'
+    role: 'sales_person'
   });
 
   const [showPassword, setShowPassword] = useState(false);
@@ -21,27 +20,22 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
   const [successMessage, setSuccessMessage] = useState('');
 
   const publicRoles = [
-    { value: 'administration', label: 'Administration' },
-    { value: 'hr_manager', label: 'HR Manager' },
+    { value: 'sales_person', label: 'Sales Person' },
+    { value: 'support', label: 'Support Department' },
+    { value: 'accountant', label: 'Accounts Department' },
+    { value: 'finance', label: 'Finance Department' },
     { value: 'sales_manager', label: 'Sales Manager' },
     { value: 'project_manager', label: 'Project Manager' },
+    { value: 'hr_manager', label: 'HR Manager' },
     { value: 'marketing', label: 'Marketing' },
-    { value: 'accountant', label: 'Accountant' },
-    { value: 'employee', label: 'Employee' }
+    { value: 'employee', label: 'Employee (General)' }
   ];
 
-  const departments = [
-    'Sales', 'HR', 'Marketing', 'Development', 'Accounting',
-    'Administration', 'Operations', 'Finance', 'Customer Support', 'Other'
-  ];
-
-  // Reset department when role changes
   const handleRoleChange = (e) => {
     const newRole = e.target.value;
     setFormData(prev => ({
       ...prev,
-      role: newRole,
-      department: newRole === 'employee' ? 'Sales' : ''
+      role: newRole
     }));
   };
 
@@ -116,6 +110,19 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
     setLoading(true);
 
     try {
+      const roleDepartmentMap = {
+        'sales_person': 'Sales',
+        'support': 'Customer Support',
+        'accountant': 'Accounting',
+        'finance': 'Finance',
+        'sales_manager': 'Sales',
+        'project_manager': 'Development',
+        'hr_manager': 'HR',
+        'marketing': 'Marketing',
+        'administration': 'Administration',
+        'employee': 'General'
+      };
+
       const payload = {
         fullName: formData.fullName.trim(),
         email: formData.email.trim(),
@@ -123,7 +130,7 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         role: formData.role,
-        department: formData.role === 'employee' ? formData.department : ''
+        department: roleDepartmentMap[formData.role] || 'General'
       };
 
       const response = await fetch(`${API_BASE}/api/auth/register`, {
@@ -288,26 +295,7 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
               </div>
             </div>
 
-            {/* Department — only shown for Employee role */}
-            {formData.role === 'employee' && (
-              <div className="auth-field-group">
-                <label className="auth-label">Department *</label>
-                <div className="auth-input-wrapper">
-                  <Briefcase className="auth-input-icon" size={16} />
-                  <select
-                    name="department"
-                    className="auth-select"
-                    value={formData.department}
-                    onChange={handleChange}
-                    required
-                  >
-                    {departments.map((dept) => (
-                      <option key={dept} value={dept}>{dept}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-            )}
+
 
             {/* Password & Confirm Password */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>

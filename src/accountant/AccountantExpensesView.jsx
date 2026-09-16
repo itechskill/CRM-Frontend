@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { apiRequest } from '../utils/api';
 import {
   Receipt,
   Plus,
@@ -14,57 +15,90 @@ import {
 } from 'lucide-react';
 import './AccountantViews.css';
 
-const initialExpenses = [
-  { id: 'EXP-801', merchant: 'AWS Cloud Services', category: 'Software & Tools', date: '2026-08-18', amount: 4850.00, claimer: 'IT Operations', status: 'Approved', taxDeductible: 'Yes' },
-  { id: 'EXP-802', merchant: 'Downtown Co-Working Space', category: 'Office Operations', date: '2026-08-16', amount: 3200.00, claimer: 'Facilities', status: 'Approved', taxDeductible: 'Yes' },
-  { id: 'EXP-803', merchant: 'Google Ads Platform', category: 'Marketing & Ads', date: '2026-08-14', amount: 6400.00, claimer: 'Marketing Team', status: 'Approved', taxDeductible: 'Yes' },
-  { id: 'EXP-804', merchant: 'Delta Airlines (Client Meeting)', category: 'Travel & Dining', date: '2026-08-12', amount: 1250.00, claimer: 'Sarah Mitchell', status: 'Pending', taxDeductible: 'Partial' },
-  { id: 'EXP-805', merchant: 'Salesforce CRM License', category: 'Software & Tools', date: '2026-08-10', amount: 8900.00, claimer: 'Sales Ops', status: 'Approved', taxDeductible: 'Yes' },
-  { id: 'EXP-806', merchant: 'Legal & Advisory Retainer', category: 'Professional Services', date: '2026-08-08', amount: 5000.00, claimer: 'Executive Team', status: 'Approved', taxDeductible: 'Yes' },
-];
 
 export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
-  const [expenses, setExpenses] = useState(initialExpenses);
+  const [expenses, setExpenses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState(false);
+
+  const fetchExpenses = async () => {
+    try {
+      const { response, data } = await apiRequest('/api/finance/expenses');
+      if (response.ok && data.success) {
+        setExpenses(data.data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExpenses();
+  }, []);
   const [activeCategory, setActiveCategory] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
   const [merchant, setMerchant] = useState('');
-  const [category, setCategory] = useState('Software & Tools');
+  const [category, setCategory] = useState('Office Supplies');
   const [amount, setAmount] = useState('');
   const [claimer, setClaimer] = useState('');
 
-  const handleAddExpense = (e) => {
+const handleAddExpense = async (e) => {
     e.preventDefault();
     if (!merchant || !amount) return;
-
-    const newExp = {
-      id: `EXP-80${expenses.length + 1}`,
-      merchant,
-      category,
-      date: new Date().toISOString().split('T')[0],
-      amount: parseFloat(amount),
-      claimer: claimer || 'Accounts Dept',
-      status: 'Approved',
-      taxDeductible: 'Yes'
-    };
-
-    setExpenses([newExp, ...expenses]);
-    setMerchant('');
-    setAmount('');
-    setClaimer('');
-    if (onCloseModal) onCloseModal();
+    
+    setActionLoading(true);
+    try {
+      const { response, data } = await apiRequest('/api/finance/expenses', {
+        method: 'POST',
+        body: JSON.stringify({
+          title: merchant,
+          category,
+          amount,
+          notes: claimer
+        })
+      });
+      if (response.ok && data.success) {
+        setExpenses([data.data, ...expenses]);
+        setMerchant('');
+        setAmount('');
+        setClaimer('');
+        if (onCloseModal) onCloseModal();
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const filteredExpenses = expenses.filter(exp => {
     const matchesCat = activeCategory === 'All' || exp.category === activeCategory;
     const matchesSearch =
-      exp.merchant.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exp.claimer.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      exp.id.toLowerCase().includes(searchQuery.toLowerCase());
+      (exp.title || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (exp.notes || exp.submittedByName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+      exp._id.toLowerCase().includes(searchQuery.toLowerCase());
 
     return matchesCat && matchesSearch;
   });
+
+
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      const { response, data } = await apiRequest(`/api/finance/expenses/${id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+      if (response.ok && data.success) {
+        setExpenses(expenses.map(e => e._id === id ? data.data : e));
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const totalExpense = expenses.reduce((sum, e) => sum + e.amount, 0);
   const pendingCount = expenses.filter(e => e.status === 'Pending').length;
@@ -95,7 +129,7 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Software & Cloud</span>
             <div className="acc-kpi-icon blue"><Building2 size={18} /></div>
           </div>
-          <div className="acc-kpi-value">Rs. 13,750</div>
+          <div className="acc-kpi-value">Rs. {expenses.filter(e => e.category === 'Software').reduce((sum, e) => sum + (e.amount || 0), 0).toLocaleString()}</div>
           <div className="acc-kpi-subtitle">Primary operational expense</div>
         </div>
 
@@ -113,7 +147,7 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Tax Deductible Ratio</span>
             <div className="acc-kpi-icon emerald"><CheckCircle size={18} /></div>
           </div>
-          <div className="acc-kpi-value">94.5%</div>
+          <div className="acc-kpi-value">{expenses.length > 0 ? Math.round((expenses.filter(e => e.category !== 'Travel').length / expenses.length) * 100) : 0}%</div>
           <div className="acc-kpi-subtitle up">Eligible for tax write-off</div>
         </div>
       </div>
@@ -123,7 +157,7 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
         {/* Filter Controls */}
         <div className="acc-filter-bar">
           <div className="acc-tabs">
-            {['All', 'Software & Tools', 'Office Operations', 'Marketing & Ads', 'Travel & Dining'].map(cat => (
+            {['All', 'Software', 'Office Supplies', 'Marketing', 'Travel', 'Utilities', 'Salaries', 'Other'].map(cat => (
               <button
                 key={cat}
                 className={`acc-tab-btn ${activeCategory === cat ? 'active' : ''}`}
@@ -161,19 +195,25 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
               </tr>
             </thead>
             <tbody>
-              {filteredExpenses.map((exp) => (
-                <tr key={exp.id}>
-                  <td style={{ fontWeight: 700, color: '#0F172A' }}>{exp.id}</td>
-                  <td style={{ fontWeight: 600, color: '#1E293B' }}>{exp.merchant}</td>
+              {loading ? <tr><td colSpan="8" style={{textAlign: 'center', padding: '20px'}}>Loading...</td></tr> : filteredExpenses.length === 0 ? <tr><td colSpan="8" style={{textAlign: 'center', padding: '20px'}}>No expenses found</td></tr> : filteredExpenses.map((exp) => (
+                <tr key={exp._id}>
+                  <td style={{ fontWeight: 700, color: '#0F172A' }}>{exp._id}</td>
+                  <td style={{ fontWeight: 600, color: '#1E293B' }}>{exp.title}</td>
                   <td><span className="acc-badge draft"><Tag size={12} /> {exp.category}</span></td>
-                  <td>{exp.date}</td>
-                  <td>{exp.claimer}</td>
+                  <td>{new Date(exp.createdAt || exp.date || new Date()).toLocaleDateString()}</td>
+                  <td>{(exp.notes || exp.submittedByName)}</td>
                   <td style={{ fontWeight: 700, color: '#DC2626' }}>Rs. {exp.amount.toLocaleString(undefined, { minimumFractionDigits: 2 })}</td>
-                  <td>{exp.taxDeductible}</td>
+                  <td>{exp.category === 'Travel' ? 'Partial' : 'Yes'}</td>
                   <td>
-                    <span className={`acc-badge ${exp.status.toLowerCase()}`}>
-                      {exp.status}
+<span className={`acc-badge ${(exp.status || 'pending').toLowerCase()}`}>
+                      {exp.status || 'Pending'}
                     </span>
+                    {(exp.status === 'Pending' || !exp.status) && (
+                      <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                        <button onClick={() => handleUpdateStatus(exp._id, 'Approved')} style={{ fontSize: '10px', padding: '2px 4px', background: '#10B981', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Approve</button>
+                        <button onClick={() => handleUpdateStatus(exp._id, 'Rejected')} style={{ fontSize: '10px', padding: '2px 4px', background: '#EF4444', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>Reject</button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -206,11 +246,13 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
                 <div className="acc-form-group">
                   <label>Expense Category</label>
                   <select value={category} onChange={(e) => setCategory(e.target.value)}>
-                    <option value="Software & Tools">Software & Tools</option>
-                    <option value="Office Operations">Office Operations</option>
-                    <option value="Marketing & Ads">Marketing & Ads</option>
-                    <option value="Travel & Dining">Travel & Dining</option>
-                    <option value="Professional Services">Professional Services</option>
+                    <option value="Software">Software</option>
+                    <option value="Office Supplies">Office Supplies</option>
+                    <option value="Marketing">Marketing</option>
+                    <option value="Travel">Travel</option>
+                    <option value="Utilities">Utilities</option>
+                    <option value="Salaries">Salaries</option>
+                    <option value="Other">Other</option>
                   </select>
                 </div>
 
@@ -241,7 +283,7 @@ export default function AccountantExpensesView({ isModalOpen, onCloseModal }) {
 
               <div className="acc-modal-footer">
                 <button type="button" className="acc-btn-secondary" onClick={onCloseModal}>Cancel</button>
-                <button type="submit" className="acc-btn-primary">Record Expense</button>
+                <button type="submit" className="acc-btn-primary" disabled={actionLoading}>{actionLoading ? 'Recording...' : 'Record Expense'}</button>
               </div>
             </form>
           </div>

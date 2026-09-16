@@ -37,7 +37,17 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
   const [salesLoading, setSalesLoading] = useState(false);
   const [recentActivities, setRecentActivities] = useState([]);
 
-  const isSalesDept = (currentUser?.department || '').trim().toLowerCase() === 'sales';
+  const isAhmedAnjum = (currentUser?.fullName || '').toLowerCase().includes('ahmed') ||
+    (currentUser?.email || '').toLowerCase().includes('quote@fortline.net') ||
+    (currentUser?.email || '').toLowerCase().includes('ahmed');
+  const isSalesRep = isAhmedAnjum || 
+    (currentUser?.position || '').toLowerCase().includes('representative') || 
+    (currentUser?.position || '').toLowerCase().includes('sales rep') ||
+    (currentUser?.role || '').toLowerCase() === 'sales_rep';
+  const isSalesDept = (currentUser?.department || '').trim().toLowerCase() === 'sales' ||
+    (currentUser?.role || '').toLowerCase() === 'sales_member' ||
+    (currentUser?.role || '').toLowerCase() === 'sales_rep' ||
+    isSalesRep;
   const firstName = currentUser?.fullName ? currentUser.fullName.split(' ')[0] : 'there';
   const todayFormatted = new Date().toLocaleDateString('en-US', {
     weekday: 'long',
@@ -324,167 +334,245 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
         </div>
       </div>
 
-      {/* ── TOP SECTION: 2 HERO KPI CARDS (Sales Performance & Financial Performance) ── */}
-      <div className="hero-kpi-row">
-        {/* HERO CARD 1: SALES PERFORMANCE */}
-        <div className="hero-kpi-card sales-hero-card">
-          <div className="hero-card-header">
-            <div className="hero-header-left">
-              <div className="hero-icon-box sales">
-                <Target size={22} color="#FFFFFF" />
+      {/* ── TOP SECTION: HERO KPI CARDS ── */}
+      {/* For Ahmed Anjum / Sales Representative, retain both Sales Performance AND Financial Performance cards. For new Sales Person, show only Sales Performance card. */}
+      {isSalesRep ? (
+        <div className="hero-kpi-row">
+          {/* HERO CARD 1: SALES PERFORMANCE */}
+          <div className="hero-kpi-card sales-hero-card">
+            <div className="hero-card-header">
+              <div className="hero-header-left">
+                <div className="hero-icon-box sales">
+                  <Target size={22} color="#FFFFFF" />
+                </div>
+                <div>
+                  <h3 className="hero-card-title">Sales Performance</h3>
+                  <p className="hero-card-subtitle">Monthly sales quota &amp; deal conversion</p>
+                </div>
               </div>
-              <div>
-                <h3 className="hero-card-title">Sales Performance</h3>
-                <p className="hero-card-subtitle">Monthly sales quota & deal conversion</p>
+              <div className="hero-badge-pct">
+                <span>{salesPerf.targetAchievementPct}%</span>
+                <span className="hero-badge-sub">Achieved</span>
               </div>
             </div>
-            <div className="hero-badge-pct">
-              <span>{salesPerf.targetAchievementPct}%</span>
-              <span className="hero-badge-sub">Achieved</span>
+
+            <div className="hero-card-main-val">
+              <div className="hero-val-group">
+                <span className="hero-val-label">Sales Achieved</span>
+                <span className="hero-val-num" title={`Rs. ${Number(salesPerf.salesAchieved || 0).toLocaleString()}`}>
+                  <span className="hero-val-prefix">Rs.</span>
+                  <span className="hero-val-text">{Math.round(Number(salesPerf.salesAchieved || 0)).toLocaleString()}</span>
+                </span>
+              </div>
+              <div className="hero-val-group">
+                <span className="hero-val-label">Target Quota</span>
+                <span className="hero-val-num light" title={`Rs. ${Number(salesPerf.monthlyTarget || 0).toLocaleString()}`}>
+                  <span className="hero-val-prefix">Rs.</span>
+                  <span className="hero-val-text">{Math.round(Number(salesPerf.monthlyTarget || 0)).toLocaleString()}</span>
+                </span>
+              </div>
+              <div className="hero-val-group">
+                <span className="hero-val-label">Remaining</span>
+                <span className="hero-val-num rem" title={`Rs. ${Number(salesPerf.remainingTarget || 0).toLocaleString()}`}>
+                  <span className="hero-val-prefix">Rs.</span>
+                  <span className="hero-val-text">{Math.round(Number(salesPerf.remainingTarget || 0)).toLocaleString()}</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Target Progress Bar */}
+            <div className="hero-progress-track">
+              <div
+                className="hero-progress-fill sales"
+                style={{ width: `${Math.min(100, salesPerf.targetAchievementPct)}%` }}
+              />
+            </div>
+
+            {/* Sales Performance Key Metric Pills */}
+            <div className="hero-pills-grid">
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_leads')}>
+                <span className="pill-title">Total Leads</span>
+                <span className="pill-value">{salesPerf.totalLeads}</span>
+                <span className="pill-sub positive">+{salesPerf.convertedLeads} Converted</span>
+              </div>
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_deals')}>
+                <span className="pill-title">Won Deals</span>
+                <span className="pill-value" style={{ color: '#059669' }}>{salesPerf.wonDealsCount || 0}</span>
+                <span className="pill-sub">Rs. {Math.round(Number(salesPerf.wonDealsValue || 0)).toLocaleString()} volume</span>
+              </div>
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_quotations')}>
+                <span className="pill-title">Quotations</span>
+                <span className="pill-value">{salesPerf.totalQuotations}</span>
+                <span className="pill-sub">{salesPerf.acceptedQuotations} Accepted</span>
+              </div>
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_orders')}>
+                <span className="pill-title">Sales Orders</span>
+                <span className="pill-value">{salesPerf.totalOrders}</span>
+                <span className="pill-sub">{salesPerf.completedOrders || 0} Delivered</span>
+              </div>
             </div>
           </div>
 
-          <div className="hero-card-main-val">
-            <div className="hero-val-group">
-              <span className="hero-val-label">Sales Achieved</span>
-              <span className="hero-val-num" title={`Rs. ${Number(salesPerf.salesAchieved || 0).toLocaleString()}`}>
-                <span className="hero-val-prefix">Rs.</span>
-                <span className="hero-val-text">{Math.round(Number(salesPerf.salesAchieved || 0)).toLocaleString()}</span>
-              </span>
+          {/* HERO CARD 2: FINANCIAL PERFORMANCE (Kept for Ahmed Anjum / Sales Representative) */}
+          <div className="hero-kpi-card financial-hero-card">
+            <div className="hero-card-header">
+              <div className="hero-header-left">
+                <div className="hero-icon-box finance">
+                  <DollarSign size={22} color="#FFFFFF" />
+                </div>
+                <div>
+                  <h3 className="hero-card-title">Financial Performance</h3>
+                  <p className="hero-card-subtitle">Receivables, overdue balances &amp; settlement</p>
+                </div>
+              </div>
+              <div className="hero-badge-pct green">
+                <span>Rs. {Math.round(Number(finPerf.netRevenue || 0)).toLocaleString()}</span>
+                <span className="hero-badge-sub">Net Revenue</span>
+              </div>
             </div>
-            <div className="hero-val-group">
-              <span className="hero-val-label">Target Quota</span>
-              <span className="hero-val-num light" title={`Rs. ${Number(salesPerf.monthlyTarget || 0).toLocaleString()}`}>
-                <span className="hero-val-prefix">Rs.</span>
-                <span className="hero-val-text">{Math.round(Number(salesPerf.monthlyTarget || 0)).toLocaleString()}</span>
-              </span>
-            </div>
-            <div className="hero-val-group">
-              <span className="hero-val-label">Remaining</span>
-              <span className="hero-val-num rem" title={`Rs. ${Number(salesPerf.remainingTarget || 0).toLocaleString()}`}>
-                <span className="hero-val-prefix">Rs.</span>
-                <span className="hero-val-text">{Math.round(Number(salesPerf.remainingTarget || 0)).toLocaleString()}</span>
-              </span>
-            </div>
-          </div>
 
-          {/* Target Progress Bar */}
-          <div className="hero-progress-track">
-            <div
-              className="hero-progress-fill sales"
-              style={{ width: `${Math.min(100, salesPerf.targetAchievementPct)}%` }}
-            />
-          </div>
+            <div className="hero-card-main-val">
+              <div className="hero-val-group">
+                <span className="hero-val-label">Overdue Amount</span>
+                <span className="hero-val-num" style={{ color: finPerf.overdueAmount > 0 ? '#DC2626' : '#059669' }} title={`Rs. ${Number(finPerf.overdueAmount || 0).toLocaleString()}`}>
+                  <span className="hero-val-prefix">Rs.</span>
+                  <span className="hero-val-text">{Math.round(Number(finPerf.overdueAmount || 0)).toLocaleString()}</span>
+                </span>
+              </div>
+              <div className="hero-val-group">
+                <span className="hero-val-label">Total Receivables</span>
+                <span className="hero-val-num" style={{ color: '#0284C7' }} title={`Rs. ${Number(finPerf.receivables || 0).toLocaleString()}`}>
+                  <span className="hero-val-prefix">Rs.</span>
+                  <span className="hero-val-text">{Math.round(Number(finPerf.receivables || 0)).toLocaleString()}</span>
+                </span>
+              </div>
+              <div className="hero-val-group">
+                <span className="hero-val-label">Salary Target</span>
+                <span className="hero-val-num light" title={`Rs. ${Number(finPerf.salaryTarget || 0).toLocaleString()}`}>
+                  <span className="hero-val-prefix">Rs.</span>
+                  <span className="hero-val-text">{Math.round(Number(finPerf.salaryTarget || 0)).toLocaleString()}</span>
+                </span>
+              </div>
+            </div>
 
-          {/* Sales Performance Key Metric Pills */}
-          <div className="hero-pills-grid">
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_leads')}>
-              <span className="pill-title">Total Leads</span>
-              <span className="pill-value">{salesPerf.totalLeads}</span>
-              <span className="pill-sub positive">+{salesPerf.convertedLeads} Converted</span>
+            {/* Financial Indicator Bar */}
+            <div className="hero-progress-track">
+              <div
+                className="hero-progress-fill finance"
+                style={{
+                  width: finPerf.overdueAmount > 0 ? '60%' : '100%',
+                  background: finPerf.overdueAmount > 0
+                    ? 'linear-gradient(90deg, #10B981 70%, #EF4444 100%)'
+                    : 'linear-gradient(90deg, #10B981, #059669)'
+                }}
+              />
             </div>
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_deals')}>
-              <span className="pill-title">Won Deals</span>
-              <span className="pill-value" style={{ color: '#059669' }}>{salesPerf.wonDealsCount || 0}</span>
-              <span className="pill-sub">Rs. {Math.round(Number(salesPerf.wonDealsValue || 0)).toLocaleString()} volume</span>
-            </div>
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_quotations')}>
-              <span className="pill-title">Quotations</span>
-              <span className="pill-value">{salesPerf.totalQuotations}</span>
-              <span className="pill-sub">{salesPerf.acceptedQuotations} Accepted</span>
-            </div>
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_orders')}>
-              <span className="pill-title">Sales Orders</span>
-              <span className="pill-value">{salesPerf.totalOrders}</span>
-              <span className="pill-sub">{salesPerf.completedOrders} Delivered</span>
+
+            {/* Financial Performance Key Metric Pills */}
+            <div className="hero-pills-grid">
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_invoices')}>
+                <span className="pill-title">Approved Invoices</span>
+                <span className="pill-value">{finPerf.approvedInvoicesCount || 0}</span>
+                <span className="pill-sub">Total {finPerf.totalInvoicesCount || 0} Invoices</span>
+              </div>
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_invoices')}>
+                <span className="pill-title">Settled Invoices</span>
+                <span className="pill-value" style={{ color: '#059669' }}>
+                  Rs. {Number(finPerf.paidInvoicesAmount || 0).toLocaleString()}
+                </span>
+                <span className="pill-sub positive">Collected</span>
+              </div>
+              <div className="hero-pill-item">
+                <span className="pill-title">Liabilities</span>
+                <span className="pill-value" style={{ color: '#64748B' }}>
+                  Rs. {Number(finPerf.liability || 0).toLocaleString()}
+                </span>
+                <span className="pill-sub">Cancellations/Returns</span>
+              </div>
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('sales_targets')}>
+                <span className="pill-title">Follow-ups Done</span>
+                <span className="pill-value">{salesPerf.completedFollowUps || 0}</span>
+                <span className="pill-sub">{salesPerf.totalFollowUps || 0} Total</span>
+              </div>
             </div>
           </div>
         </div>
-
-        {/* HERO CARD 2: FINANCIAL PERFORMANCE */}
-        <div className="hero-kpi-card financial-hero-card">
-          <div className="hero-card-header">
-            <div className="hero-header-left">
-              <div className="hero-icon-box finance">
-                <DollarSign size={22} color="#FFFFFF" />
+      ) : (
+        /* Newly Created Sales Person: Shows ONLY Sales Performance card without financial card */
+        <div className="hero-kpi-row" style={{ gridTemplateColumns: '1fr' }}>
+          <div className="hero-kpi-card sales-hero-card" style={{ width: '100%' }}>
+            <div className="hero-card-header">
+              <div className="hero-header-left">
+                <div className="hero-icon-box sales">
+                  <Target size={22} color="#FFFFFF" />
+                </div>
+                <div>
+                  <h3 className="hero-card-title">Sales Performance</h3>
+                  <p className="hero-card-subtitle">Monthly sales quota &amp; deal conversion</p>
+                </div>
               </div>
-              <div>
-                <h3 className="hero-card-title">Financial Performance</h3>
-                <p className="hero-card-subtitle">Receivables, overdue balances & settlement</p>
+              <div className="hero-badge-pct">
+                <span>{salesPerf.targetAchievementPct}%</span>
+                <span className="hero-badge-sub">Achieved</span>
               </div>
             </div>
-            <div className="hero-badge-pct green">
-              <span>Rs. {Math.round(Number(finPerf.netRevenue || 0)).toLocaleString()}</span>
-              <span className="hero-badge-sub">Net Revenue</span>
-            </div>
-          </div>
 
-          <div className="hero-card-main-val">
-            <div className="hero-val-group">
-              <span className="hero-val-label">Overdue Amount</span>
-              <span className="hero-val-num" style={{ color: finPerf.overdueAmount > 0 ? '#DC2626' : '#059669' }} title={`Rs. ${Number(finPerf.overdueAmount || 0).toLocaleString()}`}>
-                <span className="hero-val-prefix">Rs.</span>
-                <span className="hero-val-text">{Math.round(Number(finPerf.overdueAmount || 0)).toLocaleString()}</span>
-              </span>
+            <div className="hero-card-main-val">
+              <div className="hero-val-group">
+                <span className="hero-val-label">Sales Achieved</span>
+                <span className="hero-val-num" title={`Rs. ${Number(salesPerf.salesAchieved || 0).toLocaleString()}`}>
+                  <span className="hero-val-prefix">Rs.</span>
+                  <span className="hero-val-text">{Math.round(Number(salesPerf.salesAchieved || 0)).toLocaleString()}</span>
+                </span>
+              </div>
+              <div className="hero-val-group">
+                <span className="hero-val-label">Target Quota</span>
+                <span className="hero-val-num light" title={`Rs. ${Number(salesPerf.monthlyTarget || 0).toLocaleString()}`}>
+                  <span className="hero-val-prefix">Rs.</span>
+                  <span className="hero-val-text">{Math.round(Number(salesPerf.monthlyTarget || 0)).toLocaleString()}</span>
+                </span>
+              </div>
+              <div className="hero-val-group">
+                <span className="hero-val-label">Remaining</span>
+                <span className="hero-val-num rem" title={`Rs. ${Number(salesPerf.remainingTarget || 0).toLocaleString()}`}>
+                  <span className="hero-val-prefix">Rs.</span>
+                  <span className="hero-val-text">{Math.round(Number(salesPerf.remainingTarget || 0)).toLocaleString()}</span>
+                </span>
+              </div>
             </div>
-            <div className="hero-val-group">
-              <span className="hero-val-label">Total Receivables</span>
-              <span className="hero-val-num" style={{ color: '#0284C7' }} title={`Rs. ${Number(finPerf.receivables || 0).toLocaleString()}`}>
-                <span className="hero-val-prefix">Rs.</span>
-                <span className="hero-val-text">{Math.round(Number(finPerf.receivables || 0)).toLocaleString()}</span>
-              </span>
-            </div>
-            <div className="hero-val-group">
-              <span className="hero-val-label">Salary Target</span>
-              <span className="hero-val-num light" title={`Rs. ${Number(finPerf.salaryTarget || 0).toLocaleString()}`}>
-                <span className="hero-val-prefix">Rs.</span>
-                <span className="hero-val-text">{Math.round(Number(finPerf.salaryTarget || 0)).toLocaleString()}</span>
-              </span>
-            </div>
-          </div>
 
-          {/* Financial Indicator Bar */}
-          <div className="hero-progress-track">
-            <div
-              className="hero-progress-fill finance"
-              style={{
-                width: finPerf.overdueAmount > 0 ? '60%' : '100%',
-                background: finPerf.overdueAmount > 0
-                  ? 'linear-gradient(90deg, #10B981 70%, #EF4444 100%)'
-                  : 'linear-gradient(90deg, #10B981, #059669)'
-              }}
-            />
-          </div>
+            <div className="hero-progress-track">
+              <div
+                className="hero-progress-fill sales"
+                style={{ width: `${Math.min(100, salesPerf.targetAchievementPct)}%` }}
+              />
+            </div>
 
-          {/* Financial Performance Key Metric Pills */}
-          <div className="hero-pills-grid">
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_invoices')}>
-              <span className="pill-title">Approved Invoices</span>
-              <span className="pill-value">{finPerf.approvedInvoicesCount || 0}</span>
-              <span className="pill-sub">Total {finPerf.totalInvoicesCount || 0} Invoices</span>
-            </div>
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_invoices')}>
-              <span className="pill-title">Settled Invoices</span>
-              <span className="pill-value" style={{ color: '#059669' }}>
-                Rs. {Number(finPerf.paidInvoicesAmount || 0).toLocaleString()}
-              </span>
-              <span className="pill-sub positive">Collected</span>
-            </div>
-            <div className="hero-pill-item">
-              <span className="pill-title">Liabilities</span>
-              <span className="pill-value" style={{ color: '#64748B' }}>
-                Rs. {Number(finPerf.liability || 0).toLocaleString()}
-              </span>
-              <span className="pill-sub">Cancellations/Returns</span>
-            </div>
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('sales_targets')}>
-              <span className="pill-title">Follow-ups Done</span>
-              <span className="pill-value">{salesPerf.completedFollowUps || 0}</span>
-              <span className="pill-sub">{salesPerf.totalFollowUps || 0} Total</span>
+            <div className="hero-pills-grid">
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_leads')}>
+                <span className="pill-title">Total Leads</span>
+                <span className="pill-value">{salesPerf.totalLeads}</span>
+                <span className="pill-sub positive">+{salesPerf.convertedLeads} Converted</span>
+              </div>
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_deals')}>
+                <span className="pill-title">Won Deals</span>
+                <span className="pill-value" style={{ color: '#059669' }}>{salesPerf.wonDealsCount || 0}</span>
+                <span className="pill-sub">Rs. {Math.round(Number(salesPerf.wonDealsValue || 0)).toLocaleString()} volume</span>
+              </div>
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_quotations')}>
+                <span className="pill-title">Quotations</span>
+                <span className="pill-value">{salesPerf.totalQuotations}</span>
+                <span className="pill-sub">{salesPerf.acceptedQuotations} Accepted</span>
+              </div>
+              <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_orders')}>
+                <span className="pill-title">Sales Orders</span>
+                <span className="pill-value">{salesPerf.totalOrders}</span>
+                <span className="pill-sub">{salesPerf.completedOrders || 0} Active / Processed</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* ── MIDDLE SECTION: SALES WORKFLOW & RECENT ACTIVITY ── */}
       <div className="employee-middle-grid">
@@ -493,7 +581,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
           <div className="widget-header">
             <div className="widget-title-area">
               <TrendingUp size={18} color="#2563EB" />
-              <h3>Sales Workflow & Pipelines</h3>
+              <h3>Sales Workflow &amp; Pipelines</h3>
             </div>
             <span className="widget-badge-count">{salesPerf.totalLeads + salesPerf.totalOrders} records</span>
           </div>
@@ -512,7 +600,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
               <div className="sw-icon-box green"><DollarSign size={18} /></div>
               <div className="sw-info">
                 <h4>Deals Pipeline</h4>
-                <p>{salesPerf.wonDealsCount || 0} won deals ready for invoice</p>
+                <p>{salesPerf.wonDealsCount || 0} won deals ready for sales order</p>
               </div>
               <ChevronRight size={16} color="#94A3B8" />
             </div>
@@ -526,14 +614,25 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
               <ChevronRight size={16} color="#94A3B8" />
             </div>
 
-            <div className="sales-workflow-item" onClick={() => onNavigateTab?.('my_invoices')}>
-              <div className="sw-icon-box amber"><DollarSign size={18} /></div>
-              <div className="sw-info">
-                <h4>Sales Invoices</h4>
-                <p>Generate & track invoices synced with Finance</p>
+            {isSalesRep ? (
+              <div className="sales-workflow-item" onClick={() => onNavigateTab?.('my_invoices')}>
+                <div className="sw-icon-box amber"><DollarSign size={18} /></div>
+                <div className="sw-info">
+                  <h4>Sales Invoices</h4>
+                  <p>Generate &amp; track invoices synced with Finance</p>
+                </div>
+                <ChevronRight size={16} color="#94A3B8" />
               </div>
-              <ChevronRight size={16} color="#94A3B8" />
-            </div>
+            ) : (
+              <div className="sales-workflow-item" onClick={() => onNavigateTab?.('my_orders')}>
+                <div className="sw-icon-box amber"><Briefcase size={18} /></div>
+                <div className="sw-info">
+                  <h4>Sales Orders</h4>
+                  <p>{salesPerf.totalOrders} client purchase &amp; sales orders</p>
+                </div>
+                <ChevronRight size={16} color="#94A3B8" />
+              </div>
+            )}
           </div>
         </div>
 

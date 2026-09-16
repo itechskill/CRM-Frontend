@@ -66,9 +66,10 @@ const EMPTY_FORM = {
   notes: ''
 };
 
-export default function SalesDeliveryNotesView() {
+export default function SalesDeliveryNotesView({ initialSalesOrder, initialProforma, onClearInitial }) {
   const [notes, setNotes] = useState([]);
   const [availableOrders, setAvailableOrders] = useState([]);
+  const [availableProformas, setAvailableProformas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -104,6 +105,17 @@ export default function SalesDeliveryNotesView() {
     }
   }, []);
 
+  const fetchProformasForDelivery = useCallback(async () => {
+    try {
+      const { response, data } = await apiRequest('/api/sales-employee/proforma-invoices');
+      if (response.ok && data.success) {
+        setAvailableProformas(data.data || []);
+      }
+    } catch (e) {
+      console.error('Fetch proformas error:', e);
+    }
+  }, []);
+
   const fetchNotes = useCallback(async () => {
     setLoading(true);
     try {
@@ -122,7 +134,8 @@ export default function SalesDeliveryNotesView() {
   useEffect(() => {
     fetchNotes();
     fetchOrdersForDelivery();
-  }, [fetchNotes, fetchOrdersForDelivery]);
+    fetchProformasForDelivery();
+  }, [fetchNotes, fetchOrdersForDelivery, fetchProformasForDelivery]);
 
   // ── 2. MOVE / TRANSFER SALES ORDER TO DELIVERY NOTE ──
   const handleSelectSalesOrder = (orderId) => {
@@ -169,6 +182,63 @@ export default function SalesDeliveryNotesView() {
       }));
     }
   };
+
+  // ── 2B. MOVE / TRANSFER APPROVED PROFORMA INVOICE TO DELIVERY NOTE ──
+  const handleSelectProforma = (proformaId) => {
+    if (!proformaId) {
+      setForm(prev => ({
+        ...prev,
+        salesOrderId: '',
+        salesOrderNumber: ''
+      }));
+      return;
+    }
+
+    const selected = availableProformas.find(p => p._id === proformaId);
+    if (selected) {
+      const items = selected.items && selected.items.length > 0
+        ? selected.items.map(it => ({
+            product: it.description || 'Proforma Item',
+            description: it.description || 'Proforma Item',
+            demand: Number(it.quantity) || 1,
+            quantity: Number(it.quantity) || 1,
+            unit: it.unit || 'pcs',
+            availability: 'Available'
+          }))
+        : [{
+            product: 'Commercial Scope Items',
+            description: 'Commercial Scope Items',
+            demand: 1,
+            quantity: 1,
+            unit: 'pcs',
+            availability: 'Available'
+          }];
+
+      setForm(prev => ({
+        ...prev,
+        salesOrderId: selected.salesOrderId || selected._id,
+        salesOrderNumber: selected.proformaNumber ? `${selected.proformaNumber} (${selected.salesOrderNumber || 'Approved PI'})` : (selected.salesOrderNumber || ''),
+        clientName: selected.clientName || '',
+        recipientName: selected.clientName || '',
+        recipientPhone: selected.clientPhone || '',
+        deliveryAddress: selected.clientAddress || `${selected.clientName} Facility / Warehouse`,
+        items: items,
+        notes: `Delivery against Approved Proforma Invoice ${selected.proformaNumber || ''}. Total Amount: Rs. ${Number(selected.netAmount || selected.totalAmount || 0).toLocaleString()} PKR.`
+      }));
+    }
+  };
+
+  useEffect(() => {
+    if (initialProforma) {
+      handleOpenCreateModal();
+      handleSelectProforma(initialProforma._id || initialProforma);
+      if (onClearInitial) onClearInitial();
+    } else if (initialSalesOrder) {
+      handleOpenCreateModal();
+      handleSelectSalesOrder(initialSalesOrder._id || initialSalesOrder);
+      if (onClearInitial) onClearInitial();
+    }
+  }, [initialProforma, initialSalesOrder]);
 
   // ── 3. OPEN CREATE / EDIT MODAL ──
   const handleOpenCreateModal = () => {
@@ -966,46 +1036,85 @@ export default function SalesDeliveryNotesView() {
             {error && <div className="sv-error">{error}</div>}
 
             <form onSubmit={handleSaveDeliveryNote} className="sv-form">
-              {/* TOP WORKFLOW BAR: LINK / MOVE SALES ORDER INTO DELIVERY NOTE */}
+              {/* TOP WORKFLOW BAR: LINK / MOVE SALES ORDER OR APPROVED PROFORMA INTO DELIVERY NOTE */}
               <div style={{
                 background: '#F0FDF4',
                 border: '1.5px solid #86EFAC',
                 borderRadius: '10px',
                 padding: '12px 16px',
-                marginBottom: '4px'
+                marginBottom: '4px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '10px'
               }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
-                  <Boxes size={16} color="#059669" />
-                  <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#065F46' }}>
-                    Import &amp; Transfer from Active Sales Order
-                  </label>
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <Boxes size={16} color="#059669" />
+                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#065F46' }}>
+                      Import from Active Sales Order
+                    </label>
+                  </div>
+                  <select
+                    value={form.salesOrderId}
+                    onChange={e => handleSelectSalesOrder(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #A7F3D0',
+                      background: '#FFFFFF',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      color: '#0F172A'
+                    }}
+                  >
+                    <option value="">-- Select Sales Order to Auto-Fill Delivery Note --</option>
+                    {availableOrders.map(ord => {
+                      const fileInfo = ord.fileNo ? ` [File: ${ord.fileNo}${ord.fileType ? ` (${ord.fileType})` : ''}]` : '';
+                      return (
+                        <option key={ord._id} value={ord._id}>
+                          {ord.orderReference || ord.orderNumber} — {ord.clientName || ord.customerName}{fileInfo} (Rs. {Number(ord.netAmount || ord.totalAmount || 0).toLocaleString()})
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
-                <select
-                  value={form.salesOrderId}
-                  onChange={e => handleSelectSalesOrder(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '9px 12px',
-                    borderRadius: '8px',
-                    border: '1px solid #A7F3D0',
-                    background: '#FFFFFF',
-                    fontWeight: 700,
-                    fontSize: '0.88rem',
-                    color: '#0F172A'
-                  }}
-                >
-                  <option value="">-- Select Sales Order to Auto-Fill Delivery Note --</option>
-                  {availableOrders.map(ord => {
-                    const fileInfo = ord.fileNo ? ` [File: ${ord.fileNo}${ord.fileType ? ` (${ord.fileType})` : ''}]` : '';
-                    return (
-                      <option key={ord._id} value={ord._id}>
-                        {ord.orderReference || ord.orderNumber} — {ord.clientName || ord.customerName}{fileInfo} (Rs. {Number(ord.netAmount || ord.totalAmount || 0).toLocaleString()})
-                      </option>
-                    );
-                  })}
-                </select>
-                <div style={{ fontSize: '0.75rem', color: '#047857', marginTop: '4px' }}>
-                  💡 Selecting an order instantly transfers customer address, line items, and product demand into this delivery note.
+
+                {/* Import from Approved Proforma Invoices */}
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <FileSpreadsheet size={16} color="#0284C7" />
+                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0369A1' }}>
+                      OR Import from Customer-Approved Proforma Invoice
+                    </label>
+                  </div>
+                  <select
+                    onChange={e => handleSelectProforma(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      borderRadius: '8px',
+                      border: '1px solid #BAE6FD',
+                      background: '#FFFFFF',
+                      fontWeight: 700,
+                      fontSize: '0.88rem',
+                      color: '#0F172A'
+                    }}
+                  >
+                    <option value="">-- Select Approved Proforma Invoice --</option>
+                    {availableProformas.map(pi => {
+                      const isApproved = pi.status === 'Approved';
+                      return (
+                        <option key={pi._id} value={pi._id}>
+                          {pi.proformaNumber} — {pi.clientName} [{pi.status || 'Issued'}] (Rs. {Number(pi.netAmount || pi.totalAmount || 0).toLocaleString()})
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+
+                <div style={{ fontSize: '0.75rem', color: '#047857' }}>
+                  💡 Selecting either an order or approved proforma invoice instantly auto-populates products, quantities, and customer shipping details into this Delivery Note.
                 </div>
               </div>
 

@@ -1,0 +1,553 @@
+/* ==========================================================================
+   Fortline CRM - Premium Invoice & Payment Forms Design System
+   ========================================================================== */
+
+/* Modern Modal Overlay & Container */
+.ip-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+  animation: ipFadeIn 0.2s ease-out;
+}
+
+@keyframes ipFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes ipSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.ip-modal-card {
+  background: #FFFFFF;
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.8);
+  display: flex;
+  flex-direction: column;
+  animation: ipSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Modal Headers */
+.ip-modal-header {
+  padding: 22px 28px;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  position: relative;
+}
+
+.ip-modal-header.invoice-theme {
+  background: linear-gradient(135deg, #0F172A 0%, #1E3A8A 50%, #2563EB 100%);
+}
+
+.ip-modal-header.payment-theme {
+  background: linear-gradient(135deg, #064E3B 0%, #047857 50%, #059669 100%);
+}
+
+.ip-header-icon-box {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #FFFFFF;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+  flex-shrink: 0;
+}
+
+.ip-header-title-group h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #FFFFFF;
+  line-height: 1.25;
+}
+
+.ip-header-title-group p {
+  margin: 4px 0 0 0;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 400;
+}
+
+.ip-close-btn {
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #FFFFFF;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.ip-close-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: scale(1.05);
+}
+
+/* Modal Scrollable Body */
+.ip-modal-body {
+  padding: 24px 28px;
+  max-height: 76vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #CBD5E1 #F8FAFC;
+}
+
+.ip-modal-body::-webkit-scrollbar {
+  width: 6px;
+}
+.ip-modal-body::-webkit-scrollbar-track {
+  background: #F8FAFC;
+}
+.ip-modal-body::-webkit-scrollbar-thumb {
+  background: #CBD5E1;
+  border-radius: 3px;
+}
+
+/* Section Containers & Badges */
+.ip-section-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  transition: border-color 0.2s ease;
+}
+
+.ip-section-card:hover {
+  border-color: #CBD5E1;
+}
+
+.ip-section-card.hero-selector-card {
+  background: linear-gradient(180deg, #F8FAFC 0%, #F1F5F9 100%);
+  border: 1.5px solid #DBEAFE;
+}
+
+.ip-section-card.hero-selector-card.payment-card {
+  background: linear-gradient(180deg, #F0FDF4 0%, #DCFCE7 100%);
+  border: 1.5px solid #BBF7D0;
+}
+
+.ip-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #334155;
+  margin-bottom: 14px;
+}
+
+.ip-section-pill {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.ip-section-pill.blue {
+  background: #EFF6FF;
+  color: #2563EB;
+  border: 1px solid #BFDBFE;
+}
+
+.ip-section-pill.green {
+  background: #ECFDF5;
+  color: #059669;
+  border: 1px solid #A7F3D0;
+}
+
+/* Form Fields & Layouts */
+.ip-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ip-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ip-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ip-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ip-label .required-mark {
+  color: #EF4444;
+  font-weight: bold;
+}
+
+.ip-input {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  border: 1.5px solid #CBD5E1;
+  background-color: #FFFFFF;
+  color: #0F172A;
+  font-size: 0.88rem;
+  font-weight: 500;
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.ip-input:focus {
+  border-color: #2563EB;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  background-color: #FFFFFF;
+}
+
+.ip-input.payment-focus:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.15);
+}
+
+.ip-input::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+select.ip-input {
+  cursor: pointer;
+}
+
+/* Hero Badge Linked Box */
+.ip-linked-badge-box {
+  margin-top: 12px;
+  background: #FFFFFF;
+  border: 1.5px solid #BFDBFE;
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 6px rgba(37, 99, 235, 0.06);
+}
+
+.ip-linked-badge-box.green-theme {
+  border-color: #86EFAC;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.06);
+}
+
+.ip-linked-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1E3A8A;
+}
+
+.ip-linked-sub {
+  font-size: 0.78rem;
+  color: #3B82F6;
+  margin-top: 2px;
+}
+
+/* Line Items Table Styling */
+.ip-table-wrapper {
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.ip-line-items-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.ip-line-items-table th {
+  background: #F8FAFC;
+  padding: 10px 14px;
+  font-weight: 700;
+  color: #475569;
+  border-bottom: 1.5px solid #E2E8F0;
+  text-align: left;
+  letter-spacing: 0.02em;
+}
+
+.ip-line-items-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #F1F5F9;
+  vertical-align: middle;
+}
+
+.ip-line-items-table tr:hover td {
+  background: #F8FAFC;
+}
+
+.ip-btn-delete-row {
+  background: #FEF2F2;
+  border: 1px solid #FECACA;
+  color: #EF4444;
+  border-radius: 8px;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ip-btn-delete-row:hover {
+  background: #EF4444;
+  color: #FFFFFF;
+}
+
+/* Financial Totals Summary Box */
+.ip-summary-container {
+  background: linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 100%);
+  border: 1.5px solid #E2E8F0;
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+.ip-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.86rem;
+  color: #64748B;
+  padding: 4px 0;
+}
+
+.ip-summary-row.net-payable {
+  border-top: 2px dashed #CBD5E1;
+  padding-top: 10px;
+  margin-top: 8px;
+}
+
+.ip-payable-amount {
+  font-size: 1.35rem;
+  font-weight: 900;
+  color: #059669;
+  letter-spacing: -0.02em;
+}
+
+/* Payment Breakdown Metrics Grid (Finance) */
+.ip-payment-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.ip-payment-metric-card {
+  background: #FFFFFF;
+  border: 1px solid #E2E8F0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+}
+
+.ip-payment-metric-card.remaining-card {
+  border-color: #FECACA;
+  background: #FFF5F5;
+}
+
+.ip-payment-metric-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #64748B;
+  letter-spacing: 0.04em;
+}
+
+.ip-payment-metric-value {
+  font-size: 1.15rem;
+  font-weight: 900;
+  margin-top: 4px;
+}
+
+/* Quick Amount Pills */
+.ip-quick-amount-group {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #E2E8F0;
+}
+
+.ip-quick-pill {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.ip-quick-pill.full-pill {
+  background: #ECFDF5;
+  border-color: #A7F3D0;
+  color: #065F46;
+}
+
+.ip-quick-pill.full-pill:hover {
+  background: #D1FAE5;
+  transform: translateY(-1px);
+}
+
+.ip-quick-pill.half-pill {
+  background: #EFF6FF;
+  border-color: #BFDBFE;
+  color: #1E40AF;
+}
+
+.ip-quick-pill.half-pill:hover {
+  background: #DBEAFE;
+  transform: translateY(-1px);
+}
+
+/* Modal Actions Footer */
+.ip-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 28px;
+  background: #F8FAFC;
+  border-top: 1px solid #E2E8F0;
+}
+
+.ip-btn-cancel {
+  background: #FFFFFF;
+  color: #475569;
+  border: 1.5px solid #CBD5E1;
+  border-radius: 10px;
+  padding: 10px 20px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ip-btn-cancel:hover {
+  background: #F1F5F9;
+  border-color: #94A3B8;
+  color: #0F172A;
+}
+
+.ip-btn-submit-invoice {
+  background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 24px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  transition: all 0.2s ease;
+}
+
+.ip-btn-submit-invoice:hover {
+  background: linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45);
+}
+
+.ip-btn-submit-payment {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 24px;
+  font-size: 0.88rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.35);
+  transition: all 0.2s ease;
+}
+
+.ip-btn-submit-payment:hover {
+  background: linear-gradient(135deg, #047857 0%, #065F46 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(5, 150, 105, 0.45);
+}
+
+/* Mobile & Tablet Responsive */
+@media (max-width: 768px) {
+  .ip-grid-2, .ip-grid-3 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  .ip-summary-container {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+  .ip-modal-header {
+    padding: 16px 20px;
+  }
+  .ip-modal-body {
+    padding: 16px 20px;
+  }
+  .ip-modal-footer {
+    padding: 14px 20px;
+  }
+  .ip-payment-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+}

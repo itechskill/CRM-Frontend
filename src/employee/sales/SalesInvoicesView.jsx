@@ -26,7 +26,8 @@ import {
   Printer,
   Download,
   Edit2,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Truck
 } from 'lucide-react';
 import './SalesViews.css';
 
@@ -48,6 +49,10 @@ const EMPTY_ITEM = { description: '', quantity: 1, unitPrice: 0, total: 0 };
 const EMPTY_FORM = {
   dealId: '',
   dealTitle: '',
+  deliveryNoteId: '',
+  deliveryNoteNumber: '',
+  salesOrderId: '',
+  salesOrderNumber: '',
   saleReference: '',
   clientName: '',
   customerEmail: '',
@@ -70,6 +75,8 @@ const EMPTY_FORM = {
 export default function SalesInvoicesView() {
   const [invoices, setInvoices] = useState([]);
   const [eligibleWonSales, setEligibleWonSales] = useState({ deals: [], orders: [] });
+  const [deliveryNotes, setDeliveryNotes] = useState([]);
+  const [selectedDNId, setSelectedDNId] = useState('');
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [search, setSearch] = useState('');
@@ -110,9 +117,21 @@ export default function SalesInvoicesView() {
     }
   }, [filter, search]);
 
+  const fetchDeliveryNotes = useCallback(async () => {
+    try {
+      const { response, data } = await apiRequest('/api/sales-employee/delivery-notes');
+      if (response.ok && data.success && Array.isArray(data.data)) {
+        setDeliveryNotes(data.data);
+      }
+    } catch (e) {
+      console.error('Fetch delivery notes for invoice error:', e);
+    }
+  }, []);
+
   useEffect(() => {
     fetchInvoices();
-  }, [fetchInvoices]);
+    fetchDeliveryNotes();
+  }, [fetchInvoices, fetchDeliveryNotes]);
 
   // Recalculate invoice totals when items, tax, or discount changes
   const recalculateTotals = (itemsList, taxRatePct, discountVal) => {
@@ -123,9 +142,87 @@ export default function SalesInvoicesView() {
     return { subtotal, tax, amount };
   };
 
+  const handleSelectDeliveryNote = (dnId) => {
+    setSelectedDNId(dnId);
+    if (!dnId) {
+      setForm(p => ({
+        ...p,
+        deliveryNoteId: '',
+        deliveryNoteNumber: '',
+        salesOrderId: '',
+        salesOrderNumber: ''
+      }));
+      return;
+    }
+
+    const dn = deliveryNotes.find(d => d._id === dnId);
+    if (!dn) return;
+
+    const so = dn.salesOrder;
+    const dnNum = dn.deliveryNumber || dn.deliveryNoteNumber || '';
+    const soNum = dn.salesOrderNumber || so?.orderReference || so?.orderNumber || '';
+
+    let items = [];
+    if (so?.items && so.items.length > 0) {
+      items = so.items.map(it => {
+        const qty = Number(it.quantity) || 1;
+        const up = Number(it.unitPrice) || 0;
+        return {
+          description: it.description || it.product || 'Item',
+          quantity: qty,
+          unitPrice: up,
+          total: qty * up
+        };
+      });
+    } else if (dn.items && dn.items.length > 0) {
+      items = dn.items.map(it => {
+        const qty = Number(it.quantity) || Number(it.demand) || 1;
+        const up = Number(it.unitPrice) || (Number(so?.netAmount || 0) / (dn.items.length || 1)) || 0;
+        return {
+          description: it.description || it.product || 'Item',
+          quantity: qty,
+          unitPrice: up,
+          total: qty * up
+        };
+      });
+    } else {
+      const amt = Number(so?.netAmount || so?.totalAmount) || 0;
+      items = [{
+        description: `Delivered items as per ${dnNum}`,
+        quantity: 1,
+        unitPrice: amt,
+        total: amt
+      }];
+    }
+
+    const disc = Number(so?.discount) || 0;
+    const taxRate = Number(so?.taxRate) || 0;
+    const totals = recalculateTotals(items, taxRate, disc);
+
+    setForm(p => ({
+      ...p,
+      deliveryNoteId: dn._id,
+      deliveryNoteNumber: dnNum,
+      salesOrderId: so?._id || '',
+      salesOrderNumber: soNum,
+      dealId: '',
+      dealTitle: '',
+      saleReference: soNum || dnNum,
+      clientName: dn.clientName || so?.clientName || p.clientName,
+      customerEmail: so?.clientEmail || p.customerEmail,
+      customerPhone: dn.recipientPhone || so?.clientPhone || p.customerPhone,
+      customerAddress: dn.deliveryAddress || so?.clientAddress || p.customerAddress,
+      items: items,
+      discount: disc,
+      taxRate: taxRate,
+      ...totals,
+      notes: `Commercial Invoice generated from Delivery Note ${dnNum}${soNum ? ` (Order ${soNum})` : ''}`
+    }));
+  };
+
   const openCreate = () => {
     const defaultDueDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-    const initialItems = [{ description: 'Sales Deal Services / Deliverable', quantity: 1, unitPrice: 0, total: 0 }];
+    const initialItems = [];
     const totals = recalculateTotals(initialItems, 0, 0);
 
     setForm({
@@ -860,24 +957,57 @@ export default function SalesInvoicesView() {
 
             <div className="sv-form" style={{ maxHeight: '72vh', overflowY: 'auto', paddingRight: '4px' }}>
               
-              {/* 1. SELECT COMPLETED SALE / WON DEAL (Only for new) */}
+              {/* 1. SELECT DELIVERY NOTE OR COMPLETED SALE (Only for new) */}
               {!editInvoice && (
-                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', marginBottom: '14px' }}>
-                  <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 700, color: '#1E293B', marginBottom: '6px' }}>
-                    Select Completed / Won Deal (Auto-Populate Data)
-                  </label>
-                  <select 
-                    value={form.dealId} 
-                    onChange={handleSelectWonDeal}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
-                  >
-                    <option value="">-- Choose Won Deal (Or Enter Details Manually) --</option>
-                    {eligibleWonSales.deals.map(deal => (
-                      <option key={deal._id} value={deal._id}>
-                        {deal.title} — {deal.clientName || 'Client'} (Rs. {Number(deal.value || 0).toLocaleString()})
-                      </option>
-                    ))}
-                  </select>
+                <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px', marginBottom: '16px' }}>
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem', fontWeight: 700, color: '#1E293B', marginBottom: '6px' }}>
+                      <Truck size={16} color="#2563EB" /> Select Delivery Note (Auto-Fill from Delivery)
+                    </label>
+                    <select 
+                      value={selectedDNId} 
+                      onChange={e => handleSelectDeliveryNote(e.target.value)}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem', fontWeight: 600, background: '#FFFFFF' }}
+                    >
+                      <option value="">-- Choose Confirmed Delivery Note (Auto-Populate Data) --</option>
+                      {deliveryNotes.map(dn => {
+                        const dnNum = dn.deliveryNumber || dn.deliveryNoteNumber || 'DN';
+                        const soNum = dn.salesOrderNumber || dn.salesOrder?.orderReference || dn.salesOrder?.orderNumber || '';
+                        return (
+                          <option key={dn._id} value={dn._id}>
+                            {dnNum} — {dn.clientName || 'Client'} ({soNum ? `Order: ${soNum}` : 'Direct'} • {dn.status || 'Ready'})
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  {/* Optional: Select Won Deal */}
+                  <div style={{ borderTop: '1px dashed #CBD5E1', paddingTop: '10px' }}>
+                    <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#64748B', marginBottom: '4px' }}>
+                      Or choose from Won Deal:
+                    </label>
+                    <select 
+                      value={form.dealId} 
+                      onChange={handleSelectWonDeal}
+                      style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.82rem', background: '#FFFFFF' }}
+                    >
+                      <option value="">-- Choose Won Deal --</option>
+                      {eligibleWonSales.deals.map(deal => (
+                        <option key={deal._id} value={deal._id}>
+                          {deal.title} — {deal.clientName || 'Client'} (Rs. {Number(deal.value || 0).toLocaleString()})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Linked Delivery Note tag */}
+                  {form.deliveryNoteNumber && (
+                    <div style={{ marginTop: '10px', background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '6px', padding: '8px 12px', fontSize: '0.8rem', color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <CheckCircle2 size={15} color="#2563EB" />
+                      <span>Linked to Delivery Note <strong>{form.deliveryNoteNumber}</strong></span>
+                    </div>
+                  )}
                 </div>
               )}
 

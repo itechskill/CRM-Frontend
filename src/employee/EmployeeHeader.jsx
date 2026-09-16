@@ -7,6 +7,20 @@ import './EmployeeHeader.css';
 export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuToggle, currentUser, onNavigateTab }) {
   const [searchQuery, setSearchQuery] = useState('');
 
+  const user = currentUser || getUser();
+  const isAhmedAnjum = (user?.fullName || '').toLowerCase().includes('ahmed') ||
+    (user?.email || '').toLowerCase().includes('quote@fortline.net') ||
+    (user?.email || '').toLowerCase().includes('ahmed');
+  const isSalesRep = isAhmedAnjum ||
+    (user?.position || '').toLowerCase() === 'sales representative' ||
+    (user?.position || '').toLowerCase() === 'sales rep' ||
+    user?.role === 'sales_rep';
+  const isSalesDept = (user?.department || '').trim().toLowerCase() === 'sales' ||
+    user?.role === 'sales_member' ||
+    user?.role === 'sales_person' ||
+    user?.role === 'sales_rep' ||
+    isSalesRep;
+
   const getHeaderInfo = (tab) => {
     switch (tab) {
       case 'dashboard':
@@ -28,6 +42,12 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
       case 'payments':
       case 'my_payments':
         return { title: 'Customer Payments', subtitle: 'Record and track payment receipts and settlement statuses' };
+      case 'followups':
+        return { title: 'Client Follow-ups', subtitle: 'Track client interactions, calls, and follow-up schedules' };
+      case 'sales_targets':
+        return { title: 'Sales Targets & Quotas', subtitle: 'Review target quotas, achievements, and revenue milestones' };
+      case 'sales_activities':
+        return { title: 'Sales Activities', subtitle: 'Log calls, meetings, pitches, and customer communication' };
       case 'leave':
         return { title: 'Leave & Attendance', subtitle: 'Submit leave applications and review your attendance history' };
       case 'projects':
@@ -47,7 +67,10 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
       case 'settings':
         return { title: 'Portal Settings', subtitle: 'Personalize your workspace preferences and notifications' };
       default:
-        return { title: 'Sales Representative Portal', subtitle: 'Welcome to Fortline CRM' };
+        return {
+          title: isSalesRep ? 'Sales Rep Portal' : (isSalesDept ? 'Sales Person Portal' : 'Employee Portal'),
+          subtitle: 'Welcome to Fortline CRM'
+        };
     }
   };
 
@@ -61,14 +84,20 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
   };
 
   const formatRole = (role, position) => {
+    if (isSalesRep) {
+      return 'Sales Rep';
+    }
     if (position && typeof position === 'string' && position.trim()) {
+      if (position.trim().toLowerCase().includes('rep')) return 'Sales Rep';
+      if (position.trim().toLowerCase().includes('person')) return 'Sales Person';
       return position.trim();
     }
-    if (!role) return 'Sales Representative';
+    if (!role) return isSalesDept ? 'Sales Person' : 'Employee';
     const mapping = {
       sales_manager: 'Sales Manager',
-      sales_rep: 'Sales Representative',
-      employee: 'Sales Representative',
+      sales_rep: 'Sales Rep',
+      sales_member: 'Sales Person',
+      employee: isSalesDept ? 'Sales Person' : 'Employee',
       admin: 'Administrator',
       project_manager: 'Project Manager',
       accountant: 'Accountant',
@@ -82,8 +111,7 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
     return String(role).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   };
 
-  const user = currentUser || getUser();
-  const displayName = user?.fullName || user?.name || user?.username || 'Sales Representative';
+  const displayName = user?.fullName || user?.name || user?.username || (isSalesRep ? 'Sales Rep' : 'Sales Person');
   const displayRole = formatRole(user?.role, user?.position);
   const avatarImage = user?.profileImage || user?.profilePicture || user?.avatar;
 

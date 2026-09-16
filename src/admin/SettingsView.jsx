@@ -37,21 +37,18 @@ export default function SettingsView() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', maxWidth: '500px' }}>
             <div className="form-group">
               <label>Organization Name</label>
-              <input className="form-input" defaultValue="Nexus CRM Inc." />
+              <input className="form-input" defaultValue="Fortline CRM" />
             </div>
 
             <div className="form-group">
               <label>Support Email</label>
-              <input className="form-input" defaultValue="support@fortlinecrm.io" />
+              <input className="form-input" defaultValue="support@fortlinecrm.com" />
             </div>
 
             <div className="form-group">
               <label>Default Currency</label>
-              <select className="form-select" defaultValue="PKR">
+              <select className="form-select" defaultValue="PKR" disabled>
                 <option value="PKR">PKR (Rs.) - Pakistani Rupee</option>
-                <option value="USD">USD ($) - US Dollar</option>
-                <option value="EUR">EUR (€) - Euro</option>
-                <option value="GBP">GBP (£) - British Pound</option>
               </select>
             </div>
 
