@@ -875,15 +875,22 @@ body {
   }
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
 
   html,
   body,
   #root {
-    overflow: hidden;
+    overflow-x: hidden !important;
   }
 
-  /* Universal Sidebar overlay on mobile for all 9 CRM portal sidebars */
+  .main-wrapper {
+    margin-left: 0 !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    min-width: 0 !important;
+  }
+
+  /* Universal Sidebar overlay on mobile/tablet for all CRM portal sidebars */
   .sidebar,
   .employee-sidebar,
   .sales-sidebar,
@@ -892,16 +899,19 @@ body {
   .acc-sidebar,
   .mkt-sidebar,
   .ceo-sidebar,
-  .admin-side-sidebar {
+  .admin-side-sidebar,
+  .support-sidebar,
+  .finance-sidebar {
     position: fixed !important;
-    left: 0;
-    top: 0;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
     width: 280px !important;
     max-width: 85vw !important;
     height: 100vh !important;
     transform: translateX(-100%) !important;
     transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1) !important;
-    z-index: 200 !important;
+    z-index: 1000 !important;
     display: flex !important;
     flex-direction: column !important;
     box-shadow: none;
@@ -915,10 +925,46 @@ body {
   .acc-sidebar.mobile-open,
   .mkt-sidebar.mobile-open,
   .ceo-sidebar.mobile-open,
-  .admin-side-sidebar.mobile-open {
+  .admin-side-sidebar.mobile-open,
+  .support-sidebar.mobile-open,
+  .finance-sidebar.mobile-open {
     transform: translateX(0) !important;
     box-shadow: 6px 0 30px rgba(0, 0, 0, 0.5) !important;
-    z-index: 300 !important;
+    z-index: 1001 !important;
+  }
+
+  /* Ensure all labels, section titles and brand details are visible when mobile-open */
+  .sidebar.mobile-open span,
+  .employee-sidebar.mobile-open span,
+  .sales-sidebar.mobile-open span,
+  .project-sidebar.mobile-open span,
+  .hr-sidebar.mobile-open span,
+  .acc-sidebar.mobile-open span,
+  .mkt-sidebar.mobile-open span,
+  .ceo-sidebar.mobile-open span,
+  .admin-side-sidebar.mobile-open span,
+  .support-sidebar.mobile-open span,
+  .finance-sidebar.mobile-open span {
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+  }
+
+  .sidebar.mobile-open .brand-info,
+  .employee-sidebar.mobile-open .employee-brand-info,
+  .sales-sidebar.mobile-open .sales-brand-info,
+  .project-sidebar.mobile-open .project-brand-info,
+  .hr-sidebar.mobile-open .hr-brand-info,
+  .mkt-sidebar.mobile-open .mkt-brand-info,
+  .ceo-sidebar.mobile-open .ceo-brand-info,
+  .employee-sidebar.mobile-open .employee-menu-title,
+  .sales-sidebar.mobile-open .sales-menu-title,
+  .hr-sidebar.mobile-open .hr-menu-title,
+  .mkt-sidebar.mobile-open .mkt-menu-title,
+  .sidebar.mobile-open .menu-section-title {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
   }
 
   /* Ensure User Card & Sign Out footer are always fully visible on mobile */
@@ -930,7 +976,9 @@ body {
   .acc-sidebar-footer,
   .mkt-sidebar-footer,
   .ceo-sidebar-footer,
-  .admin-side-sidebar-footer {
+  .admin-side-sidebar-footer,
+  .support-sidebar-footer,
+  .finance-sidebar-footer {
     display: flex !important;
     margin-top: auto !important;
     padding: 12px 16px !important;
@@ -954,6 +1002,7 @@ body {
   /* Backdrop overlay behind open sidebar */
   .sidebar-backdrop {
     display: block !important;
+    z-index: 999 !important;
   }
 
   /* Content grids */
@@ -976,9 +1025,12 @@ body {
   .content-area {
     padding: 14px 14px 32px !important;
     height: calc(100vh - 65px) !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
   }
 
-  /* Hide hamburger hide class on desktop */
+  /* Show hamburger menu toggle across all headers on tablet/mobile */
   .mobile-menu-btn,
   .ceo-menu-toggle,
   .admin-side-menu-toggle {
@@ -989,11 +1041,19 @@ body {
     display: none !important;
   }
 
-  /* Responsive Tables & Cards */
+  /* Responsive Tables & Contained Horizontal Scrolling */
   .sv-table-container,
-  .table-container {
+  .sv-table-wrap,
+  .table-container,
+  .acc-table-wrapper,
+  .support-table-card,
+  .fin-table-container,
+  .table-responsive {
     overflow-x: auto !important;
-    -webkit-overflow-scrolling: touch;
+    -webkit-overflow-scrolling: touch !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    min-width: 0 !important;
   }
 
   .sv-header-row,
@@ -1019,6 +1079,39 @@ body {
   .smd-actions-row button {
     flex: 1 !important;
     justify-content: center !important;
+  }
+}
+
+/* Specific Mobile Form & Modal Overrides (<= 768px) */
+@media (max-width: 768px) {
+  .sv-form-grid,
+  .modal-grid,
+  .form-row,
+  .acc-form-row,
+  .invoice-form-grid,
+  .payment-form-grid,
+  .pf-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .modal-content,
+  .sv-modal,
+  .acc-modal,
+  .emp-modal,
+  .custom-modal,
+  .modal-card {
+    width: 95% !important;
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+    margin: 16px auto !important;
+    padding: 16px !important;
+  }
+
+  .header-search {
+    min-width: 140px !important;
+    width: 100% !important;
   }
 }
 
@@ -1049,7 +1142,7 @@ body {
   position: fixed;
   inset: 0;
   background: rgba(15, 23, 42, 0.65);
-  z-index: 190;
+  z-index: 999;
   animation: fadeIn 0.2s ease;
   backdrop-filter: blur(2px);
 }

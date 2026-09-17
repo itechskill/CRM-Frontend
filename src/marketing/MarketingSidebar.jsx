@@ -78,7 +78,7 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
             <div className="mkt-brand-logo">
               <Megaphone size={20} color="#FFFFFF" />
             </div>
-            {!collapsed && (
+            {(!collapsed || isMobileOpen) && (
               <div className="mkt-brand-info">
                 <span className="mkt-brand-name">Fortline CRM</span>
                 <span className="mkt-brand-subtitle">MARKETING PORTAL</span>
@@ -86,7 +86,7 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
             )}
           </div>
           <button
-            className="mkt-collapse-btn"
+            className="mkt-collapse-btn desktop-only"
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
@@ -96,7 +96,7 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
 
         {/* Navigation Menu */}
         <div className="mkt-sidebar-menu">
-          {!collapsed && <div className="mkt-menu-title">GROWTH PORTAL</div>}
+          {(!collapsed || isMobileOpen) && <div className="mkt-menu-title">GROWTH PORTAL</div>}
 
           <div className="mkt-menu-section">
             {mainNav.map((item) => {
@@ -111,9 +111,9 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
                 >
                   <div className="mkt-menu-left">
                     <Icon size={18} />
-                    {!collapsed && <span>{item.label}</span>}
+                    {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
                   </div>
-                  {!collapsed && item.badge && (
+                  {(!collapsed || isMobileOpen) && item.badge && (
                     <span className="mkt-menu-badge">{item.badge}</span>
                   )}
                 </div>
@@ -136,9 +136,9 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
                 >
                   <div className="mkt-menu-left">
                     <Icon size={18} />
-                    {!collapsed && <span>{item.label}</span>}
+                    {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
                   </div>
-                  {!collapsed && item.badge && (
+                  {(!collapsed || isMobileOpen) && item.badge && (
                     <span
                       className="mkt-menu-badge"
                       style={item.badgeColor ? { backgroundColor: item.badgeColor, color: '#FFFFFF' } : undefined}
@@ -170,7 +170,7 @@ export default function MarketingSidebar({ activeTab, setActiveTab, currentRole,
                 userInitials
               )}
             </div>
-            {!collapsed && (
+            {(!collapsed || isMobileOpen) && (
               <div className="mkt-user-info" style={{ display: 'flex', flexDirection: 'column' }}>
                 <span className="mkt-user-name" style={{ color: '#FFFFFF', fontSize: '0.825rem', fontWeight: 600 }}>{currentUser?.fullName || 'Marketing User'}</span>
                 <span className="mkt-user-role" style={{ color: '#94A3B8', fontSize: '0.72rem' }}>{currentUser?.role ? currentUser.role.replace('_', ' ').toUpperCase() : 'MARKETING'}</span>

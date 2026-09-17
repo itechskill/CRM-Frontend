@@ -109,6 +109,33 @@ export default function AdminDashboard({ onNavigateTab, currentUser }) {
         </div>
       </div>
 
+      {/* Live Financial & Overdue Summary Banner */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Invoiced Revenue</div>
+          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#2563EB' }}>Rs. {Number(data.totalInvoicedRevenue || 0).toLocaleString()}</div>
+          <div style={{ fontSize: '0.72rem', color: '#64748B' }}>{data.finalInvoices || 0} Finalized Invoices</div>
+        </div>
+
+        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Actual Receivables</div>
+          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#0284C7' }}>Rs. {Number(data.actualReceivables || 0).toLocaleString()}</div>
+          <div style={{ fontSize: '0.72rem', color: '#0284C7' }}>{data.unpaidInvoices || 0} Unpaid Balance Invoices</div>
+        </div>
+
+        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Overdue Amount</div>
+          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#DC2626' }}>Rs. {Number(data.actualOverdueAmount || 0).toLocaleString()}</div>
+          <div style={{ fontSize: '0.72rem', color: '#DC2626', fontWeight: 600 }}>{data.overdueInvoicesCount || 0} Invoices Past Due Date</div>
+        </div>
+
+        <div style={{ backgroundColor: '#FFFFFF', border: '1px solid #E2E8F0', borderRadius: '14px', padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <div style={{ fontSize: '0.78rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Payments Collected</div>
+          <div style={{ fontSize: '1.45rem', fontWeight: 800, color: '#16A34A' }}>Rs. {Number(data.totalPaymentsReceived || 0).toLocaleString()}</div>
+          <div style={{ fontSize: '0.72rem', color: '#16A34A', fontWeight: 600 }}>Customer Cash & Bank Receipts</div>
+        </div>
+      </div>
+
       {/* Top 4 Real User Administrative KPI Cards */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
         {/* Total Users */}

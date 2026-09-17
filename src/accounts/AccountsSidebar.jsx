@@ -44,13 +44,11 @@ export default function AccountsSidebar({
   useEffect(() => {
     const fetchCounts = async () => {
       try {
-        const { response, data } = await apiRequest('/api/sales-employee/orders');
+        const { response, data } = await apiRequest('/api/sales-employee/delivery-notes');
         if (response.ok && data.success && Array.isArray(data.data)) {
-          const readyCount = data.data.filter(o =>
-            o.workflowStatus === 'Sent to Accounts' ||
-            o.workflowStatus === 'Delivery Note Confirmed' ||
-            o.deliveryStatus === 'Fully Delivered' ||
-            o.deliveryStatus === 'Delivered'
+          const cutoff = new Date('2026-09-15T00:00:00.000Z');
+          const readyCount = data.data.filter(dn =>
+            new Date(dn.createdAt) > cutoff && !dn.invoiced && !dn.invoiceId
           ).length;
           setOrdersReadyCount(readyCount);
         }
@@ -59,6 +57,13 @@ export default function AccountsSidebar({
       }
     };
     fetchCounts();
+
+    const interval = setInterval(fetchCounts, 10000);
+    window.addEventListener('focus', fetchCounts);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', fetchCounts);
+    };
   }, [activeTab]);
 
   const handleNavClick = (tab) => {

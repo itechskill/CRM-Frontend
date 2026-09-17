@@ -93,6 +93,12 @@ export const ROLE_CONFIG = {
     frontendRole: 'finance',
     portalName: 'Finance Department Portal',
     defaultTab: 'dashboard'
+  },
+  logistics: {
+    backendRole: 'logistics',
+    frontendRole: 'logistics',
+    portalName: 'Logistics Department Portal',
+    defaultTab: 'dashboard'
   }
 };
 

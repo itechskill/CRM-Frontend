@@ -1,27 +1,30 @@
 import React, { useState } from 'react';
 import {
   LayoutGrid,
-  ShoppingCart,
-  Boxes,
+  Plane,
   Truck,
+  Compass,
+  PackageCheck,
+  FileSpreadsheet,
+  Bell,
+  UserCheck,
   User,
   LogOut,
   ChevronLeft,
   ChevronRight,
+  ShieldCheck,
   Crown,
   Briefcase,
-  ShieldCheck,
-  UserCheck,
-  FolderKanban,
-  Megaphone,
   Calculator,
-  Heart,
+  Headphones,
   TrendingUp,
-  Headphones
+  FolderKanban,
+  Heart,
+  Megaphone
 } from 'lucide-react';
 import '../employee/EmployeeSidebar.css';
 
-export default function SupportSidebar({
+export default function LogisticsSidebar({
   activeTab,
   setActiveTab,
   currentRole,
@@ -40,17 +43,33 @@ export default function SupportSidebar({
     if (onClose) onClose();
   };
 
-  const operationsNav = [
-    { id: 'dashboard', label: 'Support Dashboard', icon: LayoutGrid },
-    { id: 'support_orders', label: 'Sales Orders', icon: ShoppingCart },
-    { id: 'inventory', label: 'Inventory Management', icon: Boxes },
-    { id: 'delivery_notes', label: 'Delivery Notes', icon: Truck }
+  const logisticsNav = [
+    { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'incoming_shipments', label: 'Incoming Orders', icon: Plane },
+    { id: 'shipments', label: 'Shipments', icon: Truck },
+    { id: 'shipment_tracking', label: 'Shipment Tracking', icon: Compass },
+    { id: 'shipment_received', label: 'Shipment Received', icon: PackageCheck },
+    { id: 'delivery_notes', label: 'Delivery Notes', icon: FileSpreadsheet },
+    { id: 'notifications', label: 'Notifications', icon: Bell },
+    { id: 'leave', label: 'Attendance & Leave', icon: UserCheck },
+    { id: 'profile', label: 'Profile', icon: User }
   ];
 
-  const accountNav = [
-    { id: 'leave', label: 'Leave & Attendance', icon: UserCheck },
-    { id: 'profile', label: 'My Profile', icon: User }
-  ];
+  const isItemActive = (itemId) => {
+    if (activeTab === itemId) return true;
+    if (itemId === 'incoming_shipments' && (activeTab === 'incoming' || activeTab === 'incoming_shipments')) return true;
+    if (itemId === 'shipment_tracking' && (activeTab === 'tracking' || activeTab === 'shipment_tracking')) return true;
+    if (itemId === 'shipment_received' && (activeTab === 'received' || activeTab === 'shipment_received')) return true;
+    if (itemId === 'leave' && (activeTab === 'leave' || activeTab === 'attendance_leave')) return true;
+    return false;
+  };
+
+  const userInitials = (currentUser?.fullName || currentUser?.name || 'Logistics User')
+    .split(' ')
+    .map((n) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <>
@@ -59,14 +78,14 @@ export default function SupportSidebar({
         {/* Brand Header */}
         <div className="employee-sidebar-header">
           <div className="employee-brand-left">
-            <div className="employee-brand-logo" style={{ background: 'linear-gradient(135deg, #0EA5E9 0%, #0284C7 100%)' }}>
-              <Headphones size={20} color="#FFFFFF" />
+            <div className="employee-brand-logo" style={{ background: 'linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%)' }}>
+              <Plane size={20} color="#FFFFFF" />
             </div>
             {(!collapsed || isMobileOpen) && (
               <div className="employee-brand-info">
                 <span className="employee-brand-name">Fortline CRM</span>
-                <span className="employee-brand-subtitle" style={{ color: '#38BDF8', fontWeight: 600 }}>
-                  SUPPORT DEPT
+                <span className="employee-brand-subtitle" style={{ color: '#60A5FA', fontWeight: 600 }}>
+                  LOGISTICS DEPT
                 </span>
               </div>
             )}
@@ -82,12 +101,12 @@ export default function SupportSidebar({
 
         {/* Navigation Menu */}
         <div className="employee-sidebar-menu">
-          {(!collapsed || isMobileOpen) && <div className="employee-menu-title white-title">SUPPORT OPERATIONS</div>}
+          {(!collapsed || isMobileOpen) && <div className="employee-menu-title white-title">LOGISTICS WORKFLOW</div>}
 
           <div className="employee-menu-section">
-            {operationsNav.map((item) => {
+            {logisticsNav.map((item) => {
               const Icon = item.icon;
-              const isActive = activeTab === item.id;
+              const isActive = isItemActive(item.id);
               return (
                 <div
                   key={item.id}
@@ -99,37 +118,14 @@ export default function SupportSidebar({
                     <Icon size={18} />
                     {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
                   </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <div className="employee-menu-divider" />
-
-          {(!collapsed || isMobileOpen) && <div className="employee-menu-title white-title">ACCOUNT &amp; HR</div>}
-
-          <div className="employee-menu-section">
-            {accountNav.map((item) => {
-              const Icon = item.icon;
-              const isActive = activeTab === item.id;
-              return (
-                <div
-                  key={item.id}
-                  className={`employee-menu-item ${isActive ? 'active' : ''}`}
-                  onClick={() => handleNavClick(item.id)}
-                  title={collapsed ? item.label : undefined}
-                >
-                  <div className="employee-menu-left">
-                    <Icon size={18} />
-                    {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
-                  </div>
+                  {isActive && <div className="active-indicator" />}
                 </div>
               );
             })}
           </div>
         </div>
 
-        {/* User Footer & Switcher */}
+        {/* User Profile & Role Switcher Footer */}
         <div className="employee-sidebar-footer">
           <div
             className="employee-user-card"
@@ -138,24 +134,41 @@ export default function SupportSidebar({
                 setShowRoleMenu(!showRoleMenu);
               }
             }}
-            style={{ cursor: (userRole === 'admin' || userRole === 'ceo') ? 'pointer' : 'default' }}
+            title={(userRole === 'admin' || userRole === 'ceo') ? 'Click to Switch Portal' : undefined}
           >
-            <div className="employee-user-avatar" style={{ backgroundColor: '#0EA5E9' }}>
-              {(currentUser?.fullName || 'SP').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+            <div className="employee-user-avatar" style={{ backgroundColor: '#2563EB', color: '#FFF', fontWeight: 'bold' }}>
+              {currentUser?.profileImage ? (
+                <img src={currentUser.profileImage} alt="Profile" style={{ width: '100%', height: '100%', objectFit: 'cover', borderRadius: '50%' }} />
+              ) : (
+                userInitials
+              )}
             </div>
             {(!collapsed || isMobileOpen) && (
-              <div className="employee-user-info">
-                <span className="employee-user-name">{currentUser?.fullName || 'Support Member'}</span>
-                <span className="employee-user-role">Support Portal</span>
+              <div className="employee-user-info" style={{ display: 'flex', flexDirection: 'column' }}>
+                <span className="employee-user-name" style={{ color: '#FFFFFF', fontSize: '0.825rem', fontWeight: 600 }}>
+                  {currentUser?.fullName || 'Logistics Officer'}
+                </span>
+                <span className="employee-user-role" style={{ color: '#94A3B8', fontSize: '0.72rem' }}>
+                  Logistics Department
+                </span>
               </div>
             )}
             <div
-              style={{ cursor: 'pointer', padding: '6px', borderRadius: '6px', backgroundColor: 'rgba(239, 68, 68, 0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{
+                cursor: 'pointer',
+                padding: '6px',
+                borderRadius: '6px',
+                backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginLeft: 'auto'
+              }}
               onClick={(e) => {
                 e.stopPropagation();
                 if (onLogout) onLogout();
               }}
-              title="Logout"
+              title="Sign Out"
             >
               <LogOut size={16} color="#EF4444" />
             </div>
@@ -173,6 +186,9 @@ export default function SupportSidebar({
               </div>
               <div className={`employee-role-item ${currentRole === 'admin' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); onSwitchRole('admin'); setShowRoleMenu(false); }}>
                 <span>Admin</span><ShieldCheck size={16} color="#60A5FA" />
+              </div>
+              <div className={`employee-role-item ${currentRole === 'logistics' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); onSwitchRole('logistics'); setShowRoleMenu(false); }}>
+                <span>Logistics</span><Plane size={16} color="#2563EB" />
               </div>
               <div className={`employee-role-item ${currentRole === 'support' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); onSwitchRole('support'); setShowRoleMenu(false); }}>
                 <span>Support Department</span><Headphones size={16} color="#38BDF8" />

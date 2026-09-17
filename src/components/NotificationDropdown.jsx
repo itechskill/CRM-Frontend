@@ -24,8 +24,17 @@ export default function NotificationDropdown() {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 15000);
-    return () => clearInterval(interval);
+    const interval = setInterval(fetchNotifications, 10000);
+    const handleFocus = () => fetchNotifications();
+    const handleCustomRefresh = () => fetchNotifications();
+
+    window.addEventListener('focus', handleFocus);
+    window.addEventListener('notification_refresh', handleCustomRefresh);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', handleFocus);
+      window.removeEventListener('notification_refresh', handleCustomRefresh);
+    };
   }, []);
 
   useEffect(() => {

@@ -21,6 +21,7 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
 
   const publicRoles = [
     { value: 'sales_person', label: 'Sales Person' },
+    { value: 'logistics', label: 'Logistics Department' },
     { value: 'support', label: 'Support Department' },
     { value: 'accountant', label: 'Accounts Department' },
     { value: 'finance', label: 'Finance Department' },
@@ -112,6 +113,7 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
     try {
       const roleDepartmentMap = {
         'sales_person': 'Sales',
+        'logistics': 'Logistics',
         'support': 'Customer Support',
         'accountant': 'Accounting',
         'finance': 'Finance',

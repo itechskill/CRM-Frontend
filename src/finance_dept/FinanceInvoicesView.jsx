@@ -26,17 +26,18 @@ import {
   AlertCircle,
   MessageSquare,
   FileCheck,
-  Trash2
+  Trash2,
+  FileSpreadsheet
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 
-export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
+export default function FinanceInvoicesView({ onNavigateRecordPayment, searchQuery, initialTab }) {
   const [invoices, setInvoices] = useState([]);
   const [ordersRequiringApproval, setOrdersRequiringApproval] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewInvoice, setViewInvoice] = useState(null);
-  const [activeTab, setActiveTab] = useState('pending_drafts'); // 'pending_drafts' | 'order_approvals' | 'finalized' | 'all'
+  const [activeTab, setActiveTab] = useState(initialTab || 'pending_drafts'); // 'pending_drafts' | 'order_approvals' | 'finalized' | 'all'
   const [finalizeTarget, setFinalizeTarget] = useState(null);
   const [finalizeType, setFinalizeType] = useState('GST Invoice'); // 'GST Invoice' | 'Cash Invoice'
   const [submittingFinalize, setSubmittingFinalize] = useState(false);
@@ -45,6 +46,15 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
   const [submittingReturn, setSubmittingReturn] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [processingOrderId, setProcessingOrderId] = useState(null);
+  const [approvalModalOrder, setApprovalModalOrder] = useState(null);
+  const [approvalForm, setApprovalForm] = useState({
+    fileType: 'Green',
+    supplierName: '',
+    supplierCountry: 'Pakistan',
+    supplierPoNumber: '',
+    supplierNotes: ''
+  });
+  const [submittingApproval, setSubmittingApproval] = useState(false);
 
   const fetchFinanceData = async () => {
     setLoading(true);
@@ -60,19 +70,20 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
       }
 
       if (orderRes.response.ok && orderRes.data.success) {
-        const approvalNeeded = (orderRes.data.data || []).filter(o =>
-          o.departmentResponsible === 'Finance' &&
+        const allOrdersList = orderRes.data.data || [];
+        const pendingApproval = allOrdersList.filter(o =>
           o.workflowStatus !== 'Finance Rejected' &&
           o.status !== 'Rejected' &&
           o.status !== 'Sales Order Rejected due to overdue amount' &&
           (
             (o.requiresFinanceApproval === true && !o.financeApprovedBy) ||
-            o.workflowStatus === 'Pending Finance Overdue Check' ||
-            o.workflowStatus === 'Pending Finance Approval' ||
-            o.status === 'Pending Finance Overdue Check'
+            ['Pending Finance Overdue Check', 'Pending Finance Approval', 'Pending Overdue Check'].includes(o.workflowStatus) ||
+            ['Pending Finance Overdue Check', 'Pending Finance Approval', 'Pending Overdue Check'].includes(o.status) ||
+            (!o.financeApprovedBy && !['Finance Approved', 'Delivered', 'Completed', 'Invoiced', 'Done'].includes(o.workflowStatus) && !['Completed', 'Delivered', 'Done'].includes(o.status))
           )
         );
-        setOrdersRequiringApproval(approvalNeeded);
+        // Show pending orders requiring approval if any exist; otherwise show all sales orders for audit
+        setOrdersRequiringApproval(pendingApproval.length > 0 ? pendingApproval : allOrdersList);
       }
     } catch (e) {
       console.error('[Fetch Finance Data Error]:', e);
@@ -84,6 +95,12 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
   useEffect(() => {
     fetchFinanceData();
   }, []);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   const handleFinalizeInvoice = async () => {
     if (!finalizeTarget) return;
@@ -159,22 +176,31 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
     }
   };
 
-  const handleOrderReview = async (orderId, decision) => {
+  const handleOrderReview = async (orderId, decision, extraData = {}) => {
     setProcessingOrderId(orderId);
     try {
-      const reason = decision === 'reject' ? prompt('Enter reason for rejecting Sales Order due to overdue balance:') : undefined;
-      if (decision === 'reject' && !reason) {
-        setProcessingOrderId(null);
-        return;
+      let reason = '';
+      if (decision === 'block' || decision === 'hold') {
+        reason = prompt('Enter reason for placing Sales Order on HOLD / BLOCKED due to customer overdue balance:');
+        if (!reason) {
+          setProcessingOrderId(null);
+          return;
+        }
+      } else if (decision === 'reject') {
+        reason = prompt('Enter reason for rejecting Sales Order due to overdue balance:');
+        if (!reason) {
+          setProcessingOrderId(null);
+          return;
+        }
       }
 
       const { response, data } = await apiRequest(`/api/sales-employee/orders/${orderId}/finance-review`, {
         method: 'POST',
-        body: JSON.stringify({ action: decision, decision, reason })
+        body: JSON.stringify({ action: decision, decision, reason, ...extraData })
       });
 
       if (response.ok && data.success) {
-        setFeedback(data.message || `Order ${decision === 'approve' ? 'approved & moved to Support for DN creation' : 'rejected due to overdue amount & moved back to Sales'}.`);
+        setFeedback(data.message || `Order review updated successfully.`);
         fetchFinanceData();
         setTimeout(() => setFeedback(''), 4500);
       } else {
@@ -184,6 +210,45 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
       alert('Error processing order approval.');
     } finally {
       setProcessingOrderId(null);
+    }
+  };
+
+  const handleOpenApprovalModal = (order) => {
+    setApprovalModalOrder(order);
+    const isBlue = order.fileType === 'Blue';
+    setApprovalForm({
+      fileType: isBlue ? 'Blue' : 'Green',
+      supplierName: order.supplierPO?.supplierName || (isBlue ? 'International Supplier Ltd' : 'Local Supplier'),
+      supplierCountry: order.supplierPO?.supplierCountry || (isBlue ? 'China' : 'Pakistan'),
+      supplierPoNumber: order.supplierPO?.poNumber || `${isBlue ? 'IPO' : 'LPO'}-${Date.now().toString().slice(-6)}`,
+      supplierNotes: order.supplierPO?.notes || ''
+    });
+  };
+
+  const handleSubmitApproval = async (e) => {
+    e.preventDefault();
+    if (!approvalModalOrder) return;
+    setSubmittingApproval(true);
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/orders/${approvalModalOrder._id}/finance-review`, {
+        method: 'POST',
+        body: JSON.stringify({
+          action: 'clear',
+          ...approvalForm
+        })
+      });
+      if (response.ok && data.success) {
+        setFeedback(data.message || `Sales Order approved as ${approvalForm.fileType} File!`);
+        setApprovalModalOrder(null);
+        fetchFinanceData();
+        setTimeout(() => setFeedback(''), 4500);
+      } else {
+        alert(data.message || 'Failed to approve order.');
+      }
+    } catch (err) {
+      alert('Error approving order.');
+    } finally {
+      setSubmittingApproval(false);
     }
   };
 
@@ -232,6 +297,113 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
     doc.save(`${inv.invoiceType ? inv.invoiceType.replace(' ', '_') : 'Invoice'}_${inv.invoiceNumber}.pdf`);
   };
 
+  // Export Full Invoices List PDF
+  const handleExportAllPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    doc.setFillColor(5, 150, 105); // #059669
+    doc.rect(0, 0, 297, 26, 'F');
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — COMMERCIAL INVOICES & RECEIVABLES REGISTER', 14, 12);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(224, 242, 254);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} • All amounts in Pakistani Rupees (PKR)`, 14, 20);
+
+    const rows = filteredInvoices.map((inv, idx) => {
+      const total = Number(inv.amount) || 0;
+      const paid = Number(inv.paidAmount) || 0;
+      const remaining = Math.max(0, total - paid);
+      return [
+        (idx + 1).toString(),
+        inv.invoiceNumber || `INV-${idx + 1}`,
+        inv.clientName || '—',
+        inv.salesOrderNumber || '—',
+        inv.deliveryNoteNumber || '—',
+        inv.invoiceType || (inv.isDraft ? 'Draft' : 'Commercial'),
+        `Rs. ${total.toLocaleString()}`,
+        `Rs. ${paid.toLocaleString()}`,
+        `Rs. ${remaining.toLocaleString()}`,
+        inv.status || 'Pending'
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 32,
+      margin: { left: 14, right: 14 },
+      head: [['#', 'Invoice #', 'Customer / Client', 'Sales Order #', 'DN #', 'Invoice Type', 'Total (PKR)', 'Paid (PKR)', 'Remaining (PKR)', 'Status']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [5, 150, 105],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        textColor: [30, 41, 59]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 28, fontStyle: 'bold' },
+        2: { cellWidth: 46 },
+        3: { cellWidth: 26 },
+        4: { cellWidth: 26 },
+        5: { cellWidth: 26 },
+        6: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+        7: { cellWidth: 26, halign: 'right' },
+        8: { cellWidth: 28, halign: 'right', fontStyle: 'bold' },
+        9: { cellWidth: 25, halign: 'center' }
+      }
+    });
+
+    const totalAmt = filteredInvoices.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+    const finalY = doc.lastAutoTable.finalY + 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Total Invoiced: Rs. ${totalAmt.toLocaleString()}`, 14, finalY > 195 ? 195 : finalY);
+
+    doc.save(`Fortline_Invoices_Register_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Export Full Invoices List Excel CSV
+  const handleExportAllExcel = () => {
+    const headers = ['#', 'Invoice Number', 'Customer / Client', 'Sales Order Number', 'Delivery Note Number', 'Invoice Type', 'Total Amount (PKR)', 'Paid Amount (PKR)', 'Remaining Balance (PKR)', 'Status', 'Created Date'];
+    const rows = filteredInvoices.map((inv, idx) => {
+      const total = Number(inv.amount) || 0;
+      const paid = Number(inv.paidAmount) || 0;
+      const remaining = Math.max(0, total - paid);
+      return [
+        idx + 1,
+        `"${inv.invoiceNumber || ''}"`,
+        `"${(inv.clientName || '').replace(/"/g, '""')}"`,
+        `"${inv.salesOrderNumber || ''}"`,
+        `"${inv.deliveryNoteNumber || ''}"`,
+        `"${inv.invoiceType || (inv.isDraft ? 'Draft' : 'Commercial')}"`,
+        total,
+        paid,
+        remaining,
+        `"${inv.status || 'Pending'}"`,
+        `"${inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-GB') : ''}"`
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Fortline_Invoices_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Group invoices
   const pendingDrafts = invoices.filter(inv =>
     inv.status === 'Pending Finance Finalization' || (inv.status === 'Submitted' && inv.isDraft !== false)
@@ -247,29 +419,42 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
     ? finalizedInvoices
     : invoices
   ).filter(inv => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
+    const effectiveSearch = (searchQuery || searchTerm || '').trim().toLowerCase();
+    if (!effectiveSearch) return true;
+    const term = effectiveSearch;
     return (
       (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(term)) ||
       (inv.clientName && inv.clientName.toLowerCase().includes(term)) ||
-      (inv.salesOrderNumber && inv.salesOrderNumber.toLowerCase().includes(term))
+      (inv.salePerson && inv.salePerson.toLowerCase().includes(term)) ||
+      (inv.salesPerson?.fullName && inv.salesPerson.fullName.toLowerCase().includes(term)) ||
+      (inv.salesOrderNumber && inv.salesOrderNumber.toLowerCase().includes(term)) ||
+      (inv.deliveryNoteNumber && inv.deliveryNoteNumber.toLowerCase().includes(term)) ||
+      (inv.invoiceType && inv.invoiceType.toLowerCase().includes(term)) ||
+      (inv.status && inv.status.toLowerCase().includes(term)) ||
+      (inv.items && inv.items.some(i => (i.description || '').toLowerCase().includes(term)))
     );
   });
 
   const filteredOrdersToApprove = ordersRequiringApproval.filter(o => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
+    const effectiveSearch = (searchQuery || searchTerm || '').trim().toLowerCase();
+    if (!effectiveSearch) return true;
+    const term = effectiveSearch;
     return (
       (o.orderReference && o.orderReference.toLowerCase().includes(term)) ||
+      (o.orderNumber && o.orderNumber.toLowerCase().includes(term)) ||
       (o.clientName && o.clientName.toLowerCase().includes(term)) ||
-      (o.salePerson && o.salePerson.toLowerCase().includes(term))
+      (o.salePerson && o.salePerson.toLowerCase().includes(term)) ||
+      (o.salesPerson?.fullName && o.salesPerson.fullName.toLowerCase().includes(term)) ||
+      (o.productSummary && o.productSummary.toLowerCase().includes(term)) ||
+      (o.fileNo && o.fileNo.toLowerCase().includes(term)) ||
+      (o.status && o.status.toLowerCase().includes(term))
     );
   });
 
   return (
     <div className="sv-container">
       {/* Top Bar */}
-      <div className="sv-top-bar">
+      <div className="sv-top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 className="sv-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileText size={22} color="#059669" /> Finance &amp; Invoice Finalization
@@ -278,8 +463,16 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
             Review draft invoices, finalize into GST / Cash invoices, and approve credit-overdue orders
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748B', fontSize: '0.85rem' }}>
-          <Clock size={16} color="#D97706" /> Pending Drafts: <strong>{pendingDrafts.length}</strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <button className="sv-btn-primary" style={{ background: '#059669' }} onClick={handleExportAllPDF} title="Export Invoices PDF">
+            <Download size={15} /> Export PDF
+          </button>
+          <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={handleExportAllExcel} title="Export Invoices Excel">
+            <FileSpreadsheet size={15} /> Export Excel
+          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#64748B', fontSize: '0.85rem' }}>
+            <Clock size={16} color="#D97706" /> Pending Drafts: <strong>{pendingDrafts.length}</strong>
+          </div>
         </div>
       </div>
 
@@ -431,19 +624,22 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
                 <tr>
                   <th>Order Ref #</th>
                   <th>Client / Customer</th>
-                  <th>Sales Member</th>
+                  <th>Sales Person</th>
                   <th>Order Value</th>
-                  <th>Overdue Status & Balance</th>
-                  <th>Department Status</th>
-                  <th style={{ textAlign: 'center' }}>Finance Overdue Actions</th>
+                  <th>Overdue Status &amp; Balance</th>
+                  <th>File Type</th>
+                  <th>Workflow Status</th>
+                  <th style={{ textAlign: 'center' }}>Finance Overdue Decision</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredOrdersToApprove.map(o => {
                   const overdueAmt = Number(o.customerOverdueAtCreation || 0);
                   const hasOverdue = overdueAmt > 0;
+                  const isBlocked = o.isOverdueBlocked || o.workflowStatus === 'Order Blocked / Hold' || o.status === 'Order Blocked / Hold';
+
                   return (
-                    <tr key={o._id}>
+                    <tr key={o._id} style={{ backgroundColor: isBlocked ? '#FFF5F5' : 'transparent' }}>
                       <td style={{ fontWeight: 700, color: '#0F172A' }}>
                         <div>{o.orderReference || o.orderNumber}</div>
                         {o.quotationNumber && <div style={{ fontSize: '0.72rem', color: '#2563EB' }}>Quote: {o.quotationNumber}</div>}
@@ -452,7 +648,9 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
                         <div style={{ fontWeight: 600 }}>{o.clientName}</div>
                         {o.clientPhone && <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{o.clientPhone}</div>}
                       </td>
-                      <td style={{ color: '#2563EB', fontWeight: 600 }}>{o.salePerson || 'Sales Member'}</td>
+                      <td style={{ color: '#2563EB', fontWeight: 600 }}>
+                        {o.salePerson || o.salesPerson?.fullName || 'Sales Person'}
+                      </td>
                       <td style={{ fontWeight: 800, color: '#059669' }}>
                         Rs. {Number(o.netAmount || o.totalAmount || 0).toLocaleString()}
                       </td>
@@ -463,34 +661,73 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
                           </span>
                         ) : (
                           <span className="sv-badge" style={{ background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: 700 }}>
-                            <Check size={11} /> No Overdue (Clear)
+                            <Check size={11} /> No Overdue (All Clear)
                           </span>
                         )}
                       </td>
                       <td>
-                        <span className="sv-badge" style={{ background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
-                          Pending Finance Overdue Check
-                        </span>
+                        {o.fileType === 'Blue' ? (
+                          <span className="sv-badge" style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontWeight: 700 }}>
+                            Blue File (Imported)
+                          </span>
+                        ) : o.fileType === 'Green' ? (
+                          <span className="sv-badge" style={{ background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: 700 }}>
+                            Green File (Local)
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.76rem', color: '#94A3B8' }}>Select on Review</span>
+                        )}
+                      </td>
+                      <td>
+                        {isBlocked ? (
+                          <div>
+                            <span className="sv-badge" style={{ background: '#FEE2E2', color: '#B91C1C', border: '1px solid #FCA5A5', fontWeight: 700 }}>
+                              <Ban size={11} /> Order Blocked / Hold
+                            </span>
+                            {o.overdueBlockReason && (
+                              <div style={{ fontSize: '0.72rem', color: '#DC2626', marginTop: '2px', maxWidth: '200px' }}>
+                                {o.overdueBlockReason}
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="sv-badge" style={{ background: '#FEF3C7', color: '#D97706', border: '1px solid #FDE68A' }}>
+                            {o.workflowStatus || 'Pending Finance Overdue Check'}
+                          </span>
+                        )}
                       </td>
                       <td style={{ textAlign: 'center' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', flexWrap: 'wrap' }}>
                           <button
                             className="sv-btn-primary"
-                            style={{ padding: '5px 12px', fontSize: '0.75rem', background: '#059669', gap: '4px' }}
-                            onClick={() => handleOrderReview(o._id, 'approve')}
+                            style={{ padding: '6px 12px', fontSize: '0.75rem', background: '#059669', gap: '4px' }}
+                            onClick={() => handleOpenApprovalModal(o)}
                             disabled={processingOrderId === o._id}
-                            title="Approve order and move to Support Department for Delivery Note (DN)"
+                            title="Verify All Clear and choose Green / Blue File branch"
                           >
-                            <Check size={13} /> Approve → Support
+                            <Check size={13} /> {isBlocked ? 'Unblock & Clear' : 'All Clear → Approve'}
                           </button>
+
+                          {!isBlocked && (
+                            <button
+                              className="sv-btn-cancel"
+                              style={{ padding: '6px 10px', fontSize: '0.75rem', color: '#DC2626', borderColor: '#FECACA', background: '#FEF2F2', gap: '4px' }}
+                              onClick={() => handleOrderReview(o._id, 'block')}
+                              disabled={processingOrderId === o._id}
+                              title="Overdue = YES -> Order Blocked / Hold"
+                            >
+                              <Ban size={13} /> Overdue: Hold
+                            </button>
+                          )}
+
                           <button
                             className="sv-btn-cancel"
-                            style={{ padding: '5px 12px', fontSize: '0.75rem', color: '#DC2626', borderColor: '#FECACA', background: '#FEF2F2', gap: '4px' }}
+                            style={{ padding: '6px 8px', fontSize: '0.75rem', color: '#64748B', borderColor: '#CBD5E1', background: '#F8FAFC' }}
                             onClick={() => handleOrderReview(o._id, 'reject')}
                             disabled={processingOrderId === o._id}
-                            title="Reject order due to overdue balance and return to Sales Person"
+                            title="Reject order and return to Sales Person"
                           >
-                            <Ban size={13} /> Reject → Sales
+                            Reject
                           </button>
                         </div>
                       </td>
@@ -1049,6 +1286,186 @@ export default function FinanceInvoicesView({ onNavigateRecordPayment }) {
                 )}
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── FINANCE OVERDUE ALL CLEAR & FILE TYPE APPROVAL MODAL ─── */}
+      {approvalModalOrder && (
+        <div className="sv-modal-overlay" style={{ zIndex: 1100 }}>
+          <div className="sv-modal-card" style={{ maxWidth: '600px' }}>
+            <div className="sv-modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #E2E8F0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <ShieldCheck size={22} color="#059669" />
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700, color: '#0F172A' }}>
+                    Finance Overdue All Clear &amp; File Type Branching
+                  </h3>
+                  <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
+                    Order: {approvalModalOrder.orderReference || approvalModalOrder.orderNumber} &bull; Sales Person: {approvalModalOrder.salePerson || approvalModalOrder.salesPerson?.fullName || 'Sales Person'}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="sv-modal-close"
+                onClick={() => setApprovalModalOrder(null)}
+                style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#94A3B8' }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitApproval} style={{ padding: '20px' }}>
+              {/* Customer & Order Summary */}
+              <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px 16px', marginBottom: '18px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#64748B' }}>Customer:</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A' }}>{approvalModalOrder.clientName}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#64748B' }}>Order Amount:</span>
+                  <span style={{ fontSize: '0.92rem', fontWeight: 800, color: '#059669' }}>
+                    Rs. {Number(approvalModalOrder.netAmount || approvalModalOrder.totalAmount || 0).toLocaleString()}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.85rem', color: '#64748B' }}>Customer Overdue:</span>
+                  <span style={{ fontSize: '0.85rem', fontWeight: 700, color: approvalModalOrder.customerOverdueAtCreation > 0 ? '#DC2626' : '#16A34A' }}>
+                    {approvalModalOrder.customerOverdueAtCreation > 0
+                      ? `Rs. ${Number(approvalModalOrder.customerOverdueAtCreation).toLocaleString()} (Override Approved)`
+                      : 'Rs. 0 (All Clear)'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Business Flowchart Branching Decision: File Type */}
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 700, color: '#0F172A', marginBottom: '8px' }}>
+                  1. Authoritative File Type Selection (Business Flowchart):
+                </label>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                  <div
+                    onClick={() => setApprovalForm({
+                      ...approvalForm,
+                      fileType: 'Green',
+                      supplierCountry: 'Pakistan',
+                      supplierName: approvalForm.supplierName || 'Local Supplier'
+                    })}
+                    style={{
+                      border: approvalForm.fileType === 'Green' ? '2px solid #10B981' : '1px solid #CBD5E1',
+                      background: approvalForm.fileType === 'Green' ? '#ECFDF5' : '#FFFFFF',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#047857', marginBottom: '4px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#10B981' }} />
+                      Green File
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#065F46', fontWeight: 600 }}>Local / Normal Order</div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '4px' }}>
+                      Local Supplier PO &rarr; Support &rarr; Goods Received &rarr; Inventory &rarr; DN
+                    </div>
+                  </div>
+
+                  <div
+                    onClick={() => setApprovalForm({
+                      ...approvalForm,
+                      fileType: 'Blue',
+                      supplierCountry: approvalForm.supplierCountry === 'Pakistan' ? 'China' : approvalForm.supplierCountry,
+                      supplierName: approvalForm.supplierName || 'International Supplier Ltd'
+                    })}
+                    style={{
+                      border: approvalForm.fileType === 'Blue' ? '2px solid #2563EB' : '1px solid #CBD5E1',
+                      background: approvalForm.fileType === 'Blue' ? '#EFF6FF' : '#FFFFFF',
+                      borderRadius: '10px',
+                      padding: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontWeight: 700, color: '#1D4ED8', marginBottom: '4px' }}>
+                      <span style={{ width: '10px', height: '10px', borderRadius: '50%', background: '#2563EB' }} />
+                      Blue File
+                    </div>
+                    <div style={{ fontSize: '0.78rem', color: '#1E40AF', fontWeight: 600 }}>Imported from Outside Pakistan</div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '4px' }}>
+                      Int'l PO &rarr; Logistics Tracking &rarr; Shipment Received &rarr; Support &rarr; DN
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Supplier PO Details */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    Supplier Name
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.85rem' }}
+                    value={approvalForm.supplierName}
+                    onChange={(e) => setApprovalForm({ ...approvalForm, supplierName: e.target.value })}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                    Supplier Country
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    style={{ width: '100%', padding: '8px 10px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.85rem' }}
+                    value={approvalForm.supplierCountry}
+                    onChange={(e) => setApprovalForm({ ...approvalForm, supplierCountry: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '18px' }}>
+                <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#334155', marginBottom: '4px' }}>
+                  Supplier PO Number
+                </label>
+                <input
+                  type="text"
+                  required
+                  style={{ width: '100%', padding: '8px 10px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'monospace' }}
+                  value={approvalForm.supplierPoNumber}
+                  onChange={(e) => setApprovalForm({ ...approvalForm, supplierPoNumber: e.target.value })}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', paddingTop: '12px', borderTop: '1px solid #F1F5F9' }}>
+                <button
+                  type="button"
+                  className="sv-btn-cancel"
+                  onClick={() => setApprovalModalOrder(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="sv-btn-primary"
+                  disabled={submittingApproval}
+                  style={{
+                    backgroundColor: approvalForm.fileType === 'Blue' ? '#2563EB' : '#059669',
+                    padding: '9px 18px',
+                    fontWeight: 700
+                  }}
+                >
+                  {submittingApproval
+                    ? 'Processing...'
+                    : approvalForm.fileType === 'Blue'
+                    ? 'Approve → Route to Logistics'
+                    : 'Approve → Route to Support'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

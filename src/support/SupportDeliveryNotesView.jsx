@@ -484,6 +484,94 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
     doc.save(`Delivery_Note_${dnRef.replace(/\//g, '_')}.pdf`);
   };
 
+  // Full Delivery Notes List PDF Export
+  const handleExportAllPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    doc.setFillColor(2, 132, 199); // #0284C7
+    doc.rect(0, 0, 297, 26, 'F');
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — DELIVERY NOTES & DISPATCH REGISTER', 14, 12);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(224, 242, 254);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} • Warehouse Logistics & Delivery Control`, 14, 20);
+
+    const rows = filteredDNs.map((dn, idx) => {
+      const isConfirmed = dn.status === 'Done' || dn.status === 'Delivered' || dn.status === 'Confirmed';
+      return [
+        (idx + 1).toString(),
+        dn.deliveryNumber || dn.deliveryNoteNumber || `DN-${idx + 1}`,
+        dn.salesOrderNumber || dn.sourceDocument || '—',
+        dn.clientName || '—',
+        dn.deliveryAddress || '—',
+        `${dn.items ? dn.items.length : 1} items`,
+        isConfirmed ? 'Confirmed' : 'Pending',
+        dn.createdAt ? new Date(dn.createdAt).toLocaleDateString('en-GB') : '—'
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 32,
+      margin: { left: 14, right: 14 },
+      head: [['#', 'DN Ref #', 'Sales Order #', 'Customer / Consignee', 'Destination Address', 'Items', 'Status', 'Date Created']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [2, 132, 199],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        textColor: [30, 41, 59]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 32, fontStyle: 'bold' },
+        2: { cellWidth: 32 },
+        3: { cellWidth: 48 },
+        4: { cellWidth: 70 },
+        5: { cellWidth: 20, halign: 'center' },
+        6: { cellWidth: 28, halign: 'center' },
+        7: { cellWidth: 29, halign: 'center' }
+      }
+    });
+
+    doc.save(`Fortline_Delivery_Notes_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Full Delivery Notes List Excel CSV Export
+  const handleExportAllExcel = () => {
+    const headers = ['#', 'DN Ref Number', 'Sales Order Number', 'Customer / Consignee', 'Recipient Name', 'Recipient Phone', 'Destination Address', 'Status', 'Created Date', 'Notes'];
+    const rows = filteredDNs.map((dn, idx) => [
+      idx + 1,
+      `"${dn.deliveryNumber || dn.deliveryNoteNumber || ''}"`,
+      `"${dn.salesOrderNumber || dn.sourceDocument || ''}"`,
+      `"${(dn.clientName || '').replace(/"/g, '""')}"`,
+      `"${(dn.recipientName || '').replace(/"/g, '""')}"`,
+      `"${(dn.recipientPhone || '').replace(/"/g, '""')}"`,
+      `"${(dn.deliveryAddress || '').replace(/"/g, '""')}"`,
+      `"${dn.status || 'Ready'}"`,
+      `"${dn.createdAt ? new Date(dn.createdAt).toLocaleDateString('en-GB') : ''}"`,
+      `"${(dn.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Fortline_Delivery_Notes_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredDNs = deliveryNotes.filter(dn => {
     if (!searchTerm.trim()) return true;
     const term = searchTerm.toLowerCase();
@@ -503,7 +591,7 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
       )}
 
       {/* Top Bar */}
-      <div className="sv-filters">
+      <div className="sv-filters" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <div className="sv-search-box">
           <Search size={16} color="#94A3B8" />
           <input
@@ -513,9 +601,17 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <button className="sv-btn-primary" onClick={handleOpenAddModal}>
-          <Plus size={16} /> Create Delivery Note
-        </button>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button className="sv-btn-primary" style={{ background: '#0284C7' }} onClick={handleExportAllPDF} title="Export All to PDF">
+            <Download size={15} /> Export PDF
+          </button>
+          <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={handleExportAllExcel} title="Export All to Excel">
+            <FileSpreadsheet size={15} /> Export Excel
+          </button>
+          <button className="sv-btn-primary" onClick={handleOpenAddModal}>
+            <Plus size={16} /> Create Delivery Note
+          </button>
+        </div>
       </div>
 
       {/* DN Table */}

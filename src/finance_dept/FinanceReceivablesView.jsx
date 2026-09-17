@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 
-export default function FinanceReceivablesView() {
+export default function FinanceReceivablesView({ onNavigatePayment, searchQuery }) {
   const [receivables, setReceivables] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -76,12 +76,16 @@ export default function FinanceReceivablesView() {
   };
 
   const filteredReceivables = receivables.filter(r => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
+    const effectiveSearch = (searchQuery || searchTerm || '').trim().toLowerCase();
+    if (!effectiveSearch) return true;
+    const term = effectiveSearch;
     return (
       (r.invoiceNumber && r.invoiceNumber.toLowerCase().includes(term)) ||
       (r.clientName && r.clientName.toLowerCase().includes(term)) ||
-      (r.salesOrderNumber && r.salesOrderNumber.toLowerCase().includes(term))
+      (r.salePerson && r.salePerson.toLowerCase().includes(term)) ||
+      (r.salesPerson?.fullName && r.salesPerson.fullName.toLowerCase().includes(term)) ||
+      (r.salesOrderNumber && r.salesOrderNumber.toLowerCase().includes(term)) ||
+      (r.status && r.status.toLowerCase().includes(term))
     );
   });
 
