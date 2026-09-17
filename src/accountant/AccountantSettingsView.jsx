@@ -37,10 +37,6 @@ export default function AccountantSettingsView() {
             <label>Base Accounting Currency</label>
             <select value={currency} onChange={(e) => setCurrency(e.target.value)}>
               <option value="PKR (Rs.)">PKR - Pakistani Rupee (Rs.)</option>
-              <option value="USD ($)">USD - US Dollar ($)</option>
-              <option value="EUR (€)">EUR - Euro (€)</option>
-              <option value="GBP (£)">GBP - British Pound (£)</option>
-              <option value="CAD ($)">CAD - Canadian Dollar ($)</option>
             </select>
           </div>
 

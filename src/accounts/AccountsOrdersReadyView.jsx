@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 
-export default function AccountsOrdersReadyView({ onNavigateCreateInvoice }) {
+export default function AccountsOrdersReadyView({ onNavigateCreateInvoice, searchQuery }) {
   const [deliveryNotes, setDeliveryNotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -51,15 +51,22 @@ export default function AccountsOrdersReadyView({ onNavigateCreateInvoice }) {
     : deliveryNotes;
 
   const filteredNotes = displayedList.filter(dn => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
-    const dnNum = dn.deliveryNumber || dn.deliveryNoteNumber || '';
-    const client = dn.clientName || '';
-    const soNum = dn.salesOrderNumber || dn.salesOrder?.orderReference || dn.salesOrder?.orderNumber || '';
+    const effectiveSearch = (searchQuery || searchTerm || '').trim().toLowerCase();
+    if (!effectiveSearch) return true;
+    const term = effectiveSearch;
+    const dnNum = (dn.deliveryNumber || dn.deliveryNoteNumber || '').toLowerCase();
+    const client = (dn.clientName || dn.recipientName || '').toLowerCase();
+    const soNum = (dn.salesOrderNumber || dn.salesOrder?.orderReference || dn.salesOrder?.orderNumber || '').toLowerCase();
+    const salesPerson = (dn.salePerson || dn.salesOrder?.salePerson || dn.salesOrder?.salesPerson?.fullName || '').toLowerCase();
+    const status = (dn.status || '').toLowerCase();
+    const itemsText = (dn.items || []).map(i => (i.product || i.description || '')).join(' ').toLowerCase();
     return (
-      dnNum.toLowerCase().includes(term) ||
-      client.toLowerCase().includes(term) ||
-      soNum.toLowerCase().includes(term)
+      dnNum.includes(term) ||
+      client.includes(term) ||
+      soNum.includes(term) ||
+      salesPerson.includes(term) ||
+      status.includes(term) ||
+      itemsText.includes(term)
     );
   });
 

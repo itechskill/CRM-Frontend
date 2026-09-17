@@ -161,10 +161,18 @@ export default function CEODashboard({ onNavigateTab, currentUser }) {
     {
       title: 'Actual Receivables',
       value: `PKR ${(data.actualReceivables || 0).toLocaleString()}`,
-      subtext: `Overdue: PKR ${(data.actualOverdueAmount || 0).toLocaleString()}`,
+      subtext: `Unpaid: ${data.unpaidInvoices || 0} Invoices`,
       icon: Receipt,
       iconClass: 'icon-blue',
       badge: `${data.unpaidInvoices || 0} Unpaid Invoices`
+    },
+    {
+      title: 'Total Overdue Amount',
+      value: `PKR ${(data.actualOverdueAmount || 0).toLocaleString()}`,
+      subtext: `${data.overdueInvoicesCount || 0} Invoices past due date`,
+      icon: AlertTriangle,
+      iconClass: 'icon-amber',
+      badge: 'Past Due Balance'
     },
     {
       title: 'Active Sales Orders',

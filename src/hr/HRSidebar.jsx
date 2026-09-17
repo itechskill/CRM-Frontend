@@ -78,7 +78,7 @@ export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwit
             <div className="hr-brand-logo">
               <Heart size={20} color="#FFFFFF" />
             </div>
-            {!collapsed && (
+            {(!collapsed || isMobileOpen) && (
               <div className="hr-brand-info">
                 <span className="hr-brand-name">Fortline CRM</span>
                 <span className="hr-brand-subtitle">HR PORTAL</span>
@@ -86,7 +86,7 @@ export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwit
             )}
           </div>
           <button
-            className="hr-collapse-btn"
+            className="hr-collapse-btn desktop-only"
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
@@ -96,7 +96,7 @@ export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwit
 
         {/* Navigation Menu */}
         <div className="hr-sidebar-menu">
-          {!collapsed && <div className="hr-menu-title">HUMAN RESOURCES</div>}
+          {(!collapsed || isMobileOpen) && <div className="hr-menu-title">HUMAN RESOURCES</div>}
 
           <div className="hr-menu-section">
             {mainNav.map((item) => {
@@ -111,9 +111,9 @@ export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwit
                 >
                   <div className="hr-menu-left">
                     <Icon size={18} />
-                    {!collapsed && <span>{item.label}</span>}
+                    {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
                   </div>
-                  {!collapsed && item.badge && (
+                  {(!collapsed || isMobileOpen) && item.badge && (
                     <span className="hr-menu-badge">{item.badge}</span>
                   )}
                 </div>
@@ -136,9 +136,9 @@ export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwit
                 >
                   <div className="hr-menu-left">
                     <Icon size={18} />
-                    {!collapsed && <span>{item.label}</span>}
+                    {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
                   </div>
-                  {!collapsed && item.badge && (
+                  {(!collapsed || isMobileOpen) && item.badge && (
                     <span
                       className="hr-menu-badge"
                       style={item.badgeColor ? { backgroundColor: item.badgeColor, color: '#FFFFFF' } : undefined}
@@ -170,7 +170,7 @@ export default function HRSidebar({ activeTab, setActiveTab, currentRole, onSwit
                 userInitials
               )}
             </div>
-            {!collapsed && (
+            {(!collapsed || isMobileOpen) && (
               <div className="hr-user-info" style={{ display: 'flex', flexDirection: 'column' }}>
                 <span className="hr-user-name" style={{ color: '#FFFFFF', fontSize: '0.825rem', fontWeight: 600 }}>{currentUser?.fullName || 'HR Manager'}</span>
                 <span className="hr-user-role" style={{ color: '#94A3B8', fontSize: '0.72rem' }}>{currentUser?.role ? currentUser.role.replace('_', ' ').toUpperCase() : 'HR MANAGER'}</span>

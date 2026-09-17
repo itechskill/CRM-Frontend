@@ -182,6 +182,16 @@ import FinanceReceivablesView from './finance_dept/FinanceReceivablesView';
 import FinanceReportsView from './finance_dept/FinanceReportsView';
 import FinanceLeaveView from './finance_dept/FinanceLeaveView';
 
+// 13. Logistics Department Components (src/logistics/)
+import LogisticsSidebar from './logistics/LogisticsSidebar';
+import LogisticsHeader from './logistics/LogisticsHeader';
+import LogisticsDashboard from './logistics/LogisticsDashboard';
+import LogisticsIncomingOrdersView from './logistics/LogisticsIncomingOrdersView';
+import LogisticsShipmentsView from './logistics/LogisticsShipmentsView';
+import LogisticsDeliveryNotesView from './logistics/LogisticsDeliveryNotesView';
+import LogisticsLeaveView from './logistics/LogisticsLeaveView';
+import LogisticsNotificationsView from './logistics/LogisticsNotificationsView';
+
 import { Users, ShieldCheck, UserX } from 'lucide-react';
 
 const initialUsersList = [];
@@ -453,7 +463,7 @@ export default function App() {
 
   const knownRoles = [
     'employee', 'sales_member', 'sales_rep', 'sales_person', 'sales_manager', 'project_manager', 'admin',
-    'hr', 'accountant', 'marketing', 'ceo', 'administration', 'support', 'finance'
+    'hr', 'accountant', 'marketing', 'ceo', 'administration', 'support', 'finance', 'logistics'
   ];
 
   const effectiveRole = knownRoles.includes(currentRole)
@@ -481,14 +491,15 @@ export default function App() {
         'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'
       ],
       support: ['dashboard', 'leave', 'support_orders', 'inventory', 'delivery_notes', 'profile'],
+      logistics: ['dashboard', 'incoming_shipments', 'incoming', 'shipments', 'shipment_tracking', 'tracking', 'shipment_received', 'received', 'delivery_notes', 'notifications', 'leave', 'attendance_leave', 'profile'],
       sales_manager: ['dashboard', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
-      admin: ['dashboard', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      admin: ['dashboard', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
       accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
       finance: ['dashboard', 'leave', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'finance_reports', 'reports', 'profile'],
       marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'],
-      ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile', 'org_users', 'org_dept_sales', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile']
     };
 
@@ -954,6 +965,7 @@ export default function App() {
               {activeTab === 'leave' && <AccountsLeaveView />}
               {activeTab === 'orders_ready' && (
                 <AccountsOrdersReadyView
+                  searchQuery={portalSearch}
                   onNavigateCreateInvoice={(order) => {
                     setDnOrderForInvoice(order);
                     setActiveTab('invoices');
@@ -962,18 +974,21 @@ export default function App() {
               )}
               {activeTab === 'invoices' && (
                 <AccountsInvoicesView
+                  searchQuery={portalSearch}
                   initialOrder={dnOrderForInvoice}
                   onClearInitialOrder={() => setDnOrderForInvoice(null)}
                 />
               )}
               {activeTab === 'expenses' && (
                 <AccountantExpensesView
+                  searchQuery={portalSearch}
                   isModalOpen={isAccModalOpen}
                   onCloseModal={() => setIsAccModalOpen(false)}
                 />
               )}
               {activeTab === 'payroll' && (
                 <AccountantPayrollView
+                  searchQuery={portalSearch}
                   isModalOpen={isAccModalOpen}
                   onCloseModal={() => setIsAccModalOpen(false)}
                 />
@@ -1027,15 +1042,26 @@ export default function App() {
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
                 <FinanceDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => handleSetActiveTab(tab)}
                 />
               )}
               {activeTab === 'leave' && <FinanceLeaveView />}
+              {activeTab === 'overdue_approval' && (
+                <FinanceInvoicesView
+                  searchQuery={portalSearch}
+                  initialTab="order_approvals"
+                  onNavigatePayment={(inv) => {
+                    setFinanceInvoiceForPayment(inv);
+                    handleSetActiveTab('customer_payments');
+                  }}
+                />
+              )}
               {activeTab === 'finance_invoices' && (
                 <FinanceInvoicesView
+                  searchQuery={portalSearch}
                   onNavigatePayment={(inv) => {
                     setFinanceInvoiceForPayment(inv);
                     handleSetActiveTab('customer_payments');
@@ -1044,12 +1070,14 @@ export default function App() {
               )}
               {(activeTab === 'customer_payments' || activeTab === 'finance_payments') && (
                 <FinancePaymentsView
+                  searchQuery={portalSearch}
                   initialInvoice={financeInvoiceForPayment}
                   onClearInitialInvoice={() => setFinanceInvoiceForPayment(null)}
                 />
               )}
               {(activeTab === 'receivables' || activeTab === 'finance_receivables') && (
                 <FinanceReceivablesView
+                  searchQuery={portalSearch}
                   onNavigatePayment={(inv) => {
                     setFinanceInvoiceForPayment(inv);
                     handleSetActiveTab('customer_payments');
@@ -1058,6 +1086,89 @@ export default function App() {
               )}
               {(activeTab === 'finance_reports' || activeTab === 'reports') && <FinanceReportsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
+            </main>
+          </div>
+        </RoleProtectedRoute>
+      )}
+
+      {/* ----------------- LOGISTICS DEPARTMENT PORTAL ----------------- */}
+      {effectiveRole === 'logistics' && (
+        <RoleProtectedRoute
+          userRole={backendVerifiedRole}
+          allowedRoles={['logistics', 'admin', 'ceo']}
+          onReturnToDashboard={() => setCurrentRole(backendVerifiedRole)}
+        >
+          <LogisticsSidebar
+            activeTab={activeTab}
+            setActiveTab={handleSetActiveTab}
+            currentRole={currentRole}
+            userRole={backendVerifiedRole}
+            currentUser={currentUser}
+            onSwitchRole={handleSwitchRole}
+            isMobileOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+            onLogout={handleLogout}
+          />
+          <div className="main-wrapper">
+            <LogisticsHeader
+              activeTab={activeTab}
+              currentUser={currentUser}
+              onMenuToggle={() => setIsSidebarOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
+              onNavigateTab={(tab) => handleSetActiveTab(tab)}
+            />
+            <main className="content-area">
+              {(activeTab === 'dashboard' || !['incoming', 'incoming_shipments', 'shipments', 'tracking', 'shipment_tracking', 'received', 'shipment_received', 'delivery_notes', 'notifications', 'leave', 'attendance_leave', 'profile'].includes(activeTab)) && (
+                <LogisticsDashboard
+                  currentUser={currentUser}
+                  onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                />
+              )}
+              {(activeTab === 'incoming' || activeTab === 'incoming_shipments') && (
+                <LogisticsIncomingOrdersView
+                  onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                />
+              )}
+              {activeTab === 'shipments' && (
+                <LogisticsShipmentsView
+                  filterMode="all"
+                  searchQuery={portalSearch}
+                  currentUser={currentUser}
+                  onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                />
+              )}
+              {(activeTab === 'tracking' || activeTab === 'shipment_tracking') && (
+                <LogisticsShipmentsView
+                  filterMode="tracking"
+                  searchQuery={portalSearch}
+                  currentUser={currentUser}
+                  onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                />
+              )}
+              {(activeTab === 'received' || activeTab === 'shipment_received') && (
+                <LogisticsShipmentsView
+                  filterMode="received"
+                  searchQuery={portalSearch}
+                  currentUser={currentUser}
+                  onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                />
+              )}
+              {activeTab === 'delivery_notes' && (
+                <LogisticsDeliveryNotesView
+                  searchQuery={portalSearch}
+                  currentUser={currentUser}
+                />
+              )}
+              {activeTab === 'notifications' && (
+                <LogisticsNotificationsView />
+              )}
+              {(activeTab === 'leave' || activeTab === 'attendance_leave') && (
+                <LogisticsLeaveView />
+              )}
+              {activeTab === 'profile' && (
+                <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />
+              )}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -1210,6 +1321,8 @@ export default function App() {
           </div>
         </RoleProtectedRoute>
       )}
+
+
 
       {!knownRoles.includes(effectiveRole) && (
         <div style={{

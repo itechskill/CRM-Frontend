@@ -23,11 +23,43 @@
   border: none;
   color: #64748B;
   cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
 }
 
-@media (max-width: 768px) {
+.ceo-menu-toggle:hover {
+  background-color: #F1F5F9;
+  color: #0F172A;
+}
+
+@media (max-width: 1024px) {
+  .ceo-header {
+    padding: 0 16px !important;
+    height: 64px !important;
+  }
+
   .ceo-menu-toggle {
-    display: flex;
+    display: flex !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .ceo-header-title p {
+    display: none !important;
+  }
+
+  .ceo-header-title h1 {
+    font-size: 1.05rem !important;
+  }
+
+  .ceo-profile-name {
+    display: none !important;
+  }
+
+  .ceo-profile-pill {
+    padding: 2px !important;
+    border: none !important;
+    background: transparent !important;
   }
 }
 

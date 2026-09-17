@@ -13,12 +13,16 @@ const roleOptions = [
   { label: 'Project Manager', value: 'project_manager' },
   { label: 'Marketing', value: 'marketing' },
   { label: 'Accountant', value: 'accountant' },
+  { label: 'Support', value: 'support' },
+  { label: 'Finance', value: 'finance' },
+  { label: 'Logistics', value: 'logistics' },
   { label: 'Employee', value: 'employee' }
 ];
 
 const departmentOptions = [
   'Executive Administration',
   'Executive Leadership',
+  'Logistics Department',
   'Operations Management',
   'Human Resources',
   'Sales & Business',

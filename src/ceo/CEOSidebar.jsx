@@ -16,6 +16,7 @@ import {
   Calculator,
   Megaphone,
   Briefcase,
+  Plane,
   LogOut
 } from 'lucide-react';
 import './CEOSidebar.css';
@@ -38,6 +39,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
   const orgNav = [
     { id: 'org_users', label: 'All Users Directory', icon: Users },
     { id: 'org_dept_sales', label: 'Sales Department', icon: TrendingUp },
+    { id: 'org_dept_logistics', label: 'Logistics Dept', icon: Plane },
     { id: 'org_dept_support', label: 'Support & Ops', icon: Briefcase },
     { id: 'org_dept_accounts', label: 'Accounts Dept', icon: Calculator },
     { id: 'org_dept_finance', label: 'Finance Dept', icon: Wallet },
@@ -60,7 +62,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
             <div className="ceo-brand-logo">
               <Crown size={20} color="#FFFFFF" />
             </div>
-            {!collapsed && (
+            {(!collapsed || isMobileOpen) && (
               <div className="ceo-brand-info">
                 <span className="ceo-brand-name">Fortline CRM</span>
                 <span className="ceo-brand-subtitle">EXECUTIVE PORTAL</span>
@@ -68,7 +70,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
             )}
           </div>
           <button
-            className="ceo-collapse-btn"
+            className="ceo-collapse-btn desktop-only"
             onClick={() => setCollapsed(!collapsed)}
             title={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
           >
@@ -78,7 +80,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
 
         {/* Navigation Menu */}
         <div className="ceo-sidebar-menu">
-          {!collapsed && <div className="ceo-menu-title">EXECUTIVE SUITE</div>}
+          {(!collapsed || isMobileOpen) && <div className="ceo-menu-title">EXECUTIVE SUITE</div>}
 
           <div className="ceo-menu-section">
             {mainNav.map((item) => {
@@ -93,9 +95,9 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
                 >
                   <div className="ceo-menu-left">
                     <Icon size={18} />
-                    {!collapsed && <span>{item.label}</span>}
+                    {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
                   </div>
-                  {!collapsed && item.badge && (
+                  {(!collapsed || isMobileOpen) && item.badge && (
                     <span className="ceo-menu-badge">{item.badge}</span>
                   )}
                 </div>
@@ -103,7 +105,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
             })}
           </div>
 
-          {!collapsed && <div className="ceo-menu-title" style={{ marginTop: '16px' }}>ORGANIZATION MONITORING</div>}
+          {(!collapsed || isMobileOpen) && <div className="ceo-menu-title" style={{ marginTop: '16px' }}>ORGANIZATION MONITORING</div>}
           <div className="ceo-menu-section">
             {orgNav.map((item) => {
               const Icon = item.icon;
@@ -117,9 +119,9 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
                 >
                   <div className="ceo-menu-left">
                     <Icon size={18} />
-                    {!collapsed && <span>{item.label}</span>}
+                    {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
                   </div>
-                  {!collapsed && item.badge && (
+                  {(!collapsed || isMobileOpen) && item.badge && (
                     <span className="ceo-menu-badge" style={{ backgroundColor: '#2563EB', color: '#FFF' }}>{item.badge}</span>
                   )}
                 </div>
@@ -127,7 +129,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
             })}
           </div>
 
-          {!collapsed && <div className="ceo-menu-title" style={{ marginTop: '16px' }}>ACCOUNT</div>}
+          {(!collapsed || isMobileOpen) && <div className="ceo-menu-title" style={{ marginTop: '16px' }}>ACCOUNT</div>}
           <div className="ceo-menu-section">
             {accountNav.map((item) => {
               const Icon = item.icon;
@@ -141,7 +143,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
                 >
                   <div className="ceo-menu-left">
                     <Icon size={18} />
-                    {!collapsed && <span>{item.label}</span>}
+                    {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
                   </div>
                 </div>
               );
@@ -164,7 +166,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
                   currentUser?.fullName ? currentUser.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : 'CEO'
                 )}
               </div>
-              {!collapsed && (
+              {(!collapsed || isMobileOpen) && (
                 <div className="ceo-user-info" style={{ display: 'flex', flexDirection: 'column' }}>
                   <span className="ceo-user-name" style={{ color: '#FFFFFF', fontSize: '0.825rem', fontWeight: 600 }}>
                     {currentUser?.fullName || 'Executive CEO'}

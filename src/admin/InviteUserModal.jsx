@@ -87,6 +87,7 @@ export default function InviteUserModal({ isOpen, onClose, onInviteUser }) {
               <label>Department</label>
               <select className="form-select" value={department} onChange={(e) => setDepartment(e.target.value)}>
                 <option value="Sales">Sales</option>
+                <option value="Logistics">Logistics</option>
                 <option value="Operations">Operations</option>
                 <option value="Engineering">Engineering</option>
                 <option value="Product">Product</option>

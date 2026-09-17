@@ -19,12 +19,13 @@ import {
   AlertCircle,
   Clock,
   ArrowRight,
-  Receipt
+  Receipt,
+  FileSpreadsheet
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import '../accounts/InvoicePaymentForms.css';
 
-export default function FinancePaymentsView({ initialPreFillInvoice, initialInvoice, onClearInitialInvoice }) {
+export default function FinancePaymentsView({ initialPreFillInvoice, initialInvoice, onClearInitialInvoice, searchQuery }) {
   const [payments, setPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -223,15 +224,113 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     doc.save(`${pay.paymentRefNumber || 'Payment_Receipt'}.pdf`);
   };
 
+  // Full Customer Payments List PDF Export
+  const handleExportAllPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    doc.setFillColor(5, 150, 105); // #059669
+    doc.rect(0, 0, 297, 26, 'F');
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — CUSTOMER PAYMENTS & SETTLEMENTS LEDGER', 14, 12);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(224, 242, 254);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} • All amounts in Pakistani Rupees (PKR)`, 14, 20);
+
+    const rows = filteredPayments.map((pay, idx) => [
+      (idx + 1).toString(),
+      pay.paymentRefNumber || `PAY-${idx + 1}`,
+      pay.customerName || 'Customer',
+      pay.invoiceNumber || '—',
+      pay.salesOrderNumber || '—',
+      `Rs. ${(Number(pay.amount) || 0).toLocaleString()}`,
+      pay.paymentType || 'Full',
+      pay.paymentMethod || 'Bank Transfer',
+      pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString('en-GB') : '—'
+    ]);
+
+    autoTable(doc, {
+      startY: 32,
+      margin: { left: 14, right: 14 },
+      head: [['#', 'Receipt #', 'Customer / Client', 'Invoice #', 'Sales Order #', 'Amount (PKR)', 'Type', 'Method', 'Payment Date']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [5, 150, 105],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        textColor: [30, 41, 59]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 32, fontStyle: 'bold' },
+        2: { cellWidth: 54 },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 36, halign: 'right', fontStyle: 'bold' },
+        6: { cellWidth: 24, halign: 'center' },
+        7: { cellWidth: 30 },
+        8: { cellWidth: 23, halign: 'center' }
+      }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Total Collections: Rs. ${totalCollected.toLocaleString()} (${filteredPayments.length} Receipts)`, 14, finalY > 195 ? 195 : finalY);
+
+    doc.save(`Fortline_Customer_Payments_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Full Customer Payments List Excel CSV Export
+  const handleExportAllExcel = () => {
+    const headers = ['#', 'Receipt Ref Number', 'Customer / Client', 'Invoice Number', 'Sales Order Number', 'Amount Settled (PKR)', 'Payment Type', 'Payment Method', 'Payment Date', 'Notes'];
+    const rows = filteredPayments.map((pay, idx) => [
+      idx + 1,
+      `"${pay.paymentRefNumber || ''}"`,
+      `"${(pay.customerName || '').replace(/"/g, '""')}"`,
+      `"${pay.invoiceNumber || ''}"`,
+      `"${pay.salesOrderNumber || ''}"`,
+      Number(pay.amount) || 0,
+      `"${pay.paymentType || 'Full'}"`,
+      `"${pay.paymentMethod || 'Bank Transfer'}"`,
+      `"${pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString('en-GB') : ''}"`,
+      `"${(pay.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Fortline_Customer_Payments_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredPayments = payments.filter(p => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
+    const effectiveSearch = (searchQuery || searchTerm || '').trim().toLowerCase();
+    if (!effectiveSearch) return true;
+    const term = effectiveSearch;
     return (
       (p.paymentRefNumber && p.paymentRefNumber.toLowerCase().includes(term)) ||
       (p.customerName && p.customerName.toLowerCase().includes(term)) ||
+      (p.salePerson && p.salePerson.toLowerCase().includes(term)) ||
+      (p.salesPerson?.fullName && p.salesPerson.fullName.toLowerCase().includes(term)) ||
       (p.invoiceNumber && p.invoiceNumber.toLowerCase().includes(term)) ||
       (p.salesOrderNumber && p.salesOrderNumber.toLowerCase().includes(term)) ||
-      (p.paymentMethod && p.paymentMethod.toLowerCase().includes(term))
+      (p.paymentMethod && p.paymentMethod.toLowerCase().includes(term)) ||
+      (p.paymentType && p.paymentType.toLowerCase().includes(term)) ||
+      (p.notes && p.notes.toLowerCase().includes(term))
     );
   });
 
@@ -248,7 +347,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
   return (
     <div className="sv-container">
       {/* Top Bar */}
-      <div className="sv-top-bar">
+      <div className="sv-top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 className="sv-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <CreditCard size={22} color="#059669" /> Customer Payments &amp; Remittance
@@ -257,8 +356,14 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
             Record customer settlements, bank transfers, cheques, and update invoice receivable balances
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="sv-btn-primary" style={{ background: '#059669' }} onClick={openCreateModal}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button className="sv-btn-primary" style={{ background: '#059669' }} onClick={handleExportAllPDF} title="Export Payments PDF">
+            <Download size={15} /> Export PDF
+          </button>
+          <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={handleExportAllExcel} title="Export Payments Excel">
+            <FileSpreadsheet size={15} /> Export Excel
+          </button>
+          <button className="sv-btn-primary" style={{ background: '#0F172A' }} onClick={openCreateModal}>
             <Plus size={16} /> Record Payment
           </button>
         </div>

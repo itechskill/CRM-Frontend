@@ -26,12 +26,13 @@ import {
   AlertCircle,
   AlertTriangle,
   RotateCcw,
-  Tag
+  Tag,
+  FileSpreadsheet
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import './InvoicePaymentForms.css';
 
-export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder, onClearInitialOrder }) {
+export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder, onClearInitialOrder, searchQuery }) {
   const [invoices, setInvoices] = useState([]);
   const [salesOrders, setSalesOrders] = useState([]);
   const [deliveryNotes, setDeliveryNotes] = useState([]);
@@ -528,6 +529,100 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     doc.save(`${inv.invoiceNumber || 'Invoice'}.pdf`);
   };
 
+  // Export Full Invoices List PDF
+  const handleExportAllPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    doc.setFillColor(30, 58, 138); // Navy
+    doc.rect(0, 0, 297, 26, 'F');
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — ACCOUNTS INVOICES & BILLING REGISTER', 14, 12);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(224, 242, 254);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} • All amounts in Pakistani Rupees (PKR)`, 14, 20);
+
+    const rows = filteredInvoices.map((inv, idx) => [
+      (idx + 1).toString(),
+      inv.invoiceNumber || `INV-${idx + 1}`,
+      inv.clientName || '—',
+      inv.salesOrderNumber || '—',
+      inv.deliveryNoteNumber || '—',
+      `Rs. ${(Number(inv.amount) || 0).toLocaleString()}`,
+      `Rs. ${(Number(inv.paidAmount) || 0).toLocaleString()}`,
+      inv.status || 'Draft',
+      inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-GB') : '—'
+    ]);
+
+    autoTable(doc, {
+      startY: 32,
+      margin: { left: 14, right: 14 },
+      head: [['#', 'Invoice #', 'Customer / Client', 'Sales Order #', 'DN #', 'Total (PKR)', 'Paid (PKR)', 'Status', 'Date']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [30, 58, 138],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        textColor: [30, 41, 59]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 30, fontStyle: 'bold' },
+        2: { cellWidth: 54 },
+        3: { cellWidth: 30 },
+        4: { cellWidth: 30 },
+        5: { cellWidth: 34, halign: 'right', fontStyle: 'bold' },
+        6: { cellWidth: 30, halign: 'right' },
+        7: { cellWidth: 28, halign: 'center' },
+        8: { cellWidth: 23, halign: 'center' }
+      }
+    });
+
+    const totalVal = filteredInvoices.reduce((s, i) => s + (Number(i.amount) || 0), 0);
+    const finalY = doc.lastAutoTable.finalY + 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text(`Total Filtered Value: Rs. ${totalVal.toLocaleString()} (${filteredInvoices.length} Invoices)`, 14, finalY > 195 ? 195 : finalY);
+
+    doc.save(`Fortline_Accounts_Invoices_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Export Full Invoices List Excel CSV
+  const handleExportAllExcel = () => {
+    const headers = ['#', 'Invoice Number', 'Customer / Client', 'Sales Order Number', 'Delivery Note Number', 'Total Amount (PKR)', 'Paid Amount (PKR)', 'Status', 'Created Date', 'Payment Terms'];
+    const rows = filteredInvoices.map((inv, idx) => [
+      idx + 1,
+      `"${inv.invoiceNumber || ''}"`,
+      `"${(inv.clientName || '').replace(/"/g, '""')}"`,
+      `"${inv.salesOrderNumber || ''}"`,
+      `"${inv.deliveryNoteNumber || ''}"`,
+      Number(inv.amount) || 0,
+      Number(inv.paidAmount) || 0,
+      `"${inv.status || 'Draft'}"`,
+      `"${inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-GB') : ''}"`,
+      `"${inv.paymentTerms || 'Net 30'}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Fortline_Accounts_Invoices_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const pendingDrafts = invoices.filter(i =>
     i.status === 'Draft' ||
     i.status === 'Pending Review' ||
@@ -547,21 +642,27 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     : invoices;
 
   const filteredInvoices = displayedInvoices.filter(inv => {
-    if (!searchTerm.trim()) return true;
-    const term = searchTerm.toLowerCase();
+    const effectiveSearch = (searchQuery || searchTerm || '').trim().toLowerCase();
+    if (!effectiveSearch) return true;
+    const term = effectiveSearch;
     return (
       (inv.invoiceNumber && inv.invoiceNumber.toLowerCase().includes(term)) ||
       (inv.clientName && inv.clientName.toLowerCase().includes(term)) ||
+      (inv.salePerson && inv.salePerson.toLowerCase().includes(term)) ||
+      (inv.salesPerson?.fullName && inv.salesPerson.fullName.toLowerCase().includes(term)) ||
       (inv.salesOrderNumber && inv.salesOrderNumber.toLowerCase().includes(term)) ||
       (inv.deliveryNoteNumber && inv.deliveryNoteNumber.toLowerCase().includes(term)) ||
-      (inv.status && inv.status.toLowerCase().includes(term))
+      (inv.fileNumber && inv.fileNumber.toLowerCase().includes(term)) ||
+      (inv.status && inv.status.toLowerCase().includes(term)) ||
+      (inv.invoiceType && inv.invoiceType.toLowerCase().includes(term)) ||
+      (inv.items && inv.items.some(i => (i.description || '').toLowerCase().includes(term)))
     );
   });
 
   return (
     <div className="sv-container">
       {/* Top Bar */}
-      <div className="sv-top-bar">
+      <div className="sv-top-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 className="sv-title" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <FileText size={22} color="#2563EB" /> Invoices Management
@@ -570,8 +671,14 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
             Create, issue, and manage commercial draft invoices linked with Delivery Notes &amp; Sales Orders
           </p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button className="sv-btn-primary" onClick={openCreateModal}>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button className="sv-btn-primary" style={{ background: '#1E3A8A' }} onClick={handleExportAllPDF} title="Export Invoices PDF">
+            <Download size={15} /> Export PDF
+          </button>
+          <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={handleExportAllExcel} title="Export Invoices Excel">
+            <FileSpreadsheet size={15} /> Export Excel
+          </button>
+          <button className="sv-btn-primary" style={{ background: '#0F172A' }} onClick={openCreateModal}>
             <Plus size={16} /> Create Draft Invoice
           </button>
         </div>

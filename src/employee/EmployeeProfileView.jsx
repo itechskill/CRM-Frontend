@@ -1,43 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Calendar, BadgeCheck, Pencil, TrendingUp, Award, Clock, Star, Phone, Building, Briefcase, X, AlertCircle } from 'lucide-react';
 import {
-  ResponsiveContainer,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip
-} from 'recharts';
+  Mail, Calendar, BadgeCheck, Pencil, TrendingUp, Award, Clock, Star, Phone,
+  Building, Briefcase, X, AlertCircle, Target, Users, FileText, ShoppingCart,
+  CreditCard, CheckCircle2, DollarSign, ArrowUpRight, BarChart3, ShieldCheck
+} from 'lucide-react';
 import './EmployeeProfileView.css';
 import { getToken, getUser, setUser } from '../utils/authStorage';
-import { API_BASE, authHeaders } from '../utils/api';
-
-const statCards = [
-  { label: 'Active Projects', value: '4', icon: TrendingUp, iconBg: '#EFF6FF', iconColor: '#2563EB' },
-  { label: 'Tasks Completed', value: '6', icon: Award, iconBg: '#DCFCE7', iconColor: '#16A34A' },
-  { label: 'Hours This Month', value: '154h', icon: Clock, iconBg: '#F3E8FF', iconColor: '#8B5CF6' },
-  { label: 'Performance Score', value: '94%', icon: Star, iconBg: '#FEF9C3', iconColor: '#CA8A04' },
-];
-
-const monthlyPerformanceData = [
-  { month: 'Jan', score: 86 },
-  { month: 'Feb', score: 90 },
-  { month: 'Mar', score: 84 },
-  { month: 'Apr', score: 95 },
-  { month: 'May', score: 88 },
-  { month: 'Jun', score: 94 },
-];
-
-const skillProficiency = [
-  { skill: 'React / TypeScript', value: 95, color: '#16A34A' },
-  { skill: 'UI/UX Design', value: 82, color: '#2563EB' },
-  { skill: 'API Integration', value: 78, color: '#F59E0B' },
-  { skill: 'Testing (Jest, Cypress)', value: 74, color: '#F59E0B' },
-];
+import { API_BASE, authHeaders, apiRequest } from '../utils/api';
 
 export default function EmployeeProfileView({ onUpdateCurrentUser }) {
   const [profile, setProfile] = useState(null);
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [fullName, setFullName] = useState('');
@@ -47,24 +20,28 @@ export default function EmployeeProfileView({ onUpdateCurrentUser }) {
   const [alert, setAlert] = useState(null);
 
   useEffect(() => {
-    fetchProfile();
+    fetchProfileAndStats();
   }, []);
 
-  const fetchProfile = async () => {
+  const fetchProfileAndStats = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`${API_BASE}/api/users/me`, {
-        headers: authHeaders()
-      });
-      const data = await response.json();
-      if (response.ok && data.success) {
-        setProfile(data.data);
-        setFullName(data.data.fullName || '');
-        setPhone(data.data.phone || '');
-        setProfileImage(data.data.profileImage || '');
+      const [pRes, sRes] = await Promise.all([
+        apiRequest('/api/users/me'),
+        apiRequest('/api/sales-employee/stats')
+      ]);
+
+      if (pRes.response.ok && pRes.data.success) {
+        setProfile(pRes.data.data);
+        setFullName(pRes.data.data.fullName || '');
+        setPhone(pRes.data.data.phone || '');
+        setProfileImage(pRes.data.data.profileImage || '');
+      }
+      if (sRes.response.ok && sRes.data.success) {
+        setStats(sRes.data.data);
       }
     } catch (err) {
-      console.error('Fetch profile error:', err);
+      console.error('Fetch profile & stats error:', err);
     } finally {
       setLoading(false);
     }
@@ -91,22 +68,18 @@ export default function EmployeeProfileView({ onUpdateCurrentUser }) {
     setSaving(true);
     setAlert(null);
     try {
-      const response = await fetch(`${API_BASE}/api/users/me`, {
+      const { response, data } = await apiRequest('/api/users/me', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-          ...authHeaders()
-        },
         body: JSON.stringify({
           fullName: fullName.trim(),
           phone: phone.trim(),
           profileImage: profileImage
         })
       });
-      const data = await response.json();
+
       if (response.ok && data.success) {
         setProfile(data.data);
-        setAlert({ type: 'success', text: 'Profile & picture updated successfully!' });
+        setAlert({ type: 'success', text: 'Profile updated successfully!' });
         setIsEditModalOpen(false);
         const savedUser = getUser();
         if (savedUser) {
@@ -129,6 +102,25 @@ export default function EmployeeProfileView({ onUpdateCurrentUser }) {
     if (!name) return 'US';
     return name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
   };
+
+  if (loading) {
+    return (
+      <div style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
+        <p>Loading performance profile...</p>
+      </div>
+    );
+  }
+
+  const isSalesRole = (profile?.department || '').toLowerCase() === 'sales' ||
+    profile?.role === 'sales_member' ||
+    profile?.role === 'sales_rep' ||
+    profile?.role === 'sales_person' ||
+    profile?.role === 'sales_manager';
+
+  const monthlyTarget = Number(stats?.monthlyTarget || 0);
+  const salesAchieved = Number(stats?.salesAchieved || 0);
+  const remainingTarget = Math.max(0, monthlyTarget - salesAchieved);
+  const targetPct = monthlyTarget > 0 ? Math.min(100, Math.round((salesAchieved / monthlyTarget) * 100)) : 0;
 
   return (
     <div className="employee-profile-container">
@@ -160,11 +152,7 @@ export default function EmployeeProfileView({ onUpdateCurrentUser }) {
           <div className="profile-hero-info">
             <h2>{profile?.fullName || 'User Profile'}</h2>
             <p>
-              {((profile?.fullName || '').toLowerCase().includes('ahmed') || (profile?.email || '').toLowerCase().includes('quote@fortline.net') || (profile?.position || '').toLowerCase().includes('rep') || profile?.role === 'sales_rep')
-                ? 'Sales Rep'
-                : ((profile?.department || '').toLowerCase() === 'sales' || profile?.role === 'sales_member' || (profile?.position || '').toLowerCase().includes('person')
-                  ? 'Sales Person'
-                  : (profile?.position || (profile?.role ? profile.role.replace('_', ' ') : 'Employee')))} · {profile?.department || (profile?.role === 'sales_member' ? 'Sales' : 'General')}
+              {profile?.position || (profile?.role ? profile.role.replace(/_/g, ' ').toUpperCase() : 'Employee')} · {profile?.department || 'Fortline Operations'}
             </p>
             <div className="profile-hero-meta">
               <span><Mail size={14} /> {profile?.email}</span>
@@ -181,67 +169,150 @@ export default function EmployeeProfileView({ onUpdateCurrentUser }) {
         </div>
       </div>
 
-      {/* 4 KPI Stat Cards */}
-      <div className="profile-stats-grid">
-        {statCards.map((card) => {
-          const Icon = card.icon;
-          return (
-            <div className="profile-stat-card" key={card.label}>
-              <div className="profile-stat-top">
-                <div className="profile-stat-icon" style={{ backgroundColor: card.iconBg, color: card.iconColor }}>
-                  <Icon size={20} />
-                </div>
-                <span className="profile-stat-label">{card.label}</span>
+      {/* Target & Quota Section (Real DB metrics in PKR) */}
+      {isSalesRole && (
+        <div style={{
+          background: '#FFFFFF',
+          borderRadius: '14px',
+          padding: '22px 24px',
+          border: '1px solid #E2E8F0',
+          marginBottom: '20px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <Target size={20} color="#2563EB" />
               </div>
-              <div className="profile-stat-value">{card.value}</div>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0F172A', fontWeight: 800 }}>Sales Target &amp; Quota Performance</h3>
+                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748B' }}>Assigned monthly target tracked against finalized sales value</p>
+              </div>
             </div>
-          );
-        })}
-      </div>
-
-      {/* Bottom Row: Chart + Skill Proficiency */}
-      <div className="profile-bottom-grid">
-        <div className="profile-chart-card">
-          <div className="profile-chart-header">
-            <h3>Monthly Performance Score</h3>
-            <p>Averaged from task quality, timeliness, and feedback</p>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: '#2563EB' }}>
+              {targetPct}% Achieved
+            </div>
           </div>
 
-          <div style={{ width: '100%', height: '280px' }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyPerformanceData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
-                <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: '#64748B', fontSize: 12 }} />
-                <YAxis
-                  domain={[78, 100]}
-                  ticks={[78, 86, 100]}
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#94A3B8', fontSize: 11 }}
-                />
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#FFFFFF', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
-                <Bar dataKey="score" fill="#2563EB" radius={[6, 6, 0, 0]} barSize={48} name="Score" />
-              </BarChart>
-            </ResponsiveContainer>
+          {/* Progress Bar */}
+          <div style={{ width: '100%', height: '10px', background: '#F1F5F9', borderRadius: '5px', overflow: 'hidden', marginBottom: '16px' }}>
+            <div style={{
+              width: `${targetPct}%`,
+              height: '100%',
+              background: 'linear-gradient(90deg, #2563EB 0%, #10B981 100%)',
+              borderRadius: '5px',
+              transition: 'width 0.6s ease'
+            }} />
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '16px' }}>
+            <div style={{ padding: '12px 16px', background: '#F8FAFC', borderRadius: '10px', border: '1px solid #E2E8F0' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Assigned Target</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>
+                Rs. {monthlyTarget.toLocaleString()}
+              </div>
+            </div>
+
+            <div style={{ padding: '12px 16px', background: '#ECFDF5', borderRadius: '10px', border: '1px solid #A7F3D0' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#047857', textTransform: 'uppercase' }}>Sales Achieved</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>
+                Rs. {salesAchieved.toLocaleString()}
+              </div>
+            </div>
+
+            <div style={{ padding: '12px 16px', background: '#FEF2F2', borderRadius: '10px', border: '1px solid #FECACA' }}>
+              <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#B91C1C', textTransform: 'uppercase' }}>Remaining Target</div>
+              <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#DC2626', marginTop: '4px' }}>
+                Rs. {remainingTarget.toLocaleString()}
+              </div>
+            </div>
           </div>
         </div>
+      )}
 
-        <div className="skill-proficiency-card">
-          <h3>Skill Proficiency</h3>
-          <div className="skill-list">
-            {skillProficiency.map((skill) => (
-              <div className="skill-row" key={skill.skill}>
-                <div className="skill-row-top">
-                  <span className="skill-name">{skill.skill}</span>
-                  <span className="skill-percent" style={{ color: skill.color }}>{skill.value}%</span>
-                </div>
-                <div className="skill-track">
-                  <div className="skill-fill" style={{ width: `${skill.value}%`, backgroundColor: skill.color }}></div>
-                </div>
-              </div>
-            ))}
+      {/* Real Performance Statistics Grid (Driven strictly from MongoDB) */}
+      <div style={{ marginBottom: '24px' }}>
+        <h3 style={{ fontSize: '1rem', fontWeight: 800, color: '#0F172A', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <BarChart3 size={18} color="#2563EB" /> Actual Operational Statistics
+        </h3>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
+          <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', borderLeft: '4px solid #2563EB' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Leads</span>
+              <Users size={16} color="#2563EB" />
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '6px' }}>
+              {stats?.totalLeads ?? 0}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
+              {stats?.convertedLeads ?? 0} converted ({stats?.leadConversionRate ?? 0}%)
+            </div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', borderLeft: '4px solid #059669' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Quotations</span>
+              <FileText size={16} color="#059669" />
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '6px' }}>
+              {stats?.totalQuotations ?? 0}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
+              {stats?.acceptedQuotations ?? 0} accepted by client
+            </div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', borderLeft: '4px solid #6366F1' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Sales Orders</span>
+              <ShoppingCart size={16} color="#6366F1" />
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '6px' }}>
+              {stats?.totalOrders ?? 0}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
+              {stats?.completedOrders ?? 0} completed deliveries
+            </div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', borderLeft: '4px solid #D97706' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Deals Closed</span>
+              <TrendingUp size={16} color="#D97706" />
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '6px' }}>
+              {stats?.wonDealsCount ?? 0}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
+              {stats?.totalDeals ?? 0} total in pipeline
+            </div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', borderLeft: '4px solid #0891B2' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Invoices</span>
+              <FileText size={16} color="#0891B2" />
+            </div>
+            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', marginTop: '6px' }}>
+              {stats?.totalInvoicesCount ?? 0}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
+              {stats?.approvedInvoicesCount ?? 0} approved / finalized
+            </div>
+          </div>
+
+          <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0', borderLeft: '4px solid #10B981' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Paid Realization</span>
+              <DollarSign size={16} color="#10B981" />
+            </div>
+            <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669', marginTop: '6px' }}>
+              Rs. {Number(stats?.paidInvoicesAmount || 0).toLocaleString()}
+            </div>
+            <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: '2px' }}>
+              Cash inflows settled
+            </div>
           </div>
         </div>
       </div>
@@ -278,7 +349,7 @@ export default function EmployeeProfileView({ onUpdateCurrentUser }) {
                 <label style={{ fontSize: '0.85rem', color: '#CBD5E1', fontWeight: 600 }}>Phone Number</label>
                 <input
                   type="text"
-                  placeholder="+1 234 567 890"
+                  placeholder="+92 300 0000000"
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   style={{

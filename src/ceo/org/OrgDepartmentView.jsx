@@ -11,6 +11,7 @@ import {
   RefreshCw,
   Package,
   Truck,
+  Plane,
   CheckCircle2,
   Clock,
   Lock,
@@ -62,6 +63,7 @@ export default function OrgDepartmentView({ departmentKey = 'sales', onSelectUse
   const getDepartmentIcon = (key) => {
     switch (key) {
       case 'sales': return <TrendingUp size={24} color="#2563EB" />;
+      case 'logistics': return <Plane size={24} color="#2563EB" />;
       case 'support': return <Truck size={24} color="#0D9488" />;
       case 'accounts': return <Calculator size={24} color="#7C3AED" />;
       case 'finance': return <Wallet size={24} color="#059669" />;
@@ -148,6 +150,38 @@ export default function OrgDepartmentView({ departmentKey = 'sales', onSelectUse
               </span>
               <span className="org-kpi-subtext">
                 {dept.kpis?.wonDeals || 0} Deals Won
+              </span>
+            </div>
+          </>
+        )}
+
+        {departmentKey === 'logistics' && (
+          <>
+            <div className="org-kpi-card">
+              <div className="org-kpi-header">
+                <span className="org-kpi-title">Total Shipments</span>
+                <div className="org-kpi-icon" style={{ backgroundColor: '#EFF6FF', color: '#2563EB' }}>
+                  <Plane size={18} />
+                </div>
+              </div>
+              <span className="org-kpi-value">{dept.kpis?.totalShipments || 0}</span>
+              <span className="org-kpi-subtext">
+                {dept.kpis?.blueFileOrders || 0} Blue File Orders
+              </span>
+            </div>
+
+            <div className="org-kpi-card">
+              <div className="org-kpi-header">
+                <span className="org-kpi-title">In-Transit &amp; Received</span>
+                <div className="org-kpi-icon" style={{ backgroundColor: '#DCFCE7', color: '#16A34A' }}>
+                  <Truck size={18} />
+                </div>
+              </div>
+              <span className="org-kpi-value">
+                {dept.kpis?.inTransitShipments || 0} / {dept.kpis?.receivedShipments || 0}
+              </span>
+              <span className="org-kpi-subtext">
+                {dept.kpis?.receivedShipments || 0} Received in Office
               </span>
             </div>
           </>
@@ -344,6 +378,39 @@ export default function OrgDepartmentView({ departmentKey = 'sales', onSelectUse
                       <td><span className="org-badge org-badge-dept">{o.deliveryStatus || 'Pending'}</span></td>
                       <td><span className="org-badge org-badge-active">{o.paymentStatus || 'Pending'}</span></td>
                       <td>{o.createdAt ? new Date(o.createdAt).toLocaleDateString() : ''}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {departmentKey === 'logistics' && (
+            <table className="org-table">
+              <thead>
+                <tr>
+                  <th>Shipment ID</th>
+                  <th>Sales Order</th>
+                  <th>Customer</th>
+                  <th>Supplier &amp; Country</th>
+                  <th>Flight / Carrier</th>
+                  <th>ETA</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {dept.records?.shipments?.length === 0 ? (
+                  <tr><td colSpan="7" style={{ textAlign: 'center', padding: '24px', color: '#94A3B8' }}>No international shipments recorded.</td></tr>
+                ) : (
+                  dept.records?.shipments?.slice(0, 20).map(s => (
+                    <tr key={s._id}>
+                      <td style={{ fontWeight: 600, color: '#2563EB' }}>{s.shipmentId || 'SHP'}</td>
+                      <td>{s.salesOrderNumber || '—'}</td>
+                      <td>{s.clientName || '—'}</td>
+                      <td>{s.supplierName} ({s.supplierCountry || 'Int'})</td>
+                      <td>{s.flightNumber || s.carrier || '—'}</td>
+                      <td>{s.eta ? new Date(s.eta).toLocaleDateString() : 'Pending'}</td>
+                      <td><span className={`org-badge org-badge-${s.status === 'Received in Office' ? 'active' : 'dept'}`}>{s.status}</span></td>
                     </tr>
                   ))
                 )}

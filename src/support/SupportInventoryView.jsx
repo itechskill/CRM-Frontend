@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
 import {
   Boxes,
@@ -16,7 +18,9 @@ import {
   DollarSign,
   Layers,
   FileText,
-  Building
+  Building,
+  Download,
+  FileSpreadsheet
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import './SupportPortal.css';
@@ -136,10 +140,120 @@ export default function SupportInventoryView() {
     }
   };
 
+  // Full Inventory List PDF Export
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    doc.setFillColor(15, 23, 42); // Navy #0F172A
+    doc.rect(0, 0, 297, 26, 'F');
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — WAREHOUSE INVENTORY & STOCK VALUATION', 14, 12);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(226, 232, 240);
+    doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} • All amounts in Pakistani Rupees (PKR)`, 14, 20);
+
+    const rows = filteredItems.map((item, idx) => {
+      const available = (item.quantityOnHand || 0) - (item.reservedQuantity || 0);
+      const totalVal = (item.quantityOnHand || 0) * (item.unitPrice || 0);
+      return [
+        (idx + 1).toString(),
+        item.name || 'Product Item',
+        item.sku || 'No SKU',
+        item.category || 'General',
+        item.location || 'WH/Stock',
+        `${item.quantityOnHand || 0} ${item.unit || 'pcs'}`,
+        `${item.reservedQuantity || 0} ${item.unit || 'pcs'}`,
+        `${available} ${item.unit || 'pcs'}`,
+        `Rs. ${(item.unitPrice || 0).toLocaleString()}`,
+        `Rs. ${totalVal.toLocaleString()}`,
+        item.status || 'In Stock'
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 32,
+      margin: { left: 14, right: 14 },
+      head: [['#', 'Product Name', 'SKU', 'Category', 'Location', 'Total Qty', 'Reserved', 'Available', 'Unit Price', 'Stock Value', 'Status']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [15, 23, 42],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        textColor: [30, 41, 59]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 48, fontStyle: 'bold' },
+        2: { cellWidth: 24 },
+        3: { cellWidth: 24 },
+        4: { cellWidth: 24 },
+        5: { cellWidth: 20, halign: 'center' },
+        6: { cellWidth: 20, halign: 'center' },
+        7: { cellWidth: 20, halign: 'center', fontStyle: 'bold' },
+        8: { cellWidth: 26, halign: 'right' },
+        9: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+        10: { cellWidth: 23, halign: 'center' }
+      }
+    });
+
+    const totalValAll = filteredItems.reduce((s, it) => s + ((it.quantityOnHand || 0) * (it.unitPrice || 0)), 0);
+    const finalY = doc.lastAutoTable.finalY + 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Total Stock Asset Value: Rs. ${totalValAll.toLocaleString()}`, 14, finalY > 195 ? 195 : finalY);
+
+    doc.save(`Fortline_Inventory_Register_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Full Inventory List Excel CSV Export
+  const handleExportExcel = () => {
+    const headers = ['#', 'Product Name', 'SKU Code', 'Category', 'Unit', 'Total Stock', 'Reserved Qty', 'Available Qty', 'Min Alert Level', 'Unit Price (PKR)', 'Total Value (PKR)', 'Location', 'Status', 'Description'];
+    const rows = filteredItems.map((item, idx) => {
+      const available = (item.quantityOnHand || 0) - (item.reservedQuantity || 0);
+      const totalVal = (item.quantityOnHand || 0) * (item.unitPrice || 0);
+      return [
+        idx + 1,
+        `"${(item.name || '').replace(/"/g, '""')}"`,
+        `"${(item.sku || '').replace(/"/g, '""')}"`,
+        `"${(item.category || '').replace(/"/g, '""')}"`,
+        `"${item.unit || 'pcs'}"`,
+        item.quantityOnHand || 0,
+        item.reservedQuantity || 0,
+        available,
+        item.minStockLevel || 5,
+        item.unitPrice || 0,
+        totalVal,
+        `"${(item.location || '').replace(/"/g, '""')}"`,
+        `"${item.status || 'In Stock'}"`,
+        `"${(item.description || '').replace(/"/g, '""')}"`
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Fortline_Inventory_Register_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="sv-container">
       {/* Top Filter Bar */}
-      <div className="sv-filters">
+      <div className="sv-filters" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
         <div className="sv-search-box">
           <Search size={16} color="#94A3B8" />
           <input
@@ -150,7 +264,7 @@ export default function SupportInventoryView() {
           />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
           <select
             className="sv-input"
             style={{ width: '160px', padding: '8px 12px' }}
@@ -163,6 +277,12 @@ export default function SupportInventoryView() {
             <option value="Out of Stock">Out of Stock</option>
           </select>
 
+          <button className="sv-btn-primary" style={{ background: '#0F172A' }} onClick={handleExportPDF} title="Export Inventory PDF">
+            <Download size={15} /> Export PDF
+          </button>
+          <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={handleExportExcel} title="Export Inventory Excel">
+            <FileSpreadsheet size={15} /> Export Excel
+          </button>
           <button className="sv-btn-primary" onClick={handleOpenAdd}>
             <Plus size={16} /> Add Product Stock
           </button>

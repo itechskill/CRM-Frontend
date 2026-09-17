@@ -8,6 +8,7 @@ import OrgMonthlyReports from './OrgMonthlyReports';
 import {
   Users,
   TrendingUp,
+  Plane,
   Briefcase,
   Calculator,
   Wallet,
@@ -23,6 +24,7 @@ export default function OrgOverview({ activeTab = 'org_users', setActiveTab }) {
   const subtabs = [
     { id: 'org_users', label: 'All Users Directory', icon: Users },
     { id: 'org_dept_sales', label: 'Sales Dept', icon: TrendingUp },
+    { id: 'org_dept_logistics', label: 'Logistics Dept', icon: Plane },
     { id: 'org_dept_support', label: 'Support & Ops', icon: Briefcase },
     { id: 'org_dept_accounts', label: 'Accounts Dept', icon: Calculator },
     { id: 'org_dept_finance', label: 'Finance Dept', icon: Wallet },
@@ -73,6 +75,10 @@ export default function OrgOverview({ activeTab = 'org_users', setActiveTab }) {
 
       {currentTab === 'org_dept_sales' && (
         <OrgDepartmentView departmentKey="sales" onSelectUser={(u) => setSelectedUser(u)} />
+      )}
+
+      {currentTab === 'org_dept_logistics' && (
+        <OrgDepartmentView departmentKey="logistics" onSelectUser={(u) => setSelectedUser(u)} />
       )}
 
       {currentTab === 'org_dept_support' && (

@@ -41,13 +41,17 @@ export default function FinanceSidebar({
     if (onClose) onClose();
   };
 
-  const navItems = [
+  const operationsNav = [
     { id: 'dashboard', label: 'Finance Dashboard', icon: LayoutGrid },
-    { id: 'leave', label: 'Leave & Attendance', icon: UserCheck },
+    { id: 'overdue_approval', label: 'Overdue Check & SO Approval', icon: ShieldCheck },
     { id: 'finance_invoices', label: 'Submitted Invoices', icon: FileText },
     { id: 'finance_payments', label: 'Customer Payments', icon: CreditCard },
     { id: 'finance_receivables', label: 'Accounts Receivable', icon: DollarSign },
-    { id: 'finance_reports', label: 'Financial Reports', icon: BarChart3 },
+    { id: 'finance_reports', label: 'Financial Reports', icon: BarChart3 }
+  ];
+
+  const accountNav = [
+    { id: 'leave', label: 'Leave & Attendance', icon: UserCheck },
     { id: 'profile', label: 'My Profile', icon: User }
   ];
 
@@ -88,12 +92,36 @@ export default function FinanceSidebar({
           {(!collapsed || isMobileOpen) && <div className="employee-menu-title white-title">FINANCE &amp; TREASURY</div>}
 
           <div className="employee-menu-section">
-            {navItems.map((item) => {
+            {operationsNav.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id ||
                 (item.id === 'finance_payments' && activeTab === 'customer_payments') ||
                 (item.id === 'finance_receivables' && activeTab === 'receivables') ||
                 (item.id === 'finance_reports' && activeTab === 'reports');
+              return (
+                <div
+                  key={item.id}
+                  className={`employee-menu-item ${isActive ? 'active' : ''}`}
+                  onClick={() => handleNavClick(item.id)}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <div className="employee-menu-left">
+                    <Icon size={18} />
+                    {(!collapsed || isMobileOpen) && <span>{item.label}</span>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="employee-menu-divider" />
+
+          {(!collapsed || isMobileOpen) && <div className="employee-menu-title white-title">ACCOUNT &amp; HR</div>}
+
+          <div className="employee-menu-section">
+            {accountNav.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
               return (
                 <div
                   key={item.id}

@@ -15,6 +15,7 @@ import {
   Briefcase,
   TrendingUp,
   FileText,
+  Plane,
   Wallet
 } from 'lucide-react';
 import './Sidebar.css';
@@ -52,6 +53,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
   const orgMenuItems = [
     { id: 'org_users', label: 'All Users Directory', icon: Users },
     { id: 'org_dept_sales', label: 'Sales Department', icon: TrendingUp },
+    { id: 'org_dept_logistics', label: 'Logistics Dept', icon: Plane },
     { id: 'org_dept_support', label: 'Support & Ops', icon: Briefcase },
     { id: 'org_dept_accounts', label: 'Accounts Dept', icon: Calculator },
     { id: 'org_dept_finance', label: 'Finance Dept', icon: Wallet },

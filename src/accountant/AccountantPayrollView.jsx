@@ -14,14 +14,15 @@ import {
   Eye,
   Trash2,
   AlertTriangle,
-  RefreshCw
+  RefreshCw,
+  FileSpreadsheet
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
 import './AccountantViews.css';
 
-export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
+export default function AccountantPayrollView({ isModalOpen, onCloseModal, searchQuery }) {
   const [payrollList, setPayrollList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -349,18 +350,150 @@ export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
     doc.save(`Payroll_Slip_${empName.replace(/[^a-zA-Z0-9]/g, '_')}_Disbursement.pdf`);
   };
 
-  const totalGross = payrollList.reduce((sum, emp) => sum + (emp.baseSalary || 0) + (emp.bonus || 0), 0);
-  const totalTaxes = payrollList.reduce((sum, emp) => sum + (emp.taxDeduction || 0), 0);
-  const totalNet = payrollList.reduce((sum, emp) => sum + (emp.netPay || 0), 0);
-  const processedCount = payrollList.filter(emp => emp.status === 'Processed').length;
+  // Full Payroll Register PDF Export
+  const exportPayrollRegisterPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    
+    // Header Banner
+    doc.setFillColor(30, 58, 138); // Deep Navy
+    doc.rect(0, 0, 297, 26, 'F');
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(255, 255, 255);
+    doc.text('FORTLINE CRM — MONTHLY EMPLOYEE PAYROLL REGISTER', 14, 12);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(226, 232, 240);
+    doc.text(`Generated on ${new Date().toLocaleDateString('en-GB')} • All amounts in Pakistani Rupees (PKR)`, 14, 20);
+
+    const rows = (filteredPayroll || payrollList).map((emp, idx) => {
+      const user = emp.user || {};
+      const empId = user.employeeId || emp._id?.slice(-6) || `EMP-${idx + 1}`;
+      return [
+        (idx + 1).toString(),
+        empId,
+        user.fullName || 'Employee',
+        user.department || 'General',
+        user.role || 'Staff',
+        `Rs. ${(emp.baseSalary || 0).toLocaleString()}`,
+        `Rs. ${(emp.bonus || 0).toLocaleString()}`,
+        `Rs. ${(emp.taxDeduction || 0).toLocaleString()}`,
+        `Rs. ${(emp.netPay || 0).toLocaleString()}`,
+        emp.status || 'Pending'
+      ];
+    });
+
+    autoTable(doc, {
+      startY: 32,
+      margin: { left: 14, right: 14 },
+      head: [['#', 'Emp ID', 'Employee Name', 'Department', 'Role', 'Base Salary', 'Bonus', 'Tax Withheld', 'Net Pay (PKR)', 'Status']],
+      body: rows,
+      theme: 'grid',
+      headStyles: {
+        fillColor: [30, 58, 138],
+        textColor: 255,
+        fontStyle: 'bold',
+        fontSize: 8.5
+      },
+      styles: {
+        fontSize: 8,
+        cellPadding: 2.5,
+        textColor: [30, 41, 59]
+      },
+      columnStyles: {
+        0: { cellWidth: 10, halign: 'center' },
+        1: { cellWidth: 20 },
+        2: { cellWidth: 44 },
+        3: { cellWidth: 28 },
+        4: { cellWidth: 28 },
+        5: { cellWidth: 30, halign: 'right' },
+        6: { cellWidth: 26, halign: 'right' },
+        7: { cellWidth: 26, halign: 'right' },
+        8: { cellWidth: 34, halign: 'right', fontStyle: 'bold' },
+        9: { cellWidth: 23, halign: 'center' }
+      }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 8;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(30, 58, 138);
+    doc.text(`Total Monthly Net Pay Outlay: Rs. ${totalNet.toLocaleString()} | Headcount: ${(filteredPayroll || payrollList).length}`, 14, finalY > 195 ? 195 : finalY);
+
+    doc.save(`Fortline_Payroll_Register_${new Date().toISOString().split('T')[0]}.pdf`);
+  };
+
+  // Full Payroll Register CSV / Excel Export
+  const exportPayrollExcelCSV = () => {
+    const headers = ['#', 'Employee ID', 'Employee Name', 'Email', 'Department', 'Role', 'Base Salary (PKR)', 'Bonus (PKR)', 'Tax Withheld (PKR)', 'Net Pay (PKR)', 'Status', 'Notes'];
+    const rows = (filteredPayroll || payrollList).map((emp, idx) => {
+      const user = emp.user || {};
+      const empId = user.employeeId || emp._id?.slice(-6) || `EMP-${idx + 1}`;
+      return [
+        idx + 1,
+        `"${empId}"`,
+        `"${(user.fullName || '').replace(/"/g, '""')}"`,
+        `"${(user.email || '').replace(/"/g, '""')}"`,
+        `"${(user.department || '').replace(/"/g, '""')}"`,
+        `"${(user.role || '').replace(/"/g, '""')}"`,
+        emp.baseSalary || 0,
+        emp.bonus || 0,
+        emp.taxDeduction || 0,
+        emp.netPay || 0,
+        `"${emp.status || 'Pending'}"`,
+        `"${(emp.notes || '').replace(/"/g, '""')}"`
+      ];
+    });
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Fortline_Payroll_Register_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const filteredPayroll = payrollList.filter(emp => {
+    const q = (searchQuery || '').trim().toLowerCase();
+    if (!q) return true;
+    const user = emp.user || {};
+    return (
+      (user.fullName || '').toLowerCase().includes(q) ||
+      (user.email || '').toLowerCase().includes(q) ||
+      (user.department || '').toLowerCase().includes(q) ||
+      (user.role || '').toLowerCase().includes(q) ||
+      (user.employeeId || '').toLowerCase().includes(q) ||
+      (emp.status || '').toLowerCase().includes(q)
+    );
+  });
+
+  const totalGross = filteredPayroll.reduce((sum, emp) => sum + (emp.baseSalary || 0) + (emp.bonus || 0), 0);
+  const totalTaxes = filteredPayroll.reduce((sum, emp) => sum + (emp.taxDeduction || 0), 0);
+  const totalNet = filteredPayroll.reduce((sum, emp) => sum + (emp.netPay || 0), 0);
+  const processedCount = filteredPayroll.filter(emp => emp.status === 'Processed').length;
 
   return (
     <div className="acc-view-container">
       {/* Page Header */}
-      <div className="acc-page-header">
+      <div className="acc-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
         <div className="acc-page-header-title">
           <h2>Payroll & Employee Compensation (PKR)</h2>
           <p>Real-time monthly salary disbursements in PKR, tax withholdings, and payroll slips backed by MongoDB.</p>
+        </div>
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button className="acc-btn-secondary" onClick={fetchPayroll} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <RefreshCw size={14} /> Refresh
+          </button>
+          <button className="acc-btn-secondary" onClick={exportPayrollRegisterPDF} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <Download size={14} /> Export Register PDF
+          </button>
+          <button className="acc-btn-secondary" onClick={exportPayrollExcelCSV} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+            <FileSpreadsheet size={14} /> Export Excel
+          </button>
         </div>
       </div>
 
@@ -372,7 +505,7 @@ export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
             <div className="acc-kpi-icon emerald"><DollarSign size={18} /></div>
           </div>
           <div className="acc-kpi-value">Rs. {totalNet.toLocaleString()}</div>
-          <div className="acc-kpi-subtitle">{payrollList.length} Registered Staff Records</div>
+          <div className="acc-kpi-subtitle">{filteredPayroll.length} Registered Staff Records</div>
         </div>
 
         <div className="acc-kpi-card">
@@ -389,7 +522,7 @@ export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
             <span className="acc-kpi-title">Processed Batch</span>
             <div className="acc-kpi-icon teal"><CheckCircle size={18} /></div>
           </div>
-          <div className="acc-kpi-value">{processedCount} / {payrollList.length}</div>
+          <div className="acc-kpi-value">{processedCount} / {filteredPayroll.length}</div>
           <div className="acc-kpi-subtitle up">Disbursement Status</div>
         </div>
 
@@ -411,9 +544,6 @@ export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
             <p className="acc-card-desc">Individual pay stubs, bonus calculations, and disbursement status</p>
           </div>
           <div style={{ display: 'flex', gap: '10px' }}>
-            <button className="acc-btn-secondary" onClick={fetchPayroll} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <RefreshCw size={14} /> Refresh
-            </button>
             <button className="acc-btn-primary" onClick={handleProcessBatch} disabled={submitting}>
               <FileCheck size={16} /> Process Payroll Batch
             </button>
@@ -439,7 +569,7 @@ export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
                 </tr>
               </thead>
               <tbody>
-                {payrollList.map((emp) => {
+                {filteredPayroll.map((emp) => {
                   const user = emp.user || {};
                   const empId = user.employeeId || emp._id?.slice(-6) || 'EMP-100';
                   return (
@@ -615,7 +745,7 @@ export default function AccountantPayrollView({ isModalOpen, onCloseModal }) {
                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.95rem', fontWeight: 700, borderTop: '1px dashed #CBD5E1', paddingTop: '8px' }}>
                   <span>Total Net Pay Amount:</span>
                   <span style={{ color: '#2563EB' }}>
-                    ${payrollList.filter(p => p.status === 'Pending').reduce((sum, p) => sum + (p.netPay || 0), 0).toLocaleString()}
+                    Rs. {payrollList.filter(p => p.status === 'Pending').reduce((sum, p) => sum + (p.netPay || 0), 0).toLocaleString()}
                   </span>
                 </div>
               </div>

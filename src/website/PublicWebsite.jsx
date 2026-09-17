@@ -5,7 +5,8 @@ import {
   Clock, Building2, Mail, Phone, MessageSquare, Send,
   Play, ChevronDown, Menu, X, TrendingUp, Activity,
   Calendar, FileText, Settings, PieChart, Layers, Cpu,
-  Search, Bell, Check, User, ArrowUpRight, Filter, HelpCircle
+  Search, Bell, Check, User, ArrowUpRight, Filter, HelpCircle,
+  Truck, Receipt, FileCheck, ShoppingCart, CreditCard, Boxes
 } from 'lucide-react';
 import { API_BASE } from '../utils/api';
 import './PublicWebsite.css';
@@ -24,47 +25,51 @@ const NAV_ITEMS = [
 
 /* ─── Static Data Structures ────────────────────────────────────────────────── */
 const FEATURES_DATA = [
-  { id: 'lead', icon: Target, label: 'Lead Management', color: '#EFF6FF', iconColor: '#2563EB', desc: 'Capture, qualify, and hand off leads from Marketing to Sales with full historical metadata, notes, and campaign tags intact.' },
-  { id: 'sales', icon: TrendingUp, label: 'Sales Management', color: '#F0FDF4', iconColor: '#16A34A', desc: 'Drag-and-drop Kanban pipeline board to manage deals from Qualification to Proposal, Negotiation, and Closed Won.' },
-  { id: 'marketing', icon: Zap, label: 'Marketing Automation', color: '#F5F3FF', iconColor: '#7C3AED', desc: 'Plan multi-channel campaigns, measure lead conversion metrics, track ROI, and automatically trigger sales pipeline handoffs.' },
-  { id: 'hr', icon: Users, label: 'HR & Employee Management', color: '#FFF7ED', iconColor: '#EA580C', desc: 'Centralized employee profiles, attendance logs, leave management, recruitment tracking, and annual performance reviews.' },
-  { id: 'project', icon: Briefcase, label: 'Project & Task Management', color: '#F5F3FF', iconColor: '#6366F1', desc: 'Create projects, delegate tasks, set priority levels, monitor milestone deadlines, and track team progress in real time.' },
-  { id: 'accounting', icon: DollarSign, label: 'Accounting & Invoices', color: '#ECFDF5', iconColor: '#059669', desc: 'Auto-generate invoices directly from won sales deals, log company operational expenses, run payroll, and track revenue.' },
-  { id: 'reports', icon: BarChart3, label: 'Reports & Analytics', color: '#FEF2F2', iconColor: '#EF4444', desc: 'Cross-departmental executive dashboards, revenue charts, pipeline donut visuals, and downloadable PDF reports.' },
-  { id: 'workflow', icon: Cpu, label: 'Workflow Automation', color: '#EFF6FF', iconColor: '#0284C7', desc: 'Real-time background notifications and status synchronizations across Marketing, Sales, Accounting, and HR.' }
+  { id: 'sales_mgr', icon: Target, label: 'Sales Manager Control', color: '#EFF6FF', iconColor: '#2563EB', desc: 'Manage Sales Persons, allot targets, assign operational tasks, and monitor sales performance with real MongoDB metrics.' },
+  { id: 'sales_rep', icon: TrendingUp, label: 'Sales Person Workflow', color: '#F0FDF4', iconColor: '#16A34A', desc: 'Create Quotations, Customer POs, Product Files, and Sales Orders with permanent salesPersonId ownership attached.' },
+  { id: 'finance_app', icon: ShieldCheck, label: 'Finance Overdue Check', color: '#F5F3FF', iconColor: '#7C3AED', desc: 'Finance performs real-time overdue balance checks and customer payment history review before approving Sales Orders.' },
+  { id: 'logistics_trk', icon: Truck, label: 'Logistics & Shipment Tracking', color: '#EFF6FF', iconColor: '#0284C7', desc: 'Manage Blue File international shipments, live ETD/ETA, carrier & flight tracking, customs reference docs, and office receiving.' },
+  { id: 'support_dn', icon: Boxes, label: 'Support & Delivery Notes', color: '#FFF7ED', iconColor: '#EA580C', desc: 'Support Department receives Finance-approved Sales Orders, verifies goods and BL input, and generates Delivery Notes.' },
+  { id: 'accounts_inv', icon: FileText, label: 'Accounts Draft Invoicing', color: '#ECFDF5', iconColor: '#059669', desc: 'Accounts Department converts confirmed Delivery Notes into Draft Invoices and submits them to Finance for finalization.' },
+  { id: 'finance_pay', icon: Receipt, label: 'Final Billing & Payments', color: '#FEF2F2', iconColor: '#EF4444', desc: 'Finance finalizes Draft Invoices, issues GST/Cash Invoices, records customer payments, and tracks receivables in PKR.' },
+  { id: 'hr_portal', icon: Users, label: 'HR Management', color: '#EFF6FF', iconColor: '#0284C7', desc: 'Centralized employee profiles, attendance logs, leave management, recruitment tracking, and payroll operations.' },
+  { id: 'ceo_gov', icon: BarChart3, label: 'CEO Executive Governance', color: '#F5F3FF', iconColor: '#6366F1', desc: 'Real-time executive summaries of Total Orders, Delivery Notes, Finalized Invoices, Receivables, Overdue, and Revenue.' }
 ];
 
 const SOLUTIONS_DATA = [
-  { key: 'ceo', icon: ShieldCheck, role: 'CEO / Admin', desc: 'Get a complete overview of your business with real-time analytics and reports.', bg: '#EFF6FF', color: '#2563EB', details: 'Executive dashboards, user permissions, multi-department analytics, audit logs, and complete enterprise governance.' },
-  { key: 'administration', icon: Building2, role: 'Administration', desc: 'Oversee departments, company resources, employees, and administrative operations.', bg: '#ECFDF5', color: '#10B981', details: 'Centralized administration dashboard, employee directory control, company resources asset tracking, department hierarchy, and organizational reporting.' },
-  { key: 'sales', icon: TrendingUp, role: 'Sales', desc: 'Manage leads, follow-ups, deals and close more business.', bg: '#F0FDF4', color: '#16A34A', details: 'Lead pipeline management, deal conversion, meeting scheduler, customer proposal generation, and sales team analytics.' },
-  { key: 'marketing', icon: Zap, role: 'Marketing', desc: 'Run campaigns, generate leads and measure performance.', bg: '#EFF6FF', color: '#0284C7', details: 'Campaign creation, lead acquisition forms, qualification triggers, content strategy, and channel ROI measurement.' },
-  { key: 'hr', icon: Users, role: 'HR', desc: 'Manage employees, leave, attendance and performance.', bg: '#F0FDF4', color: '#22C55E', details: 'Employee directory, digital attendance marking, leave approval workflows, recruitment pipelines, and performance reviews.' },
-  { key: 'accountant', icon: DollarSign, role: 'Accountant', desc: 'Create invoices, track payments and manage your finances.', bg: '#FFF7ED', color: '#F59E0B', details: 'Invoice creation linked to won deals, expense categorizations, payroll processing, accounts ledger, and financial statements.' },
-  { key: 'project', icon: Briefcase, role: 'Project Manager', desc: 'Plan projects, assign tasks and track progress efficiently.', bg: '#F5F3FF', color: '#8B5CF6', details: 'Project creation, team allocation, task Kanban board, milestone timelines, delivery tracking, and project health indicators.' },
-  { key: 'employee', icon: User, role: 'Employee', desc: 'View tasks, update progress and collaborate with your team.', bg: '#EFF6FF', color: '#3B82F6', details: 'Personal task board, daily work update submission, leave request form, activity logs, and profile management.' }
+  { key: 'admin', icon: ShieldCheck, role: 'System Admin', desc: 'System administration, user management, and security controls.', bg: '#EFF6FF', color: '#2563EB', details: 'User directory control, role assignment, registration request approval, department configuration, and system audit logs.' },
+  { key: 'ceo', icon: BarChart3, role: 'CEO Executive', desc: 'Executive overview of total sales, delivery notes, invoices, and receivables.', bg: '#F5F3FF', color: '#6366F1', details: 'Real-time executive dashboard summarizing company-wide sales orders, delivery notes, finalized invoices, receivables, and overdue totals.' },
+  { key: 'sales_mgr', icon: Target, role: 'Sales Manager', desc: 'Manage Sales Persons, allot targets, and track performance.', bg: '#ECFDF5', color: '#10B981', details: 'Sales Person directory, task allocation, sales target assignment, performance tracking, and sales pipeline monitoring.' },
+  { key: 'sales_person', icon: TrendingUp, role: 'Sales Person', desc: 'Create Quotations, Customer POs, Product Files, and Sales Orders.', bg: '#F0FDF4', color: '#16A34A', details: 'Personal sales dashboard, quotation creation, customer PO processing, product file upload, and sales order creation.' },
+  { key: 'logistics', icon: Truck, role: 'Logistics Department', desc: 'Oversee Blue File international shipments and tracking.', bg: '#EFF6FF', color: '#0284C7', details: 'Shipment tracking, international supplier POs, live ETD/ETA schedules, carrier/flight logs, customs reference documents, and office receipt confirmation.' },
+  { key: 'support', icon: Boxes, role: 'Support Department', desc: 'Verify goods received, Bill of Lading (BL), and issue Delivery Notes.', bg: '#FFF7ED', color: '#EA580C', details: 'Pending approved sales orders queue, physical goods receipt, BL verification, stock checks, and delivery note generation.' },
+  { key: 'accounts', icon: FileText, role: 'Accounts Department', desc: 'Transform Delivery Notes into Draft Invoices.', bg: '#ECFDF5', color: '#059669', desc: 'Orders ready for invoicing queue, draft invoice creation, review, editing, and submission to Finance for finalization.' },
+  { key: 'finance', icon: Receipt, role: 'Finance Department', desc: 'Overdue order approval, final invoice issuance, and customer payments.', bg: '#FEF2F2', color: '#EF4444', desc: 'Sales Order overdue approval check, draft invoice finalization, GST/Cash invoice generation, payment recording, and receivables in PKR.' },
+  { key: 'hr', icon: Users, role: 'HR Department', desc: 'Manage employees, attendance, leave, and payroll.', bg: '#EFF6FF', color: '#0284C7', details: 'Employee directory, daily attendance logs, leave approval workflows, recruitment pipelines, and payroll management.' }
 ];
 
 const WORKFLOW_STEPS = [
-  { step: '01', title: 'Marketing & Sales Pipeline', desc: 'Generate Leads & Close Deals', details: 'Marketing campaigns capture prospect details. Qualified leads transfer to Sales representatives to convert into Won Deals.' },
-  { step: '02', title: 'Accounting & Invoicing', desc: 'Billing & Financial Tracking', details: 'Closing a deal automatically triggers Accounting workflows to issue invoices, log revenue, and track incoming payments.' },
-  { step: '03', title: 'Project Management & Tasks', desc: 'Project Manager → Assign Task → Employee → Complete Task & Report → PM Review', details: 'Project Managers assign tasks to department employees. Employees complete work, submit completion reports, and PMs review & verify.' },
-  { step: '04', title: 'HR & People Operations', desc: 'HR → Manage Recruitment → Manage Employees → Track Attendance & Leave', details: 'HR posts jobs, reviews resumes, schedules interviews, onboard registered employees, tracks daily attendance logs, and manages leave requests.' },
-  { step: '05', title: 'Executive Governance', desc: 'CEO Directives & Task Assignment', details: 'CEO views overall business analytics, issues high-priority directives directly to department heads (HR, Sales, PM, Finance, Admin), and tracks company-wide progress.' }
+  { step: '01', title: 'Sales Manager → Sales Person', desc: 'Target Allocation & Task Assignment', details: 'Sales Manager assigns sales targets and operational tasks to Sales Persons and monitors pipeline progress.' },
+  { step: '02', title: 'Sales Creation Workflow', desc: 'Quotation → Customer PO → Product File → Sales Order', details: 'Sales Person creates Quotation, attaches Customer Purchase Order & Product Files, and generates the formal Sales Order with permanent salesPersonId ownership.' },
+  { step: '03', title: 'Finance Overdue Check', desc: 'Credit Review & Branching (Green vs Blue)', details: 'Finance reviews customer credit history and overdue balances. If overdue, order is blocked. If all clear, order is approved and branched into Green File (Local) or Blue File (Imported).' },
+  { step: '04', title: 'Logistics (Blue File Only)', desc: 'International PO & Shipment Tracking', details: 'Logistics receives Blue File orders, issues International Supplier PO, tracks ETD/ETA, flight/carrier logs, and confirms physical shipment receipt in office.' },
+  { step: '05', title: 'Support & Delivery Note', desc: 'Goods Received, BL & DN Dispatch', details: 'Support receives Green File orders (or Blue File once received in office), verifies goods receipt and Bill of Lading (BL), and generates customer Delivery Notes.' },
+  { step: '06', title: 'Accounts & Draft Invoicing', desc: 'Draft Invoice Creation & Review', details: 'Accounts receives confirmed Delivery Notes, generates Draft Invoices, and submits them to Finance for final review.' },
+  { step: '07', title: 'Finance Final Invoice & Payment', desc: 'Final Invoice → Customer Payment (PKR)', details: 'Finance finalizes Draft Invoices, issues GST/Cash Invoices, records customer payments, and tracks receivables in PKR.' }
 ];
 
 const PRICING_PLANS = [
-  { name: 'Starter', priceMonthly: 4999, priceYearly: 3999, desc: 'Ideal for small teams getting started.', popular: false, features: ['Up to 5 Users', 'Lead Management', 'Basic Reports', 'Email Support'] },
-  { name: 'Professional', priceMonthly: 12999, priceYearly: 9999, desc: 'Perfect for growing businesses.', popular: true, features: ['Up to 20 Users', 'Sales & Marketing', 'Advanced Reports', 'Priority Support'] },
-  { name: 'Business', priceMonthly: 24999, priceYearly: 19999, desc: 'For teams that need more power.', popular: false, features: ['Up to 50 Users', 'All Features', 'Custom Reports', '24/7 Support'] },
-  { name: 'Enterprise', priceMonthly: 'Custom', priceYearly: 'Custom', desc: 'Tailored for large organizations.', popular: false, features: ['Unlimited Users', 'Custom Features', 'Dedicated Support', 'Onboarding & Training'] }
+  { name: 'Starter', priceMonthly: 4999, priceYearly: 3999, desc: 'Ideal for small sales teams getting started.', popular: false, features: ['Up to 5 Users', 'Sales Workflow', 'Delivery Notes', 'Email Support'] },
+  { name: 'Professional', priceMonthly: 12999, priceYearly: 9999, desc: 'Perfect for growing enterprise businesses.', popular: true, features: ['Up to 20 Users', 'All 9 Operational Portals', 'Draft & Final Invoicing', 'Priority Support'] },
+  { name: 'Business', priceMonthly: 24999, priceYearly: 19999, desc: 'For scaling enterprise organizations.', popular: false, features: ['Up to 50 Users', 'All Workflow Modules', 'Custom Financial Reports', '24/7 Support'] },
+  { name: 'Enterprise', priceMonthly: 'Custom', priceYearly: 'Custom', desc: 'Tailored for large multi-department corporations.', popular: false, features: ['Unlimited Users', 'Custom Integrations', 'Dedicated Account Manager', 'Onboarding & Training'] }
 ];
 
 const PRICING_FAQS = [
-  { q: 'Can I switch or upgrade plans later?', a: 'Yes! You can upgrade, downgrade, or switch billing cycles at any time from your Admin billing portal.' },
+  { q: 'Can I switch or upgrade plans later?', a: 'Yes! You can upgrade, downgrade, or switch billing cycles at any time from your System Admin portal.' },
   { q: 'Is there a free trial available?', a: 'All plans come with a 14-day free trial. No credit card is required to sign up and get started.' },
-  { q: 'Are all 9 department portals included?', a: 'Yes! Even our Starter plan gives your team access to the specific role-based dashboards needed for your business.' },
-  { q: 'How does data security and backup work?', a: 'Fortline CRM uses enterprise-grade JWT authentication, role-based access control, and automated daily MongoDB backups.' }
+  { q: 'Are all 9 operational department portals included?', a: 'Yes! System Admin, CEO, Sales Manager, Sales Person, Logistics, Support, Accounts, Finance, and HR portals are all included and fully integrated.' },
+  { q: 'How does data security and currency tracking work?', a: 'Fortline CRM uses enterprise-grade JWT authentication, role-based access control, automated MongoDB backups, and tracks all financial totals natively in PKR.' }
 ];
 
 /* ─── Hero Browser Mockup Graphic ────────────────────────────────────────────── */
@@ -543,10 +548,32 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
             <button className="pw-btn-primary-blue" onClick={onNavigateToRegister}>Get Started</button>
           </div>
 
-          <button className="pw-nav-hamburger" onClick={() => setMobileMenuOpen(o => !o)}>
+          <button 
+            className={`pw-nav-hamburger ${mobileMenuOpen ? 'open' : ''}`} 
+            onClick={() => setMobileMenuOpen(o => !o)}
+            aria-label={mobileMenuOpen ? "Close navigation menu" : "Open navigation menu"}
+          >
             <span /><span /><span />
           </button>
         </div>
+
+        {/* Responsive Mobile Menu Backdrop */}
+        {mobileMenuOpen && (
+          <div
+            className="pw-nav-backdrop"
+            onClick={() => setMobileMenuOpen(false)}
+            style={{
+              position: 'fixed',
+              top: '72px',
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(15, 23, 42, 0.6)',
+              backdropFilter: 'blur(4px)',
+              zIndex: 1000
+            }}
+          />
+        )}
 
         {/* Responsive Mobile Menu */}
         <div className={`pw-mobile-menu ${mobileMenuOpen ? 'open' : ''}`}>
@@ -554,7 +581,10 @@ export default function PublicWebsite({ onNavigateToLogin, onNavigateToRegister 
             <button
               key={item.id}
               className={currentPage === item.id ? 'active-nav-item' : ''}
-              onClick={() => setCurrentPage(item.id)}
+              onClick={() => {
+                setCurrentPage(item.id);
+                setMobileMenuOpen(false);
+              }}
               style={{ display: 'flex', alignItems: 'center', gap: '8px' }}
             >
               {item.label}
