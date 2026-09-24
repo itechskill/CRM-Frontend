@@ -286,6 +286,27 @@ export default function AdminDashboard({ onNavigateTab, currentUser }) {
                 {data.hrTeamCount || 0} Staff
               </span>
             </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Logistics Department</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#6366F1', background: '#EEF2FF', padding: '2px 8px', borderRadius: '6px' }}>
+                {data.logisticsTeamCount || 0} Staff
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Local Purchaser Dept</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0284C7', background: '#E0F2FE', padding: '2px 8px', borderRadius: '6px' }}>
+                {data.localPurchaserTeamCount || 0} Staff
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#F8FAFC', borderRadius: '8px' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 600, color: '#334155' }}>Global Purchaser Dept</span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#7C3AED', background: '#F5F3FF', padding: '2px 8px', borderRadius: '6px' }}>
+                {data.globalPurchaserTeamCount || 0} Staff
+              </span>
+            </div>
           </div>
         </div>
 
@@ -332,6 +353,74 @@ export default function AdminDashboard({ onNavigateTab, currentUser }) {
               <div style={{ fontSize: '0.7rem', color: '#7C3AED', marginTop: '2px' }}>{data.activeProjects || 0} Active</div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Registered Users Full Table */}
+      <div style={{
+        backgroundColor: '#FFFFFF',
+        border: '1px solid #E2E8F0',
+        borderRadius: '16px',
+        padding: '22px',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '14px',
+        boxShadow: '0 1px 3px rgba(0,0,0,0.04)'
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span style={{ fontSize: '1rem', fontWeight: 700, color: '#0F172A' }}>All Registered Users</span>
+            <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>Complete directory of all system accounts</div>
+          </div>
+          <button
+            onClick={() => onNavigateTab('users')}
+            style={{ background: 'none', border: 'none', color: '#2563EB', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+          >
+            Manage Users <ArrowRight size={14} />
+          </button>
+        </div>
+
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
+                <th style={{ padding: '10px 14px', fontSize: '0.75rem', fontWeight: 700, color: '#64748B' }}>Full Name</th>
+                <th style={{ padding: '10px 14px', fontSize: '0.75rem', fontWeight: 700, color: '#64748B' }}>Email</th>
+                <th style={{ padding: '10px 14px', fontSize: '0.75rem', fontWeight: 700, color: '#64748B' }}>Role</th>
+                <th style={{ padding: '10px 14px', fontSize: '0.75rem', fontWeight: 700, color: '#64748B' }}>Department</th>
+                <th style={{ padding: '10px 14px', fontSize: '0.75rem', fontWeight: 700, color: '#64748B' }}>Status</th>
+                <th style={{ padding: '10px 14px', fontSize: '0.75rem', fontWeight: 700, color: '#64748B' }}>Joined</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.registeredUsersList || []).slice(0, 30).map((u) => (
+                <tr key={u._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                  <td style={{ padding: '10px 14px', fontSize: '0.825rem', fontWeight: 600, color: '#0F172A' }}>{u.fullName}</td>
+                  <td style={{ padding: '10px 14px', fontSize: '0.8rem', color: '#64748B' }}>{u.email}</td>
+                  <td style={{ padding: '10px 14px' }}>
+                    <span style={{ background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '6px', fontSize: '0.73rem', fontWeight: 600 }}>
+                      {(u.role || 'employee').replace(/_/g, ' ').toUpperCase()}
+                      {u.purchaserSubDept ? ` (${u.purchaserSubDept})` : ''}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 14px', fontSize: '0.8rem', color: '#334155' }}>{u.department || '—'}</td>
+                  <td style={{ padding: '10px 14px' }}>
+                    <span style={{
+                      padding: '2px 8px', borderRadius: '6px', fontSize: '0.73rem', fontWeight: 700,
+                      background: u.status === 'active' ? '#DCFCE7' : u.status === 'pending' ? '#FEF3C7' : '#FEE2E2',
+                      color: u.status === 'active' ? '#16A34A' : u.status === 'pending' ? '#D97706' : '#DC2626'
+                    }}>{(u.status || 'active').toUpperCase()}</span>
+                  </td>
+                  <td style={{ padding: '10px 14px', fontSize: '0.75rem', color: '#94A3B8' }}>
+                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                  </td>
+                </tr>
+              ))}
+              {(!data.registeredUsersList || data.registeredUsersList.length === 0) && (
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: '#94A3B8', padding: '24px' }}>No registered users found.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

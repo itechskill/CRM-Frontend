@@ -11,12 +11,12 @@ const roleOptions = [
   { label: 'HR Manager', value: 'hr_manager' },
   { label: 'Sales Manager', value: 'sales_manager' },
   { label: 'Project Manager', value: 'project_manager' },
-  { label: 'Marketing', value: 'marketing' },
   { label: 'Accountant', value: 'accountant' },
   { label: 'Support', value: 'support' },
   { label: 'Finance', value: 'finance' },
   { label: 'Logistics', value: 'logistics' },
-  { label: 'Employee', value: 'employee' }
+  { label: 'Purchaser', value: 'purchaser' },
+  { label: 'Sales Person', value: 'sales_person' }
 ];
 
 const departmentOptions = [
@@ -39,6 +39,7 @@ const departmentOptions = [
 function EditUserModal({ user, onClose, onSave }) {
   const [email, setEmail] = useState(user.email || '');
   const [role, setRole] = useState(user.role || 'employee');
+  const [purchaserSubDept, setPurchaserSubDept] = useState(user.purchaserSubDept || 'Local');
   const [department, setDepartment] = useState(user.department || '');
   const [status, setStatus] = useState(user.status === 'Active' || user.status === 'active' ? 'active' : 'suspended');
   const [newPassword, setNewPassword] = useState('');
@@ -77,11 +78,11 @@ function EditUserModal({ user, onClose, onSave }) {
         }
       }
 
-      // 2. Role Update
-      if (role !== user.role) {
+      // 2. Role & Sub-Department Update
+      if (role !== user.role || (role === 'purchaser' && purchaserSubDept !== user.purchaserSubDept)) {
         const rRes = await apiRequest(`/api/admin/users/${targetId}/role`, {
           method: 'PATCH',
-          body: JSON.stringify({ role })
+          body: JSON.stringify({ role, purchaserSubDept: role === 'purchaser' ? purchaserSubDept : undefined })
         });
         if (!rRes.response.ok || !rRes.data.success) {
           setErrorMsg(rRes.data.message || 'Failed to update role.');
@@ -181,6 +182,16 @@ function EditUserModal({ user, onClose, onSave }) {
                 ))}
               </select>
             </div>
+
+            {role === 'purchaser' && (
+              <div className="form-group">
+                <label>Purchaser Sub-Department</label>
+                <select className="form-select" value={purchaserSubDept} onChange={(e) => setPurchaserSubDept(e.target.value)}>
+                  <option value="Local">Local Purchaser</option>
+                  <option value="Global">Global Purchaser</option>
+                </select>
+              </div>
+            )}
 
             <div className="form-group">
               <label>Department</label>

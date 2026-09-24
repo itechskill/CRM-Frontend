@@ -75,6 +75,7 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
   const [confirmingId, setConfirmingId] = useState(null);
   const [viewDN, setViewDN] = useState(null);
   const [feedback, setFeedback] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const fetchDeliveryNotes = useCallback(async () => {
     setLoading(true);
@@ -229,6 +230,8 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
       alert('Client / Customer name is required.');
       return;
     }
+    if (saving) return;
+    setSaving(true);
     try {
       const { response, data } = await apiRequest('/api/sales-employee/delivery-notes', {
         method: 'POST',
@@ -244,6 +247,8 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
       }
     } catch (err) {
       alert('Server error creating Delivery Note.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -1023,8 +1028,8 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
 
               <div className="sv-modal-actions">
                 <button type="button" className="sv-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="sv-btn-primary">
-                  <Save size={14} /> Save Delivery Note
+                <button type="submit" className="sv-btn-primary" disabled={saving}>
+                  <Save size={14} /> {saving ? 'Saving...' : 'Save Delivery Note'}
                 </button>
               </div>
             </form>

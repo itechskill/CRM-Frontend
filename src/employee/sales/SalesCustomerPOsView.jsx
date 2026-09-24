@@ -235,15 +235,14 @@ export default function SalesCustomerPOsView() {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!form.customerName.trim()) {
-      setError('Customer name is required.');
-      return;
-    }
     setSaving(true);
     setError('');
     try {
+      const selectedQuotation = quotations.find(q => q._id === form.quotationId);
+      const finalCustomerName = form.customerName || selectedQuotation?.clientName || selectedQuotation?.customerName || 'Customer';
       const payload = {
         ...form,
+        customerName: finalCustomerName,
         amount: Number(form.amount) || 0,
         poDate: form.poDate || null
       };
@@ -548,16 +547,6 @@ export default function SalesCustomerPOsView() {
             </div>
             {error && <div className="sv-error">{error}</div>}
             <form onSubmit={handleSave} className="sv-form">
-              <div className="sv-grid-2">
-                <div className="sv-field">
-                  <label>Customer PO Number</label>
-                  <input value={form.poNumber} onChange={e => setForm(p => ({ ...p, poNumber: e.target.value }))} placeholder="Auto-generated if empty (e.g. CPO-0001)" />
-                </div>
-                <div className="sv-field">
-                  <label>Customer Name *</label>
-                  <input value={form.customerName} onChange={e => setForm(p => ({ ...p, customerName: e.target.value }))} placeholder="Customer / Company name" required />
-                </div>
-              </div>
 
               <div className="sv-grid-2">
                 <div className="sv-field">
@@ -642,9 +631,8 @@ export default function SalesCustomerPOsView() {
                 <div className="sv-field">
                   <label>File Type *</label>
                   <select value={convertFileType} onChange={e => setConvertFileType(e.target.value)}>
-                    <option value="Blue">Blue File (Standard / Routine Scope)</option>
-                    <option value="Green">Green File (Special / Custom Requirements)</option>
-                    <option value="Yellow">Yellow File (Urgent / Express Track)</option>
+                    <option value="Blue">Blue File (Imported)</option>
+                    <option value="Green">Green File (Local)</option>
                   </select>
                 </div>
                 <div className="sv-field">

@@ -16,12 +16,16 @@ import {
   TrendingUp,
   FileText,
   Plane,
-  Wallet
+  Wallet,
+  ShoppingBag,
+  Globe
 } from 'lucide-react';
 import './Sidebar.css';
+import '../ceo/CEOSidebar.css';
 
 export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitchRole, isMobileOpen, onClose, onLogout, currentUser }) {
   const [counts, setCounts] = useState({ pendingRegistrations: 0, users: 0 });
+  const [showRoleMenu, setShowRoleMenu] = useState(false);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -54,6 +58,8 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
     { id: 'org_users', label: 'All Users Directory', icon: Users },
     { id: 'org_dept_sales', label: 'Sales Department', icon: TrendingUp },
     { id: 'org_dept_logistics', label: 'Logistics Dept', icon: Plane },
+    { id: 'org_dept_local_purchaser', label: 'Local Purchaser Dept', icon: ShoppingBag },
+    { id: 'org_dept_global_purchaser', label: 'Global Purchaser Dept', icon: Globe },
     { id: 'org_dept_support', label: 'Support & Ops', icon: Briefcase },
     { id: 'org_dept_accounts', label: 'Accounts Dept', icon: Calculator },
     { id: 'org_dept_finance', label: 'Finance Dept', icon: Wallet },
@@ -179,12 +185,18 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
         </div>
 
         {/* User Profile Footer */}
-        <div className="sidebar-user">
+        <div className="sidebar-user" style={{ position: 'relative' }}>
           <div 
             className="user-left" 
-            onClick={() => handleSetActiveTab('profile')} 
+            onClick={() => {
+              if (onSwitchRole) {
+                setShowRoleMenu(!showRoleMenu);
+              } else {
+                handleSetActiveTab('profile');
+              }
+            }} 
             style={{ cursor: 'pointer' }} 
-            title="Manage Admin Profile"
+            title={onSwitchRole ? "Click to Switch Portal" : "Manage Admin Profile"}
           >
             <div className="user-avatar" style={{ backgroundColor: '#2563EB', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               {currentUser?.profileImage ? (
@@ -199,6 +211,38 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
             </div>
           </div>
           <LogOut size={18} color="#EF4444" style={{ cursor: 'pointer' }} title="Log out" onClick={onLogout} />
+
+          {showRoleMenu && onSwitchRole && (
+            <div className="ceo-role-dropdown" style={{ bottom: '70px', left: '16px', right: '16px' }}>
+              <div className="ceo-role-dropdown-header">Switch Portal</div>
+              {[
+                { role: 'admin', label: 'System Admin', icon: ShieldCheck, color: '#60A5FA' },
+                { role: 'ceo', label: 'CEO Executive', icon: Crown, color: '#818CF8' },
+                { role: 'sales_manager', label: 'Sales Portal', icon: TrendingUp, color: '#34D399' },
+                { role: 'finance', label: 'Finance Dept', icon: Wallet, color: '#FBBF24' },
+                { role: 'purchaser', subDept: 'Local', label: 'Local Purchaser', icon: ShoppingBag, color: '#10B981' },
+                { role: 'purchaser', subDept: 'Global', label: 'Global Purchaser', icon: Globe, color: '#3B82F6' },
+                { role: 'accounts', label: 'Accounts Dept', icon: Calculator, color: '#38BDF8' }
+              ].map(item => {
+                const RoleIcon = item.icon;
+                const isActive = currentRole === item.role && (!item.subDept || (currentUser?.purchaserSubDept || 'Local') === item.subDept);
+                return (
+                  <div
+                    key={`${item.role}-${item.subDept || ''}`}
+                    className={`ceo-role-item ${isActive ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSwitchRole(item.role, item.subDept);
+                      setShowRoleMenu(false);
+                    }}
+                  >
+                    <span>{item.label}</span>
+                    <RoleIcon size={16} color={item.color} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </aside>
     </>

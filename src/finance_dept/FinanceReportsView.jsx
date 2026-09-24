@@ -7,7 +7,6 @@ import {
   Download,
   FileSpreadsheet,
   FileText,
-  DollarSign,
   TrendingUp,
   CreditCard,
   RefreshCw
@@ -64,9 +63,9 @@ export default function FinanceReportsView() {
       r.invoiceNumber,
       r.clientName,
       r.salesOrderNumber || '—',
-      `Rs. ${(Number(r.amount) || 0).toLocaleString()}`,
-      `Rs. ${(Number(r.paidAmount) || 0).toLocaleString()}`,
-      `Rs. ${(Number(r.remainingReceivable) || 0).toLocaleString()}`,
+      `PKR ${(Number(r.amount) || 0).toLocaleString()}`,
+      `PKR ${(Number(r.paidAmount) || 0).toLocaleString()}`,
+      `PKR ${(Number(r.remainingReceivable) || 0).toLocaleString()}`,
       r.status
     ]);
 
@@ -132,7 +131,7 @@ export default function FinanceReportsView() {
         <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Gross Revenue (Invoiced)</div>
           <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A', marginTop: '8px' }}>
-            Rs. {loading ? '...' : Number(stats?.totalInvoicedAmount || 0).toLocaleString()}
+            PKR {loading ? '...' : Number(stats?.totalInvoicedAmount || 0).toLocaleString()}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#059669', marginTop: '4px' }}>From approved final invoices</div>
         </div>
@@ -140,7 +139,7 @@ export default function FinanceReportsView() {
         <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Cash Collections</div>
           <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#059669', marginTop: '8px' }}>
-            Rs. {loading ? '...' : Number(stats?.totalPaid || 0).toLocaleString()}
+            PKR {loading ? '...' : Number(stats?.totalPaid || 0).toLocaleString()}
           </div>
           <div style={{ fontSize: '0.78rem', color: '#64748B', marginTop: '4px' }}>Realized cash inflows</div>
         </div>
@@ -148,9 +147,9 @@ export default function FinanceReportsView() {
         <div style={{ background: '#FFFFFF', padding: '20px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
           <div style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Active Receivables Pool</div>
           <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#D97706', marginTop: '8px' }}>
-            Rs. {loading ? '...' : Number(stats?.outstandingReceivables || 0).toLocaleString()}
+            PKR {loading ? '...' : Number(stats?.outstandingReceivables || 0).toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.78rem', color: '#DC2626', marginTop: '4px' }}>Includes Rs. {Number(stats?.overdueAmount || 0).toLocaleString()} overdue</div>
+          <div style={{ fontSize: '0.78rem', color: '#DC2626', marginTop: '4px' }}>Includes PKR {Number(stats?.overdueAmount || 0).toLocaleString()} overdue</div>
         </div>
       </div>
     </div>

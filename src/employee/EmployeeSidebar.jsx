@@ -101,14 +101,12 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
     { id: 'my_invoices', label: 'Invoices & Billing', icon: FileText },
     { id: 'my_payments', label: 'Customer Payments', icon: DollarSign },
     { id: 'followups', label: 'Client Follow-ups', icon: Phone },
-    { id: 'sales_targets', label: 'Targets & Quotas', icon: Target },
+    { id: 'sales_targets', label: 'Sales Targets', icon: Target },
     { id: 'sales_activities', label: 'Sales Activities', icon: ClipboardList },
   ];
 
-  // Streamlined workflow for Sales Person (only has access up to Sales Orders)
+  // Streamlined workflow for Sales Person (starts from Quotation up to Sales Orders)
   const salesPersonNav = [
-    { id: 'my_leads', label: 'My Leads', icon: Users },
-    { id: 'my_deals', label: 'Deals Pipeline', icon: TrendingUp },
     { id: 'my_quotations', label: 'Quotations', icon: FileText },
     { id: 'customer_pos', label: 'Customer POs', icon: FileCheck },
     { id: 'product_files', label: 'Product Files', icon: FolderKanban },

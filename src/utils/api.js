@@ -6,7 +6,20 @@ export { getToken };
 export const API_BASE = import.meta.env?.VITE_API_BASE_URL ||
   (import.meta.env.DEV ? 'http://localhost:5000' : 'https://nexuscrm-backend-six.vercel.app');
 
-export async function apiRequest(path, options = {}) {
+export async function apiRequest(path, optionsOrMethod = {}, possibleBody = null) {
+  let options = {};
+  if (typeof optionsOrMethod === 'string') {
+    options = {
+      method: optionsOrMethod,
+      body: possibleBody ? (typeof possibleBody === 'string' ? possibleBody : JSON.stringify(possibleBody)) : undefined
+    };
+  } else if (optionsOrMethod && typeof optionsOrMethod === 'object') {
+    options = { ...optionsOrMethod };
+    if (options.body && typeof options.body === 'object' && !(options.body instanceof FormData)) {
+      options.body = JSON.stringify(options.body);
+    }
+  }
+
   const token = getToken();
   const headers = {
     'Content-Type': 'application/json',
@@ -17,19 +30,32 @@ export async function apiRequest(path, options = {}) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers
-  });
-
+  let response;
   let data = null;
   try {
-    data = await response.json();
-  } catch {
-    data = { success: false, message: 'Invalid server response.' };
+    response = await fetch(`${API_BASE}${path}`, {
+      ...options,
+      headers
+    });
+    try {
+      data = await response.json();
+    } catch {
+      data = { success: response.ok, message: response.statusText || 'Invalid server response.' };
+    }
+  } catch (netErr) {
+    console.error(`apiRequest network error for ${path}:`, netErr);
+    response = { ok: false, status: 500, statusText: netErr.message };
+    data = { success: false, message: netErr.message || 'Network request failed.' };
   }
 
-  return { response, data };
+  const result = {
+    ...(typeof data === 'object' && data !== null ? data : {}),
+    response,
+    data, // Ensure data is ALWAYS the full parsed JSON object, overriding any nested 'data' key from the spread
+    success: data?.success ?? response?.ok ?? false
+  };
+
+  return result;
 }
 
 export function authHeaders() {

@@ -99,6 +99,12 @@ export const ROLE_CONFIG = {
     frontendRole: 'logistics',
     portalName: 'Logistics Department Portal',
     defaultTab: 'dashboard'
+  },
+  purchaser: {
+    backendRole: 'purchaser',
+    frontendRole: 'purchaser',
+    portalName: 'Purchaser Department Portal',
+    defaultTab: 'dashboard'
   }
 };
 

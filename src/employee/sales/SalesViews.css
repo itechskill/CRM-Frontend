@@ -258,15 +258,19 @@
   padding: 20px;
 }
 
-.sv-modal {
+.sv-modal,
+.sv-modal-card {
   background: #FFFFFF;
   border: 1px solid #E2E8F0;
   border-radius: 16px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.sv-modal {
   width: 100%;
   max-width: 580px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   padding: 24px;
 }
 

@@ -63,14 +63,25 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
         // Filter orders that have entered Support workflow
         const supportOrders = (data.data || []).filter(o => {
           if (o.isOverdueBlocked || o.workflowStatus === 'Order Blocked / Hold') return false;
-          if (['Sales Order Created', 'Pending Finance Approval', 'Pending Finance Overdue Check', 'Finance Rejected'].includes(o.workflowStatus)) {
-            return false;
-          }
-          // If Blue File, only enter Support if Shipment is Received in Office or order already in Support
-          if (o.fileType === 'Blue' && ['International Supplier PO Issued', 'Routed to Logistics'].includes(o.workflowStatus)) {
-            return false; // Still in Logistics!
-          }
-          return true;
+
+          // An order should ONLY enter Support if assigned to Support or has reached a Support/downstream stage
+          const isAssignedToSupport = o.currentDepartment === 'Support' || o.departmentResponsible === 'Support';
+          const isSupportStage = [
+            'Pending Delivery Note',
+            'Goods Received in Office',
+            'Shipment Received in Office',
+            'Delivery Note Created',
+            'Delivery Note Confirmed',
+            'Delivery Note Delivered',
+            'Sent to Accounts',
+            'Draft Invoice Created',
+            'Invoice Finalized',
+            'Payment Received',
+            'Order Completed',
+            'Completed'
+          ].includes(o.workflowStatus);
+
+          return isAssignedToSupport || isSupportStage;
         });
         setOrders(supportOrders);
       }

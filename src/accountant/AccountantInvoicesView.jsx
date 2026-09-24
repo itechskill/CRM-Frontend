@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
 import {
   FileText,
@@ -108,6 +110,68 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
       body: JSON.stringify({ status: 'Paid' })
     });
     fetchInvoiceData();
+  };
+
+  const handleDownloadPDF = (inv) => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const now = new Date();
+    const isOverdue = inv.status === 'Overdue' || (inv.dueDate && new Date(inv.dueDate) < now && inv.status !== 'Paid');
+    const amount = Number(inv.amount || 0);
+    const lateCharge = isOverdue ? Math.round(amount * 0.03 * 100) / 100 : 0;
+    const totalWithCharge = amount + lateCharge;
+
+    doc.setFillColor(15, 23, 42); // Navy Dark
+    doc.rect(0, 0, 210, 34, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('FORTLINE CRM - OFFICIAL ACCOUNTS INVOICE', 14, 18);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Invoice #: ${inv.id || inv.invoiceNumber} • Status: ${isOverdue ? 'OVERDUE' : (inv.status || 'Draft')}`, 14, 26);
+
+    doc.setTextColor(15, 23, 42);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Billed To: ${inv.client}`, 14, 42);
+    doc.text(`Issue Date: ${inv.issueDate}`, 14, 48);
+    doc.text(`Due Date: ${inv.dueDate}`, 130, 48);
+
+    const rows = [
+      [inv.items || 'Services', 1, `PKR ${amount.toLocaleString()}`, `PKR ${amount.toLocaleString()}`]
+    ];
+
+    if (isOverdue) {
+      rows.push([
+        'Overdue Financial Charge (3% Late Fee applied past due date)',
+        1,
+        `PKR ${lateCharge.toLocaleString()}`,
+        `PKR ${lateCharge.toLocaleString()}`
+      ]);
+    }
+
+    autoTable(doc, {
+      startY: 55,
+      head: [['Description', 'Qty', 'Unit Price (PKR)', 'Total (PKR)']],
+      body: rows,
+      theme: 'grid',
+      headStyles: { fillColor: [15, 23, 42] }
+    });
+
+    const finalY = doc.lastAutoTable.finalY + 10;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Invoice Subtotal: PKR ${amount.toLocaleString()}`, 196, finalY, { align: 'right' });
+    if (isOverdue) {
+      doc.setTextColor(220, 38, 38);
+      doc.text(`Overdue 3% Charge: PKR ${lateCharge.toLocaleString()}`, 196, finalY + 6, { align: 'right' });
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Total Payable with Charges: PKR ${totalWithCharge.toLocaleString()}`, 196, finalY + 12, { align: 'right' });
+    }
+
+    doc.save(`Invoice_${inv.id || inv.invoiceNumber}.pdf`);
   };
 
   const filteredInvoices = invoices.filter(inv => {
@@ -317,6 +381,14 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
                       >
                         <Eye size={14} />
                       </button>
+                      <button
+                        className="acc-btn-secondary"
+                        style={{ padding: '4px 8px', fontSize: '0.78rem', color: '#0284C7', borderColor: '#BAE6FD' }}
+                        onClick={() => handleDownloadPDF(inv)}
+                        title="Download Invoice PDF"
+                      >
+                        <Download size={14} />
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -456,6 +528,9 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
             </div>
             <div className="acc-modal-footer">
               <button className="acc-btn-secondary" onClick={() => setSelectedInvoice(null)}>Close</button>
+              <button className="acc-btn-secondary" style={{ color: '#0284C7', borderColor: '#BAE6FD' }} onClick={() => handleDownloadPDF(selectedInvoice)}>
+                <Download size={16} /> Download PDF
+              </button>
               <button className="acc-btn-primary" onClick={() => { alert(`Invoice ${selectedInvoice.id} sent to ${selectedInvoice.clientEmail}`); setSelectedInvoice(null); }}>
                 <Send size={16} /> Send Email
               </button>

@@ -12,7 +12,8 @@ import {
   Calendar,
   Eye,
   Edit3,
-  ExternalLink
+  ExternalLink,
+  ClipboardCheck
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import './LogisticsPortal.css';
@@ -174,10 +175,16 @@ export default function LogisticsShipmentsView({
         body: JSON.stringify(receiveForm)
       });
       if (response.ok && data.success) {
-        setFeedback(`Shipment ${receiveModalShipment.shipmentId} confirmed received in office and transitioned to Support!`);
+        setFeedback(`Shipment ${receiveModalShipment.shipmentId} confirmed received in office! Redirecting to Goods Receipt Note (GRN)...`);
         setReceiveModalShipment(null);
         fetchShipments();
-        setTimeout(() => setFeedback(''), 5000);
+        if (onNavigateTab) {
+          setTimeout(() => {
+            onNavigateTab('grn_creation');
+          }, 1000);
+        } else {
+          setTimeout(() => setFeedback(''), 5000);
+        }
       } else {
         alert(data.message || 'Failed to confirm office receipt.');
       }
@@ -476,7 +483,7 @@ export default function LogisticsShipmentsView({
                             <span>Tracking</span>
                           </button>
 
-                          {!isReceived && (
+                          {!isReceived ? (
                             <button
                               className="sv-btn-primary"
                               onClick={() => openReceiveModal(shp)}
@@ -491,6 +498,22 @@ export default function LogisticsShipmentsView({
                             >
                               <PackageCheck size={13} />
                               <span>Receive</span>
+                            </button>
+                          ) : (
+                            <button
+                              className="sv-btn-primary"
+                              onClick={() => onNavigateTab && onNavigateTab('grn_creation')}
+                              style={{
+                                padding: '5px 9px',
+                                fontSize: '0.78rem',
+                                backgroundColor: '#2563EB',
+                                border: 'none',
+                                boxShadow: 'none'
+                              }}
+                              title="Record Goods Receipt Note (GRN)"
+                            >
+                              <ClipboardCheck size={13} />
+                              <span>Create GRN</span>
                             </button>
                           )}
                         </div>

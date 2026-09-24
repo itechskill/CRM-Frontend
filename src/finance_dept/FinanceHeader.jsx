@@ -1,5 +1,5 @@
 import React from 'react';
-import { Menu, Search, DollarSign, CreditCard, FileSpreadsheet, User } from 'lucide-react';
+import { Menu, Search, CreditCard, FileSpreadsheet, User } from 'lucide-react';
 import NotificationDropdown from '../components/NotificationDropdown';
 import { getUser } from '../utils/authStorage';
 import '../employee/EmployeeHeader.css';

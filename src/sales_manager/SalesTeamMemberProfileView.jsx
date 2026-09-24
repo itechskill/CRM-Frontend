@@ -736,7 +736,7 @@ export default function SalesTeamMemberProfileView({ memberId, onBack, initialBr
 
                     <div className="sv-tc-metrics">
                       <div>
-                        <span className="sv-tc-lbl">Target Quota</span>
+                        <span className="sv-tc-lbl">Sales Target</span>
                         <span className="sv-tc-val">Rs. {Number(tgt.targetAmount).toLocaleString()}</span>
                       </div>
                       <div>

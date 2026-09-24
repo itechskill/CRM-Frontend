@@ -16,13 +16,63 @@ import {
   Clock,
   Lock,
   ArrowUpRight,
-  Eye
+  Eye,
+  Target,
+  X,
+  Save,
+  ShoppingBag,
+  Globe
 } from 'lucide-react';
 import { exportDepartmentPDF } from './OrgPDFService';
 
 export default function OrgDepartmentView({ departmentKey = 'sales', onSelectUser }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [targetUser, setTargetUser] = useState(null);
+  const [targetAmount, setTargetAmount] = useState('');
+  const [targetPeriod, setTargetPeriod] = useState(new Date().toLocaleString('en-US', { month: 'long', year: 'numeric' }));
+  const [targetNotes, setTargetNotes] = useState('');
+  const [savingTarget, setSavingTarget] = useState(false);
+  const [targetFeedback, setTargetFeedback] = useState('');
+  const [targetError, setTargetError] = useState('');
+
+  const handleAssignTarget = async (e) => {
+    e.preventDefault();
+    if (!targetUser || !targetAmount || Number(targetAmount) <= 0) {
+      setTargetError('Please enter a valid target amount.');
+      return;
+    }
+    setSavingTarget(true);
+    setTargetError('');
+    setTargetFeedback('');
+    try {
+      const { response, data: resData } = await apiRequest('/api/sales-manager/targets', {
+        method: 'POST',
+        body: JSON.stringify({
+          employeeId: targetUser._id,
+          period: targetPeriod,
+          periodType: 'Monthly',
+          targetAmount: Number(targetAmount),
+          currency: 'PKR',
+          notes: targetNotes
+        })
+      });
+      if (response.ok && resData.success) {
+        setTargetFeedback(`Sales target of PKR ${Number(targetAmount).toLocaleString()} allotted successfully to ${targetUser.fullName}!`);
+        setTimeout(() => {
+          setTargetUser(null);
+          setTargetFeedback('');
+          fetchDepartmentData();
+        }, 1800);
+      } else {
+        setTargetError(resData.message || 'Failed to assign target.');
+      }
+    } catch (err) {
+      setTargetError('Server error assigning target.');
+    } finally {
+      setSavingTarget(false);
+    }
+  };
 
   const fetchDepartmentData = async () => {
     setLoading(true);
@@ -64,6 +114,8 @@ export default function OrgDepartmentView({ departmentKey = 'sales', onSelectUse
     switch (key) {
       case 'sales': return <TrendingUp size={24} color="#2563EB" />;
       case 'logistics': return <Plane size={24} color="#2563EB" />;
+      case 'local_purchaser': return <ShoppingBag size={24} color="#0284C7" />;
+      case 'global_purchaser': return <Globe size={24} color="#6366F1" />;
       case 'support': return <Truck size={24} color="#0D9488" />;
       case 'accounts': return <Calculator size={24} color="#7C3AED" />;
       case 'finance': return <Wallet size={24} color="#059669" />;
@@ -290,6 +342,58 @@ export default function OrgDepartmentView({ departmentKey = 'sales', onSelectUse
             </div>
           </>
         )}
+
+        {departmentKey === 'local_purchaser' && (
+          <>
+            <div className="org-kpi-card">
+              <div className="org-kpi-header">
+                <span className="org-kpi-title">Supplier Purchase Orders</span>
+                <div className="org-kpi-icon" style={{ backgroundColor: '#E0F2FE', color: '#0284C7' }}>
+                  <Package size={18} />
+                </div>
+              </div>
+              <span className="org-kpi-value">{dept.kpis?.totalSupplierPOs || 0}</span>
+              <span className="org-kpi-subtext">{dept.kpis?.totalGRNs || 0} GRNs Issued</span>
+            </div>
+
+            <div className="org-kpi-card">
+              <div className="org-kpi-header">
+                <span className="org-kpi-title">Local Spend &amp; Payables</span>
+                <div className="org-kpi-icon" style={{ backgroundColor: '#FEF3C7', color: '#D97706' }}>
+                  <Wallet size={18} />
+                </div>
+              </div>
+              <span className="org-kpi-value">PKR {(dept.kpis?.totalLocalSpend || 0).toLocaleString()}</span>
+              <span className="org-kpi-subtext">{dept.kpis?.pendingLocalPayables || 0} Pending Payables</span>
+            </div>
+          </>
+        )}
+
+        {departmentKey === 'global_purchaser' && (
+          <>
+            <div className="org-kpi-card">
+              <div className="org-kpi-header">
+                <span className="org-kpi-title">Global Supplier POs</span>
+                <div className="org-kpi-icon" style={{ backgroundColor: '#EEF2FF', color: '#6366F1' }}>
+                  <Globe size={18} />
+                </div>
+              </div>
+              <span className="org-kpi-value">{dept.kpis?.totalGlobalPOs || 0}</span>
+              <span className="org-kpi-subtext">{dept.kpis?.deliveredGlobalPOs || 0} Completed / Received</span>
+            </div>
+
+            <div className="org-kpi-card">
+              <div className="org-kpi-header">
+                <span className="org-kpi-title">International Shipments</span>
+                <div className="org-kpi-icon" style={{ backgroundColor: '#EFF6FF', color: '#2563EB' }}>
+                  <Plane size={18} />
+                </div>
+              </div>
+              <span className="org-kpi-value">{dept.kpis?.totalShipments || 0}</span>
+              <span className="org-kpi-subtext">{dept.kpis?.inTransitShipments || 0} In Transit • {dept.kpis?.receivedInOffice || 0} In Office</span>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Department Staff Table */}
@@ -330,7 +434,24 @@ export default function OrgDepartmentView({ departmentKey = 'sales', onSelectUse
                     <td>{u.email}</td>
                     <td><span className={`org-badge org-badge-${u.status === 'active' ? 'active' : 'inactive'}`}>{(u.status || 'active').toUpperCase()}</span></td>
                     <td>{u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}</td>
-                    <td style={{ textAlign: 'right' }}>
+                    <td style={{ textAlign: 'right', display: 'flex', justifyContent: 'flex-end', gap: '6px' }}>
+                      {(departmentKey === 'sales' || (u.department && u.department.toLowerCase() === 'sales') || (u.role && u.role.includes('sales'))) && (
+                        <button
+                          className="org-btn org-btn-primary"
+                          onClick={() => {
+                            setTargetUser(u);
+                            setTargetAmount('');
+                            setTargetNotes('');
+                            setTargetError('');
+                            setTargetFeedback('');
+                          }}
+                          style={{ padding: '5px 10px', fontSize: '0.78rem', background: '#2563EB' }}
+                          title="Allot Sales Target (CEO)"
+                        >
+                          <Target size={13} />
+                          Assign Target
+                        </button>
+                      )}
                       <button
                         className="org-btn org-btn-outline"
                         onClick={() => onSelectUser && onSelectUser(u)}
@@ -529,10 +650,145 @@ export default function OrgDepartmentView({ departmentKey = 'sales', onSelectUse
                   ))
                 )}
               </tbody>
+              </table>
+          )}
+
+          {departmentKey === 'local_purchaser' && (
+            <table className="org-table">
+              <thead>
+                <tr>
+                  <th>PO Number</th>
+                  <th>Supplier</th>
+                  <th>Total Amount</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!dept.records?.supplierPOs || dept.records.supplierPOs.length === 0) ? (
+                  <tr><td colSpan="5" style={{ textAlign: 'center', padding: '24px', color: '#94A3B8' }}>No supplier POs recorded for local purchaser.</td></tr>
+                ) : (
+                  dept.records.supplierPOs.slice(0, 20).map(po => (
+                    <tr key={po._id}>
+                      <td style={{ fontWeight: 600, color: '#0284C7' }}>{po.poNumber || 'PO'}</td>
+                      <td>{po.supplierName || '—'}</td>
+                      <td>PKR {(po.totalAmount || po.amount || 0).toLocaleString()}</td>
+                      <td><span className={`org-badge org-badge-${po.status === 'Paid' || po.status === 'Completed' ? 'active' : 'pending'}`}>{po.status || 'Pending'}</span></td>
+                      <td>{po.createdAt ? new Date(po.createdAt).toLocaleDateString() : ''}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          )}
+
+          {departmentKey === 'global_purchaser' && (
+            <table className="org-table">
+              <thead>
+                <tr>
+                  <th>PO Number</th>
+                  <th>Supplier</th>
+                  <th>Country</th>
+                  <th>Total Amount</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(!dept.records?.supplierPOs || dept.records.supplierPOs.length === 0) ? (
+                  <tr><td colSpan="6" style={{ textAlign: 'center', padding: '24px', color: '#94A3B8' }}>No global supplier POs recorded.</td></tr>
+                ) : (
+                  dept.records.supplierPOs.slice(0, 20).map(po => (
+                    <tr key={po._id}>
+                      <td style={{ fontWeight: 600, color: '#6366F1' }}>{po.poNumber || 'PO'}</td>
+                      <td>{po.supplierName || '—'}</td>
+                      <td>{po.supplierCountry || po.country || 'International'}</td>
+                      <td>PKR {(po.totalAmount || po.amount || 0).toLocaleString()}</td>
+                      <td><span className={`org-badge org-badge-${['Delivered', 'Received', 'Done'].includes(po.status) ? 'active' : 'dept'}`}>{po.status || 'Pending'}</span></td>
+                      <td>{po.createdAt ? new Date(po.createdAt).toLocaleDateString() : ''}</td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
             </table>
           )}
         </div>
       </div>
+
+      {/* CEO TARGET ALLOTMENT MODAL */}
+      {targetUser && (
+        <div className="sv-modal-overlay" onClick={() => setTargetUser(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15,23,42,0.65)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="sv-modal" onClick={e => e.stopPropagation()} style={{ background: '#FFFFFF', borderRadius: '14px', width: '100%', maxWidth: '480px', padding: '24px', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #E2E8F0', paddingBottom: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ background: '#EFF6FF', padding: '8px', borderRadius: '8px', color: '#2563EB' }}>
+                  <Target size={20} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>CEO Target Allocation</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#64748B' }}>Assign sales target to {targetUser.fullName}</p>
+                </div>
+              </div>
+              <button onClick={() => setTargetUser(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748B' }}><X size={18} /></button>
+            </div>
+
+            {targetFeedback && (
+              <div style={{ background: '#DCFCE7', color: '#16A34A', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <CheckCircle2 size={16} /> {targetFeedback}
+              </div>
+            )}
+
+            {targetError && (
+              <div style={{ background: '#FEE2E2', color: '#DC2626', padding: '10px 14px', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 600, marginBottom: '14px' }}>
+                {targetError}
+              </div>
+            )}
+
+            <form onSubmit={handleAssignTarget} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Target Period / Month</label>
+                <input
+                  type="text"
+                  value={targetPeriod}
+                  onChange={e => setTargetPeriod(e.target.value)}
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Sales Target Amount (PKR) *</label>
+                <input
+                  type="number"
+                  value={targetAmount}
+                  onChange={e => setTargetAmount(e.target.value)}
+                  placeholder="e.g. 500000"
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.9rem', outline: 'none' }}
+                  required
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Notes & Directives from CEO</label>
+                <textarea
+                  rows={3}
+                  value={targetNotes}
+                  onChange={e => setTargetNotes(e.target.value)}
+                  placeholder="Key quarterly expectations or target directives..."
+                  style={{ width: '100%', padding: '10px 12px', border: '1px solid #CBD5E1', borderRadius: '8px', fontSize: '0.85rem', outline: 'none', resize: 'vertical' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button type="button" onClick={() => setTargetUser(null)} style={{ padding: '8px 16px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFFFFF', fontSize: '0.85rem', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={savingTarget} style={{ padding: '8px 18px', borderRadius: '8px', border: 'none', background: '#2563EB', color: '#FFFFFF', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <Save size={15} /> {savingTarget ? 'Allotting Target...' : 'Allot Sales Target'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
