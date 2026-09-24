@@ -678,8 +678,8 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                   <div className="sv-field">
                     <label>File Type *</label>
                     <select value={form.fileType} onChange={e => setForm(p => ({ ...p, fileType: e.target.value }))}>
-                      <option value="Blue">Blue File (Standard / Routine)</option>
-                      <option value="Green">Green File (Special / Customized)</option>
+                      <option value="Blue">Blue File (Imported)</option>
+                      <option value="Green">Green File (Local)</option>
                     </select>
                   </div>
                   <div className="sv-field">

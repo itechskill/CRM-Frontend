@@ -2120,24 +2120,14 @@ export default function SalesQuotationsView() {
                 </div>
               </div>
 
-              <div className="sv-grid-2">
-                <div className="sv-field">
-                  <label>Customer PO Number</label>
-                  <input
-                    value={poNumberInput}
-                    onChange={e => setPoNumberInput(e.target.value)}
-                    placeholder="Auto-generated if empty (e.g. CPO-0001)"
-                  />
-                </div>
-                <div className="sv-field">
-                  <label>PO Date</label>
-                  <input
-                    type="date"
-                    value={poDateInput}
-                    onChange={e => setPoDateInput(e.target.value)}
-                    required
-                  />
-                </div>
+              <div className="sv-field">
+                <label>PO Date</label>
+                <input
+                  type="date"
+                  value={poDateInput}
+                  onChange={e => setPoDateInput(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="sv-field">

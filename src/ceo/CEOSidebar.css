@@ -225,27 +225,40 @@
 }
 
 .ceo-sidebar-footer {
-  padding: 16px;
+  padding: 14px 16px;
   border-top: 1px solid #1E293B;
   position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background-color: #0F172A;
 }
 
 .ceo-user-card {
   display: flex;
   align-items: center;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 10px;
   padding: 10px 12px;
   background-color: #1E293B;
   border: 1px solid #334155;
   border-radius: 10px;
-  cursor: pointer;
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+  width: 100%;
 }
 
 .ceo-user-card:hover {
   border-color: #2563EB;
-  transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+}
+
+.ceo-user-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+  cursor: pointer;
 }
 
 .ceo-user-avatar {
@@ -260,6 +273,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .ceo-user-info {
@@ -272,7 +286,7 @@
 
 .ceo-user-name {
   color: #FFFFFF;
-  font-size: 0.85rem;
+  font-size: 0.825rem;
   font-weight: 600;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -281,7 +295,33 @@
 
 .ceo-user-role {
   color: #60A5FA;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+
+.ceo-logout-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background-color: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #EF4444;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ceo-logout-action:hover {
+  background-color: #EF4444;
+  color: #FFFFFF;
+  border-color: #EF4444;
+  transform: scale(1.05);
 }
 
 .ceo-role-dropdown {

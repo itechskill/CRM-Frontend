@@ -21,15 +21,14 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
 
   const publicRoles = [
     { value: 'sales_person', label: 'Sales Person' },
+    { value: 'purchaser', label: 'Purchaser' },
     { value: 'logistics', label: 'Logistics Department' },
     { value: 'support', label: 'Support Department' },
     { value: 'accountant', label: 'Accounts Department' },
     { value: 'finance', label: 'Finance Department' },
     { value: 'sales_manager', label: 'Sales Manager' },
     { value: 'project_manager', label: 'Project Manager' },
-    { value: 'hr_manager', label: 'HR Manager' },
-    { value: 'marketing', label: 'Marketing' },
-    { value: 'employee', label: 'Employee (General)' }
+    { value: 'hr_manager', label: 'HR Manager' }
   ];
 
   const handleRoleChange = (e) => {
@@ -117,6 +116,7 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
         'support': 'Customer Support',
         'accountant': 'Accounting',
         'finance': 'Finance',
+        'purchaser': 'Procurement',
         'sales_manager': 'Sales',
         'project_manager': 'Development',
         'hr_manager': 'HR',
@@ -132,6 +132,7 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         role: formData.role,
+        purchaserSubDept: formData.role === 'purchaser' ? (formData.purchaserSubDept || 'Local') : undefined,
         department: roleDepartmentMap[formData.role] || 'General'
       };
 
@@ -296,6 +297,26 @@ export default function Register({ onSwitchToLogin, onSwitchToLanding }) {
                 </select>
               </div>
             </div>
+
+            {/* Purchaser Sub-Department Selection */}
+            {formData.role === 'purchaser' && (
+              <div className="auth-field-group">
+                <label className="auth-label">Purchaser Sub-Department *</label>
+                <div className="auth-input-wrapper">
+                  <Zap className="auth-input-icon" size={16} />
+                  <select
+                    name="purchaserSubDept"
+                    className="auth-select"
+                    value={formData.purchaserSubDept || 'Local'}
+                    onChange={handleChange}
+                    required
+                  >
+                    <option value="Local">Local Purchaser</option>
+                    <option value="Global">Global Purchaser</option>
+                  </select>
+                </div>
+              </div>
+            )}
 
 
 

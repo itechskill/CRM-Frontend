@@ -51,6 +51,7 @@ export default function SalesSettingsView() {
     password: '',
     phone: '',
     position: 'Sales Representative',
+    branch: '',
     target: ''
   });
   const [inviting, setInviting] = useState(false);
@@ -141,6 +142,7 @@ export default function SalesSettingsView() {
           password: inviteForm.password,
           phone: inviteForm.phone,
           position: inviteForm.position,
+          branch: inviteForm.branch,
           target: inviteForm.target ? Number(inviteForm.target) : 0
         })
       });
@@ -154,6 +156,7 @@ export default function SalesSettingsView() {
             password: '',
             phone: '',
             position: 'Sales Representative',
+            branch: '',
             target: ''
           });
           setInviteMsg('');
@@ -651,6 +654,31 @@ export default function SalesSettingsView() {
                     onChange={(e) => setInviteForm(p => ({ ...p, target: e.target.value }))}
                   />
                 </div>
+              </div>
+
+              <div className="sv-field" style={{ marginBottom: '16px' }}>
+                <label style={{ fontWeight: 700, color: '#1E293B', marginBottom: '4px', display: 'block' }}>Regional Branch / City Office</label>
+                <select
+                  value={inviteForm.branch}
+                  onChange={(e) => setInviteForm(p => ({ ...p, branch: e.target.value }))}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1.5px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    color: '#0F172A',
+                    fontSize: '0.92rem',
+                    fontWeight: '600',
+                    outline: 'none',
+                    width: '100%',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">Default (Inherit from My Regional Branch)</option>
+                  <option value="Islamabad">Islamabad Branch (ISB)</option>
+                  <option value="Karachi">Karachi Branch (KHI)</option>
+                  <option value="Lahore">Lahore Branch (LHR)</option>
+                </select>
               </div>
 
               <div className="sv-modal-actions">

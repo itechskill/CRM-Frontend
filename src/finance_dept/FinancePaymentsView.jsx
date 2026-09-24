@@ -7,7 +7,6 @@ import {
   Plus,
   Search,
   CheckCircle2,
-  DollarSign,
   X,
   Save,
   Calendar,
@@ -164,7 +163,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
       });
 
       if (response.ok && data.success) {
-        setFeedback(`Payment ${data.data?.paymentRefNumber || ''} of Rs. ${Number(form.amount).toLocaleString()} recorded successfully!`);
+        setFeedback(`Payment ${data.data?.paymentRefNumber || ''} of PKR ${Number(form.amount).toLocaleString()} recorded successfully!`);
         setShowModal(false);
         fetchPayments();
         fetchInvoices();
@@ -209,7 +208,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
       body: [[
         `Payment against Invoice ${pay.invoiceNumber || 'Direct'}\n${pay.notes || ''}`,
         pay.paymentRefNumber || 'REC',
-        `Rs. ${Number(pay.amount || 0).toLocaleString()}`
+        `PKR ${Number(pay.amount || 0).toLocaleString()}`
       ]],
       theme: 'grid',
       headStyles: { fillColor: [5, 150, 105] }
@@ -219,7 +218,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(5, 150, 105);
-    doc.text(`Total Settled: Rs. ${Number(pay.amount || 0).toLocaleString()}`, 120, finalY);
+    doc.text(`Total Settled: PKR ${Number(pay.amount || 0).toLocaleString()}`, 120, finalY);
 
     doc.save(`${pay.paymentRefNumber || 'Payment_Receipt'}.pdf`);
   };
@@ -245,7 +244,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
       pay.customerName || 'Customer',
       pay.invoiceNumber || '—',
       pay.salesOrderNumber || '—',
-      `Rs. ${(Number(pay.amount) || 0).toLocaleString()}`,
+      `PKR ${(Number(pay.amount) || 0).toLocaleString()}`,
       pay.paymentType || 'Full',
       pay.paymentMethod || 'Bank Transfer',
       pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString('en-GB') : '—'
@@ -285,7 +284,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(5, 150, 105);
-    doc.text(`Total Collections: Rs. ${totalCollected.toLocaleString()} (${filteredPayments.length} Receipts)`, 14, finalY > 195 ? 195 : finalY);
+    doc.text(`Total Collections: PKR ${totalCollected.toLocaleString()} (${filteredPayments.length} Receipts)`, 14, finalY > 195 ? 195 : finalY);
 
     doc.save(`Fortline_Customer_Payments_${new Date().toISOString().split('T')[0]}.pdf`);
   };
@@ -391,21 +390,21 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
         <div className="sv-target-card" style={{ borderLeft: '4px solid #059669' }}>
           <span className="sv-ts-label">Total Collections</span>
           <span className="sv-ts-value" style={{ color: '#059669' }}>
-            Rs. {totalCollected.toLocaleString()}
+            PKR {totalCollected.toLocaleString()}
           </span>
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>{payments.length} payment receipts</span>
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #2563EB' }}>
           <span className="sv-ts-label">Bank Transfers</span>
           <span className="sv-ts-value" style={{ color: '#2563EB' }}>
-            Rs. {bankTransferTotal.toLocaleString()}
+            PKR {bankTransferTotal.toLocaleString()}
           </span>
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Direct account deposits</span>
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #D97706' }}>
           <span className="sv-ts-label">Cheque Collections</span>
           <span className="sv-ts-value" style={{ color: '#D97706' }}>
-            Rs. {chequeTotal.toLocaleString()}
+            PKR {chequeTotal.toLocaleString()}
           </span>
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Cleared &amp; deposited</span>
         </div>
@@ -469,7 +468,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                   </td>
                   <td>{p.salesOrderNumber || '—'}</td>
                   <td style={{ fontWeight: 800, color: '#059669' }}>
-                    Rs. {Number(p.amount || 0).toLocaleString()}
+                    PKR {Number(p.amount || 0).toLocaleString()}
                   </td>
                   <td>
                     <span className="sv-badge" style={{
@@ -528,7 +527,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
             <div className="ip-modal-header payment-theme">
               <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                 <div className="ip-header-icon-box">
-                  <DollarSign size={22} />
+                  <span style={{fontWeight: 600, fontSize: "0.9em", marginRight: "4px"}}>PKR</span>
                 </div>
                 <div className="ip-header-title-group">
                   <h3>Record Customer Payment</h3>
@@ -576,7 +575,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                       const rem = Math.max(0, total - paid);
                       return (
                         <option key={inv._id} value={inv._id}>
-                          {inv.invoiceNumber} — {inv.clientName} (Total: Rs. {total.toLocaleString()} | Remaining: Rs. {rem.toLocaleString()})
+                          {inv.invoiceNumber} — {inv.clientName} (Total: PKR {total.toLocaleString()} | Remaining: PKR {rem.toLocaleString()})
                         </option>
                       );
                     })}
@@ -589,19 +588,19 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                         <div className="ip-payment-metric-card">
                           <div className="ip-payment-metric-label">Invoice Total</div>
                           <div className="ip-payment-metric-value" style={{ color: '#0F172A' }}>
-                            Rs. {Number(selectedInvoice.amount || 0).toLocaleString()}
+                            PKR {Number(selectedInvoice.amount || 0).toLocaleString()}
                           </div>
                         </div>
                         <div className="ip-payment-metric-card">
                           <div className="ip-payment-metric-label" style={{ color: '#059669' }}>Already Paid</div>
                           <div className="ip-payment-metric-value" style={{ color: '#059669' }}>
-                            Rs. {Number(selectedInvoice.paidAmount || 0).toLocaleString()}
+                            PKR {Number(selectedInvoice.paidAmount || 0).toLocaleString()}
                           </div>
                         </div>
                         <div className="ip-payment-metric-card remaining-card">
                           <div className="ip-payment-metric-label" style={{ color: '#DC2626' }}>Remaining Balance</div>
                           <div className="ip-payment-metric-value" style={{ color: '#DC2626' }}>
-                            Rs. {Math.max(0, (Number(selectedInvoice.amount) || 0) - (Number(selectedInvoice.paidAmount) || 0)).toLocaleString()}
+                            PKR {Math.max(0, (Number(selectedInvoice.amount) || 0) - (Number(selectedInvoice.paidAmount) || 0)).toLocaleString()}
                           </div>
                         </div>
                       </div>

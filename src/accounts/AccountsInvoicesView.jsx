@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
+import { generateCombinedDocumentPackagePDF } from '../utils/combinedPdfGenerator';
 import {
   FileText,
   Plus,
@@ -529,6 +530,32 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     doc.save(`${inv.invoiceNumber || 'Invoice'}.pdf`);
   };
 
+  const handleDownloadCombinedPackage = async (inv) => {
+    const orderId = inv.salesOrderId?._id || inv.salesOrderId;
+    if (!orderId) {
+      alert('This invoice is not linked to a master Sales Order.');
+      return;
+    }
+
+    try {
+      const res = await apiRequest(`/api/sales-employee/orders/${orderId}/document-package`);
+      if (res.success && res.data) {
+        const { isComplete, missingDocuments } = res.data.validation;
+        if (!isComplete && missingDocuments.length > 0) {
+          alert(`Complete document package cannot be generated.\n\nThe following document is missing:\n- ${missingDocuments.join('\n- ')}`);
+          return;
+        }
+
+        generateCombinedDocumentPackagePDF(res.data);
+      } else {
+        alert(res.message || 'Error fetching document package details.');
+      }
+    } catch (err) {
+      console.error('Download Package Error:', err);
+      alert('Failed to generate complete document package PDF.');
+    }
+  };
+
   // Export Full Invoices List PDF
   const handleExportAllPDF = () => {
     const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
@@ -912,6 +939,9 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                         </button>
                         <button className="sv-btn-action-icon" onClick={() => handleDownloadPDF(inv)} title="Download PDF">
                           <Download size={14} color="#059669" />
+                        </button>
+                        <button className="sv-btn-action-icon" onClick={() => handleDownloadCombinedPackage(inv)} title="Download Complete 4-Document Package (Single PDF)" style={{ color: '#047857' }}>
+                          <FileSpreadsheet size={14} />
                         </button>
                         {isDraft && (
                           <button className="sv-btn-action-icon" onClick={() => setDeleteTarget(inv)} title="Delete Invoice" style={{ color: '#EF4444' }}>
@@ -1572,7 +1602,10 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                   Close
                 </button>
                 <button className="sv-btn-cancel" onClick={() => handleDownloadPDF(viewInvoice)} style={{ gap: '6px' }}>
-                  <Download size={14} color="#059669" /> Download PDF
+                  <Download size={14} color="#059669" /> Download Invoice PDF
+                </button>
+                <button className="sv-btn-primary" onClick={() => handleDownloadCombinedPackage(viewInvoice)} style={{ background: '#047857', gap: '6px' }} title="Download 4-page complete document package (Invoice, Delivery Note, Undertaking, Goods Declaration)">
+                  <FileSpreadsheet size={14} /> Download Complete Package (Single PDF)
                 </button>
                 {(viewInvoice.status === 'Draft' || viewInvoice.status === 'Pending Review' || viewInvoice.isDraft) && (
                   <button

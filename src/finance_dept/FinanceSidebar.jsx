@@ -3,7 +3,6 @@ import {
   LayoutGrid,
   FileText,
   CreditCard,
-  DollarSign,
   BarChart3,
   User,
   LogOut,
@@ -12,13 +11,15 @@ import {
   Crown,
   Briefcase,
   ShieldCheck,
+  CheckCircle2,
   UserCheck,
   FolderKanban,
   Megaphone,
   Calculator,
   Heart,
   TrendingUp,
-  Headphones
+  Headphones,
+  DollarSign
 } from 'lucide-react';
 import '../employee/EmployeeSidebar.css';
 
@@ -43,10 +44,12 @@ export default function FinanceSidebar({
 
   const operationsNav = [
     { id: 'dashboard', label: 'Finance Dashboard', icon: LayoutGrid },
-    { id: 'overdue_approval', label: 'Overdue Check & SO Approval', icon: ShieldCheck },
+    { id: 'overdue_approval', label: 'Orders Requiring Approval', icon: ShieldCheck },
+    { id: 'clear_orders', label: 'Clear / Approved Orders', icon: CheckCircle2 },
     { id: 'finance_invoices', label: 'Submitted Invoices', icon: FileText },
     { id: 'finance_payments', label: 'Customer Payments', icon: CreditCard },
     { id: 'finance_receivables', label: 'Accounts Receivable', icon: DollarSign },
+    { id: 'financial_charges', label: 'Financial Charges', icon: Calculator },
     { id: 'finance_reports', label: 'Financial Reports', icon: BarChart3 }
   ];
 
@@ -67,7 +70,7 @@ export default function FinanceSidebar({
         <div className="employee-sidebar-header">
           <div className="employee-brand-left">
             <div className="employee-brand-logo" style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)' }}>
-              <DollarSign size={20} color="#FFFFFF" />
+              <span style={{fontWeight: 600, fontSize: "0.9em", marginRight: "4px"}}>PKR</span>
             </div>
             {(!collapsed || isMobileOpen) && (
               <div className="employee-brand-info">
@@ -193,7 +196,7 @@ export default function FinanceSidebar({
                 <span>Admin</span><ShieldCheck size={16} color="#60A5FA" />
               </div>
               <div className={`employee-role-item ${currentRole === 'finance' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); onSwitchRole('finance'); setShowRoleMenu(false); }}>
-                <span>Finance Department</span><DollarSign size={16} color="#10B981" />
+                <span>Finance Department</span><span style={{fontWeight: 600, fontSize: "0.9em", marginRight: "4px"}}>PKR</span>
               </div>
               <div className={`employee-role-item ${currentRole === 'accountant' || currentRole === 'accounts' ? 'active' : ''}`} onClick={(e) => { e.stopPropagation(); onSwitchRole('accountant'); setShowRoleMenu(false); }}>
                 <span>Accounts Department</span><Calculator size={16} color="#2563EB" />

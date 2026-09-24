@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
 import {
-  DollarSign,
   FileText,
   CreditCard,
   AlertTriangle,
@@ -159,62 +158,82 @@ export default function FinanceDashboard({ onNavigateTab }) {
         )}
       </div>
 
-      {/* KPI Grid */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '24px' }}>
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '18px', border: '1px solid #E2E8F0', borderLeft: '4px solid #D97706', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+      {/* KPI Grid - 5 Specified Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+        {/* Card 1: Sales Orders */}
+        <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '18px', border: '1px solid #E2E8F0', borderLeft: '4px solid #2563EB', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Pending Draft Invoices</span>
-            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#FEF3C7', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <Clock size={18} color="#D97706" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Sales Orders</span>
+            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <FileText size={18} color="#2563EB" />
             </div>
           </div>
-          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#D97706', marginTop: '10px' }}>
-            {loading ? '...' : (stats?.pendingDrafts || 0)}
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A', marginTop: '10px' }}>
+            {loading ? '...' : (stats?.salesOrdersCount || 0)}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
-            Rs. {loading ? '...' : Number(stats?.pendingAmount || 0).toLocaleString()} awaiting finalization
+          <div style={{ fontSize: '0.78rem', color: '#2563EB', fontWeight: 700, marginTop: '4px' }}>
+            Total Amount: PKR {loading ? '...' : Math.round(Number(stats?.salesOrdersAmount || 0)).toLocaleString()}
           </div>
         </div>
 
+        {/* Card 2: Delivery Notes */}
+        <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '18px', border: '1px solid #E2E8F0', borderLeft: '4px solid #7C3AED', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Delivery Notes</span>
+            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#F3E8FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <TrendingUp size={18} color="#7C3AED" />
+            </div>
+          </div>
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#7C3AED', marginTop: '10px' }}>
+            {loading ? '...' : (stats?.deliveryNotesCount || 0)}
+          </div>
+          <div style={{ fontSize: '0.78rem', color: '#64748B', fontWeight: 600, marginTop: '4px' }}>
+            Total Dispatched Deliveries
+          </div>
+        </div>
+
+        {/* Card 3: Invoices */}
         <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '18px', border: '1px solid #E2E8F0', borderLeft: '4px solid #059669', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Finalized Invoices</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Invoices</span>
             <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <CheckCircle2 size={18} color="#059669" />
             </div>
           </div>
-          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#059669', marginTop: '10px' }}>
-            {loading ? '...' : (stats?.invoicesFinalized || stats?.approvedInvoices || 0)}
+          <div style={{ fontSize: '1.6rem', fontWeight: 800, color: '#0F172A', marginTop: '10px' }}>
+            {loading ? '...' : (stats?.invoicesCount || stats?.totalInvoices || 0)}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
-            Rs. {loading ? '...' : Number(stats?.finalizedAmount || stats?.totalInvoicedAmount || 0).toLocaleString()} in period
+          <div style={{ fontSize: '0.78rem', color: '#059669', fontWeight: 700, marginTop: '4px' }}>
+            Invoice Amount: PKR {loading ? '...' : Math.round(Number(stats?.invoicesAmount || stats?.totalInvoicedAmount || 0)).toLocaleString()}
           </div>
         </div>
 
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '18px', border: '1px solid #E2E8F0', borderLeft: '4px solid #2563EB', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        {/* Card 4: Receivables */}
+        <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '18px', border: '1px solid #E2E8F0', borderLeft: '4px solid #0284C7', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Paid Collections</span>
-            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <DollarSign size={18} color="#2563EB" />
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Receivables</span>
+            <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#E0F2FE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <CreditCard size={18} color="#0284C7" />
             </div>
           </div>
-          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#2563EB', marginTop: '10px' }}>
-            Rs. {loading ? '...' : Number(stats?.totalPaid || 0).toLocaleString()}
+          <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#0284C7', marginTop: '10px' }}>
+            PKR {loading ? '...' : Math.round(Number(stats?.receivablesAmount || stats?.outstandingReceivables || 0)).toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>Collected customer receipts</div>
+          <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>Invoice Amount - Valid Payments</div>
         </div>
 
+        {/* Card 5: Overdue */}
         <div style={{ background: '#FFFFFF', borderRadius: '12px', padding: '18px', border: '1px solid #E2E8F0', borderLeft: '4px solid #DC2626', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Overdue Balances</span>
+            <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Overdue</span>
             <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: '#FEF2F2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <AlertTriangle size={18} color="#DC2626" />
             </div>
           </div>
           <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#DC2626', marginTop: '10px' }}>
-            Rs. {loading ? '...' : Number(stats?.overdueAmount || 0).toLocaleString()}
+            PKR {loading ? '...' : Math.round(Number(stats?.overdueAmount || 0)).toLocaleString()}
           </div>
-          <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>Past due with unpaid balance</div>
+          <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>Synced with Overdue Approvals</div>
         </div>
       </div>
 

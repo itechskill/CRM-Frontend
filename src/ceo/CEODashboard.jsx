@@ -470,6 +470,74 @@ export default function CEODashboard({ onNavigateTab, currentUser }) {
         </div>
       </div>
 
+      {/* Registered Users Full Directory */}
+      <div className="ceo-card-panel" style={{ marginTop: '20px' }}>
+        <div className="ceo-card-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <span>All Registered System Users</span>
+            <div style={{ fontSize: '0.8rem', color: '#64748B', fontWeight: 500, marginTop: '2px' }}>
+              Complete staff directory — {data.totalUsers || 0} Registered &bull; {data.activeEmployees || 0} Active
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+            {[
+              { label: 'Sales', count: data.salesTeamCount, color: '#16A34A', bg: '#DCFCE7' },
+              { label: 'Support', count: data.supportTeamCount, color: '#0284C7', bg: '#E0F2FE' },
+              { label: 'Accounts', count: data.accountsTeamCount, color: '#D97706', bg: '#FEF3C7' },
+              { label: 'Finance', count: data.financeTeamCount, color: '#059669', bg: '#D1FAE5' },
+              { label: 'HR', count: data.hrTeamCount, color: '#E11D48', bg: '#FFE4E6' },
+              { label: 'Logistics', count: data.logisticsTeamCount, color: '#6366F1', bg: '#EEF2FF' },
+              { label: 'Local PO', count: data.localPurchaserTeamCount, color: '#0284C7', bg: '#BFDBFE' },
+              { label: 'Global PO', count: data.globalPurchaserTeamCount, color: '#7C3AED', bg: '#F5F3FF' },
+            ].map(d => (
+              <span key={d.label} style={{ fontSize: '0.72rem', fontWeight: 700, color: d.color, background: d.bg, padding: '2px 8px', borderRadius: '6px' }}>
+                {d.label}: {d.count || 0}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ overflowX: 'auto', marginTop: '12px' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+            <thead>
+              <tr style={{ background: '#F8FAFC', borderBottom: '2px solid #E2E8F0' }}>
+                {['Full Name', 'Email', 'Role', 'Department', 'Status', 'Joined'].map(h => (
+                  <th key={h} style={{ padding: '10px 14px', fontSize: '0.73rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(data.registeredUsersList || []).slice(0, 40).map((u) => (
+                <tr key={u._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
+                  <td style={{ padding: '10px 14px', fontSize: '0.825rem', fontWeight: 700, color: '#0F172A' }}>{u.fullName}</td>
+                  <td style={{ padding: '10px 14px', fontSize: '0.8rem', color: '#64748B' }}>{u.email}</td>
+                  <td style={{ padding: '10px 14px' }}>
+                    <span style={{ background: '#EFF6FF', color: '#2563EB', padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600 }}>
+                      {(u.role || 'employee').replace(/_/g, ' ').toUpperCase()}
+                      {u.purchaserSubDept ? ` (${u.purchaserSubDept})` : ''}
+                    </span>
+                  </td>
+                  <td style={{ padding: '10px 14px', fontSize: '0.8rem', color: '#334155' }}>{u.department || '—'}</td>
+                  <td style={{ padding: '10px 14px' }}>
+                    <span style={{
+                      padding: '2px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 700,
+                      background: u.status === 'active' ? '#DCFCE7' : u.status === 'pending' ? '#FEF3C7' : '#FEE2E2',
+                      color: u.status === 'active' ? '#16A34A' : u.status === 'pending' ? '#D97706' : '#DC2626'
+                    }}>{(u.status || 'active').toUpperCase()}</span>
+                  </td>
+                  <td style={{ padding: '10px 14px', fontSize: '0.75rem', color: '#94A3B8' }}>
+                    {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                  </td>
+                </tr>
+              ))}
+              {(!data.registeredUsersList || data.registeredUsersList.length === 0) && (
+                <tr><td colSpan={6} style={{ textAlign: 'center', color: '#94A3B8', padding: '32px' }}>No registered users found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Task Assignment Modal */}
       {isTaskModalOpen && (
         <div className="ceo-modal-overlay">

@@ -143,6 +143,8 @@ import SalesFinanceView from './ceo/SalesFinanceView';
 import TeamPerformanceView from './ceo/TeamPerformanceView';
 import ReportsAnalyticsView from './ceo/ReportsAnalyticsView';
 import OrgOverview from './ceo/org/OrgOverview';
+import CEOEditRequestsView from './ceo/CEOEditRequestsView';
+import CEOEditHistoryView from './ceo/CEOEditHistoryView';
 
 // 9. Administration Components (src/administration/)
 import AdministrationSidebar from './administration/AdministrationSidebar';
@@ -179,6 +181,7 @@ import FinanceDashboard from './finance_dept/FinanceDashboard';
 import FinanceInvoicesView from './finance_dept/FinanceInvoicesView';
 import FinancePaymentsView from './finance_dept/FinancePaymentsView';
 import FinanceReceivablesView from './finance_dept/FinanceReceivablesView';
+import FinanceFinancialChargesView from './finance_dept/FinanceFinancialChargesView';
 import FinanceReportsView from './finance_dept/FinanceReportsView';
 import FinanceLeaveView from './finance_dept/FinanceLeaveView';
 
@@ -188,9 +191,25 @@ import LogisticsHeader from './logistics/LogisticsHeader';
 import LogisticsDashboard from './logistics/LogisticsDashboard';
 import LogisticsIncomingOrdersView from './logistics/LogisticsIncomingOrdersView';
 import LogisticsShipmentsView from './logistics/LogisticsShipmentsView';
-import LogisticsDeliveryNotesView from './logistics/LogisticsDeliveryNotesView';
+import LogisticsImportInventoryView from './logistics/LogisticsImportInventoryView';
+import LogisticsGRNView from './logistics/LogisticsGRNView';
 import LogisticsLeaveView from './logistics/LogisticsLeaveView';
 import LogisticsNotificationsView from './logistics/LogisticsNotificationsView';
+
+// 14. Purchaser Department Components (src/purchaser/)
+import PurchaserHeader from './purchaser/PurchaserHeader';
+import LocalPurchaserSidebar from './purchaser/local/LocalPurchaserSidebar';
+import LocalPurchaserDashboard from './purchaser/local/LocalPurchaserDashboard';
+import LocalPurchaserPendingOrdersView from './purchaser/local/LocalPurchaserPendingOrdersView';
+import LocalPurchaserInventoryView from './purchaser/local/LocalPurchaserInventoryView';
+import LocalPurchaserPOsView from './purchaser/local/LocalPurchaserPOsView';
+import LocalPurchaserGRNsView from './purchaser/local/LocalPurchaserGRNsView';
+import LocalPurchaserPayablesView from './purchaser/local/LocalPurchaserPayablesView';
+
+import GlobalPurchaserSidebar from './purchaser/global/GlobalPurchaserSidebar';
+import GlobalPurchaserDashboard from './purchaser/global/GlobalPurchaserDashboard';
+import GlobalPurchaserPendingOrdersView from './purchaser/global/GlobalPurchaserPendingOrdersView';
+import GlobalPurchaserPOsView from './purchaser/global/GlobalPurchaserPOsView';
 
 import { Users, ShieldCheck, UserX } from 'lucide-react';
 
@@ -353,9 +372,12 @@ export default function App() {
     setIsSidebarOpen(false);
   };
 
-  const handleSwitchRole = (role) => {
+  const handleSwitchRole = (role, subDept) => {
     if (canSwitchPortal(currentUser?.role)) {
       setViewPortal(role);
+    }
+    if (subDept) {
+      setCurrentUser(prev => prev ? ({ ...prev, purchaserSubDept: subDept }) : prev);
     }
     setCurrentRole(role);
     const defTab = (role === 'sales_member' || role === 'sales_rep') ? 'my_leads' : 'dashboard';
@@ -463,7 +485,7 @@ export default function App() {
 
   const knownRoles = [
     'employee', 'sales_member', 'sales_rep', 'sales_person', 'sales_manager', 'project_manager', 'admin',
-    'hr', 'accountant', 'marketing', 'ceo', 'administration', 'support', 'finance', 'logistics'
+    'hr', 'accountant', 'marketing', 'ceo', 'administration', 'support', 'finance', 'logistics', 'purchaser'
   ];
 
   const effectiveRole = knownRoles.includes(currentRole)
@@ -480,26 +502,27 @@ export default function App() {
       ],
       sales_member: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders'
+        'my_quotations', 'customer_pos', 'product_files', 'my_orders'
       ],
       sales_person: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders'
+        'my_quotations', 'customer_pos', 'product_files', 'my_orders'
       ],
       sales_rep: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
         'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'
       ],
       support: ['dashboard', 'leave', 'support_orders', 'inventory', 'delivery_notes', 'profile'],
-      logistics: ['dashboard', 'incoming_shipments', 'incoming', 'shipments', 'shipment_tracking', 'tracking', 'shipment_received', 'received', 'delivery_notes', 'notifications', 'leave', 'attendance_leave', 'profile'],
+      logistics: ['dashboard', 'incoming_shipments', 'incoming', 'shipments', 'shipment_tracking', 'tracking', 'shipment_received', 'received', 'grn', 'grn_creation', 'grns', 'logistics_grn', 'goods_received', 'delivery_notes', 'import_inventory', 'imported_inventory', 'logistics_inventory', 'notifications', 'leave', 'attendance_leave', 'profile'],
+      purchaser: ['dashboard', 'pending_orders', 'inventory', 'supplier_pos', 'grn', 'grn_creation', 'grns', 'local_payables', 'leave', 'profile'],
       sales_manager: ['dashboard', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
-      admin: ['dashboard', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      admin: ['dashboard', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
       accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
-      finance: ['dashboard', 'leave', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'finance_reports', 'reports', 'profile'],
+      finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'financial_charges', 'finance_reports', 'reports', 'profile'],
       marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'],
-      ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile']
     };
 
@@ -1042,17 +1065,17 @@ export default function App() {
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'financial_charges', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
                 <FinanceDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => handleSetActiveTab(tab)}
                 />
               )}
               {activeTab === 'leave' && <FinanceLeaveView />}
-              {activeTab === 'overdue_approval' && (
+              {(activeTab === 'overdue_approval' || activeTab === 'clear_orders') && (
                 <FinanceInvoicesView
                   searchQuery={portalSearch}
-                  initialTab="order_approvals"
+                  initialTab={activeTab === 'clear_orders' ? 'clear_orders' : 'order_approvals'}
                   onNavigatePayment={(inv) => {
                     setFinanceInvoiceForPayment(inv);
                     handleSetActiveTab('customer_payments');
@@ -1084,6 +1107,7 @@ export default function App() {
                   }}
                 />
               )}
+              {activeTab === 'financial_charges' && <FinanceFinancialChargesView searchQuery={portalSearch} />}
               {(activeTab === 'finance_reports' || activeTab === 'reports') && <FinanceReportsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
@@ -1119,9 +1143,14 @@ export default function App() {
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['incoming', 'incoming_shipments', 'shipments', 'tracking', 'shipment_tracking', 'received', 'shipment_received', 'delivery_notes', 'notifications', 'leave', 'attendance_leave', 'profile'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['incoming', 'incoming_shipments', 'shipments', 'tracking', 'shipment_tracking', 'received', 'shipment_received', 'grn', 'grn_creation', 'grns', 'logistics_grn', 'goods_received', 'goods_receipt_notes', 'import_inventory', 'imported_inventory', 'logistics_inventory', 'notifications', 'leave', 'attendance_leave', 'profile'].includes(activeTab)) && (
                 <LogisticsDashboard
                   currentUser={currentUser}
+                  onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                />
+              )}
+              {['grn', 'grn_creation', 'grns', 'logistics_grn', 'goods_received', 'goods_receipt_notes'].includes(activeTab) && (
+                <LogisticsGRNView
                   onNavigateTab={(tab) => handleSetActiveTab(tab)}
                 />
               )}
@@ -1154,8 +1183,8 @@ export default function App() {
                   onNavigateTab={(tab) => handleSetActiveTab(tab)}
                 />
               )}
-              {activeTab === 'delivery_notes' && (
-                <LogisticsDeliveryNotesView
+              {['import_inventory', 'imported_inventory', 'logistics_inventory'].includes(activeTab) && (
+                <LogisticsImportInventoryView
                   searchQuery={portalSearch}
                   currentUser={currentUser}
                 />
@@ -1169,6 +1198,96 @@ export default function App() {
               {activeTab === 'profile' && (
                 <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />
               )}
+            </main>
+          </div>
+        </RoleProtectedRoute>
+      )}
+
+      {/* ----------------- PURCHASER DEPARTMENT PORTAL ----------------- */}
+      {effectiveRole === 'purchaser' && (
+        <RoleProtectedRoute
+          userRole={backendVerifiedRole}
+          allowedRoles={['purchaser', 'admin', 'ceo']}
+          onReturnToDashboard={() => setCurrentRole(backendVerifiedRole)}
+        >
+          {currentUser?.purchaserSubDept === 'Global' ? (
+            <GlobalPurchaserSidebar
+              activeTab={activeTab}
+              setActiveTab={handleSetActiveTab}
+              currentRole={currentRole}
+              userRole={backendVerifiedRole}
+              currentUser={currentUser}
+              onSwitchRole={handleSwitchRole}
+              isMobileOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+              onLogout={handleLogout}
+            />
+          ) : (
+            <LocalPurchaserSidebar
+              activeTab={activeTab}
+              setActiveTab={handleSetActiveTab}
+              currentRole={currentRole}
+              userRole={backendVerifiedRole}
+              currentUser={currentUser}
+              onSwitchRole={handleSwitchRole}
+              isMobileOpen={isSidebarOpen}
+              onClose={() => setIsSidebarOpen(false)}
+              onLogout={handleLogout}
+            />
+          )}
+          <div className="main-wrapper">
+            <PurchaserHeader
+              activeTab={activeTab}
+              currentUser={currentUser}
+              subDept={currentUser?.purchaserSubDept || 'Local'}
+              onMenuToggle={() => setIsSidebarOpen(true)}
+              searchQuery={portalSearch}
+              onSearchChange={setPortalSearch}
+              onNavigateTab={(tab) => handleSetActiveTab(tab)}
+            />
+            <main className="content-area">
+              {currentUser?.purchaserSubDept === 'Global' ? (
+                <>
+                  {(activeTab === 'dashboard' || !['pending_orders', 'supplier_pos', 'leave', 'profile'].includes(activeTab)) && (
+                    <GlobalPurchaserDashboard
+                      currentUser={currentUser}
+                      onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                    />
+                  )}
+                  {activeTab === 'pending_orders' && (
+                    <GlobalPurchaserPendingOrdersView searchQuery={portalSearch} onNavigateTab={(tab) => handleSetActiveTab(tab)} />
+                  )}
+                  {activeTab === 'supplier_pos' && (
+                    <GlobalPurchaserPOsView searchQuery={portalSearch} />
+                  )}
+                </>
+              ) : (
+                <>
+                  {(activeTab === 'dashboard' || !['pending_orders', 'inventory', 'supplier_pos', 'grn', 'local_payables', 'leave', 'profile'].includes(activeTab)) && (
+                    <LocalPurchaserDashboard
+                      currentUser={currentUser}
+                      onNavigateTab={(tab) => handleSetActiveTab(tab)}
+                    />
+                  )}
+                  {activeTab === 'pending_orders' && (
+                    <LocalPurchaserPendingOrdersView searchQuery={portalSearch} onNavigateTab={(tab) => handleSetActiveTab(tab)} />
+                  )}
+                  {activeTab === 'inventory' && (
+                    <LocalPurchaserInventoryView searchQuery={portalSearch} />
+                  )}
+                  {activeTab === 'supplier_pos' && (
+                    <LocalPurchaserPOsView searchQuery={portalSearch} />
+                  )}
+                  {activeTab === 'grn' && (
+                    <LocalPurchaserGRNsView searchQuery={portalSearch} />
+                  )}
+                  {activeTab === 'local_payables' && (
+                    <LocalPurchaserPayablesView searchQuery={portalSearch} />
+                  )}
+                </>
+              )}
+              {activeTab === 'leave' && <FinanceLeaveView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -1264,12 +1383,14 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || (!['business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
+              {(activeTab === 'dashboard' || (!['business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
               {activeTab === 'business_overview' && <BusinessOverviewView />}
               {activeTab === 'projects_performance' && <ProjectsPerformanceView />}
               {activeTab === 'sales_finance' && <SalesFinanceView />}
               {activeTab === 'team_performance' && <TeamPerformanceView />}
               {activeTab === 'reports_analytics' && <ReportsAnalyticsView />}
+              {activeTab === 'edit_requests' && <CEOEditRequestsView onNavigateHistory={() => handleSetActiveTab('edit_history')} />}
+              {activeTab === 'edit_history' && <CEOEditHistoryView onNavigateRequests={() => handleSetActiveTab('edit_requests')} />}
               {activeTab.startsWith('org_') && <OrgOverview activeTab={activeTab} setActiveTab={handleSetActiveTab} />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>

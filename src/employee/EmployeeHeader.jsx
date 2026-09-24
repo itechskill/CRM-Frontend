@@ -45,7 +45,7 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
       case 'followups':
         return { title: 'Client Follow-ups', subtitle: 'Track client interactions, calls, and follow-up schedules' };
       case 'sales_targets':
-        return { title: 'Sales Targets & Quotas', subtitle: 'Review target quotas, achievements, and revenue milestones' };
+        return { title: 'Sales Targets', subtitle: 'Review sales targets allotted by CEO and your achievements' };
       case 'sales_activities':
         return { title: 'Sales Activities', subtitle: 'Log calls, meetings, pitches, and customer communication' };
       case 'leave':

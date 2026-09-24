@@ -59,6 +59,7 @@ export default function SalesTeamsView() {
     password: '',
     phone: '',
     position: 'Sales Representative',
+    branch: '',
     target: ''
   });
   const [inviting, setInviting] = useState(false);
@@ -114,6 +115,7 @@ export default function SalesTeamsView() {
           password: inviteForm.password,
           phone: inviteForm.phone,
           position: inviteForm.position,
+          branch: inviteForm.branch,
           target: inviteForm.target ? Number(inviteForm.target) : 0
         })
       });
@@ -127,6 +129,7 @@ export default function SalesTeamsView() {
             password: '',
             phone: '',
             position: 'Sales Representative',
+            branch: '',
             target: ''
           });
           setInviteSuccess('');
@@ -149,6 +152,7 @@ export default function SalesTeamsView() {
       email: member.email || '',
       phone: member.phone || '',
       position: member.position || 'Sales Person',
+      branch: member.branch || member.city || '',
       salaryTarget: member.salaryTarget || member.stats?.salaryTarget || '',
       status: member.status || 'active'
     });
@@ -418,7 +422,7 @@ export default function SalesTeamsView() {
                   )}
                 </div>
 
-                {/* Action Buttons: View, Edit, Delete, Assign Target (Required) */}
+                {/* Action Buttons: View, Edit, Delete */}
                 <div className="rep-actions-footer">
                   <button
                     type="button"
@@ -435,14 +439,6 @@ export default function SalesTeamsView() {
                     title="Edit Member Details"
                   >
                     <Edit2 size={14} /> Edit
-                  </button>
-                  <button
-                    type="button"
-                    className="rep-action-btn target-btn"
-                    onClick={() => openTargetModal(rep)}
-                    title="Assign Monthly Target"
-                  >
-                    <Target size={14} /> Target
                   </button>
                   <button
                     type="button"
@@ -763,6 +759,31 @@ export default function SalesTeamsView() {
                     onChange={(e) => setInviteForm((p) => ({ ...p, target: e.target.value }))}
                   />
                 </div>
+              </div>
+
+              <div className="sv-field" style={{ marginBottom: '16px' }}>
+                <label style={{ fontWeight: 700, color: '#1E293B', marginBottom: '4px', display: 'block' }}>Regional Branch / City Office</label>
+                <select
+                  value={inviteForm.branch}
+                  onChange={(e) => setInviteForm((p) => ({ ...p, branch: e.target.value }))}
+                  style={{
+                    backgroundColor: '#FFFFFF',
+                    border: '1.5px solid #CBD5E1',
+                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    color: '#0F172A',
+                    fontSize: '0.92rem',
+                    fontWeight: '600',
+                    outline: 'none',
+                    width: '100%',
+                    cursor: 'pointer'
+                  }}
+                >
+                  <option value="">Default (Inherit from My Regional Branch)</option>
+                  <option value="Islamabad">Islamabad Branch (ISB)</option>
+                  <option value="Karachi">Karachi Branch (KHI)</option>
+                  <option value="Lahore">Lahore Branch (LHR)</option>
+                </select>
               </div>
 
               <div className="sv-modal-actions">

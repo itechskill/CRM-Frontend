@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../../utils/api';
+import { getUser } from '../../utils/authStorage';
+import EditRequestModal from '../../components/EditRequestModal';
 import {
   Plus,
   ShoppingCart,
@@ -30,6 +32,8 @@ import {
   ArrowRight,
   Send,
   ShieldCheck,
+  ShieldAlert,
+  Lock,
   Ban
 } from 'lucide-react';
 import './SalesViews.css';
@@ -108,6 +112,12 @@ export default function SalesOrdersView() {
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
   const [feedback, setFeedback] = useState('');
+
+  // CEO Edit Permission Request States
+  const [showEditRequestModal, setShowEditRequestModal] = useState(false);
+  const [editRequestTarget, setEditRequestTarget] = useState(null);
+  const [activePermission, setActivePermission] = useState(null);
+  const currentUser = getUser();
 
   // Stock check & delivery workflow states
   const [stockCheckResult, setStockCheckResult] = useState(null);
@@ -336,7 +346,7 @@ export default function SalesOrdersView() {
     setShowModal(true);
   };
 
-  const openEdit = (o) => {
+  const openEdit = async (o) => {
     setForm({
       orderReference: o.orderReference || o.orderNumber || '',
       clientName: o.clientName || o.customerName || '',
@@ -360,7 +370,17 @@ export default function SalesOrdersView() {
     });
     setEditO(o);
     setError('');
+    setActivePermission(null);
     setShowModal(true);
+
+    try {
+      const { response, data } = await apiRequest(`/api/edit-permissions/check/Sales%20Order/${o._id}`);
+      if (response.ok && data.success && data.hasPermission) {
+        setActivePermission(data.permission);
+      }
+    } catch (err) {
+      console.error('[SalesOrdersView] Permission check error:', err);
+    }
   };
 
   const handleSave = async (e) => {
@@ -385,6 +405,7 @@ export default function SalesOrdersView() {
       const { response, data } = await apiRequest(url, { method, body: JSON.stringify(payload) });
       if (response.ok && data.success) {
         setShowModal(false);
+        setActivePermission(null);
         setFeedback(editO ? 'Sales Order updated successfully.' : 'Sales Order created successfully.');
         setTimeout(() => setFeedback(''), 3500);
         fetchOrders();
@@ -841,7 +862,7 @@ export default function SalesOrdersView() {
                         const color = isGreen ? '#065F46' : '#1E40AF';
                         const border = isGreen ? '#A7F3D0' : '#BFDBFE';
                         const dotColor = isGreen ? '#10B981' : '#3B82F6';
-                        const colorName = isGreen ? 'Green File' : 'Blue File';
+                        const colorName = isGreen ? 'Green File (Local)' : 'Blue File (Imported)';
                         return (
                           <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, background: bg, color: color, border: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
                             <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: dotColor }} />
@@ -910,28 +931,84 @@ export default function SalesOrdersView() {
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}>
-                        <button
-                          className="sv-btn-action-icon"
-                          onClick={() => handleSendToFinance(o)}
-                          disabled={o.departmentResponsible === 'Finance' || o.workflowStatus === 'Finance Approved' || o.departmentResponsible === 'Support'}
-                          title={
-                            o.workflowStatus === 'Finance Approved' || o.departmentResponsible === 'Support'
-                              ? 'Finance Approved (Moved to Support for DN)'
-                              : o.departmentResponsible === 'Finance'
-                                ? 'Awaiting Finance Overdue Approval'
-                                : (o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount' || o.workflowStatus === 'Finance Rejected')
-                                  ? 'Resend to Finance for Overdue Verification'
-                                  : 'Send Order to Finance (for Overdue Verification)'
-                          }
-                          style={{
-                            color: o.departmentResponsible === 'Finance' || o.workflowStatus === 'Finance Approved' ? '#94A3B8' : ((o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount') ? '#DC2626' : '#059669'),
-                            background: o.departmentResponsible === 'Finance' || o.workflowStatus === 'Finance Approved' ? '#F1F5F9' : ((o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount') ? '#FEF2F2' : '#ECFDF5'),
-                            border: (o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount') ? '1px solid #FECACA' : undefined,
-                            fontWeight: 700
-                          }}
-                        >
-                          <ShieldCheck size={14} />
-                        </button>
+                        {/* Action: Send to Finance Button */}
+                        {o.departmentResponsible === 'Finance' || o.workflowStatus === 'Pending Finance Overdue Check' ? (
+                          <button
+                            className="sv-btn-action-icon"
+                            disabled
+                            title="Order is currently in Finance queue for Overdue Verification"
+                            style={{
+                              padding: '5px 8px',
+                              color: '#64748B',
+                              background: '#F1F5F9',
+                              border: '1px solid #CBD5E1',
+                              borderRadius: '6px',
+                              cursor: 'not-allowed',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <ShieldCheck size={14} color="#D97706" />
+                          </button>
+                        ) : (o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount' || o.workflowStatus === 'Finance Rejected') ? (
+                          <button
+                            className="sv-btn-action-icon"
+                            onClick={() => handleSendToFinance(o)}
+                            title="Re-send Sales Order to Finance for Overdue Verification"
+                            style={{
+                              padding: '5px 8px',
+                              color: '#DC2626',
+                              background: '#FEF2F2',
+                              border: '1px solid #FECACA',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <Send size={14} color="#DC2626" />
+                          </button>
+                        ) : (o.workflowStatus === 'Finance Approved' || ['Support', 'Local Purchaser', 'Global Purchaser'].includes(o.departmentResponsible)) ? (
+                          <button
+                            className="sv-btn-action-icon"
+                            disabled
+                            title="Finance Approved — Routed to Procurement/Support"
+                            style={{
+                              padding: '5px 8px',
+                              color: '#047857',
+                              background: '#ECFDF5',
+                              border: '1px solid #A7F3D0',
+                              borderRadius: '6px',
+                              cursor: 'default',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <CheckCircle2 size={14} color="#059669" />
+                          </button>
+                        ) : (
+                          <button
+                            className="sv-btn-action-icon"
+                            onClick={() => handleSendToFinance(o)}
+                            title="Send to Finance for Overdue Approval"
+                            style={{
+                              padding: '5px 8px',
+                              color: '#047857',
+                              background: '#ECFDF5',
+                              border: '1.5px solid #10B981',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              justifyContent: 'center'
+                            }}
+                          >
+                            <Send size={14} color="#059669" />
+                          </button>
+                        )}
                         <button
                           className="sv-btn-action-icon"
                           onClick={() => handleOpenProformaModal(o)}
@@ -1139,7 +1216,70 @@ export default function SalesOrdersView() {
               <button onClick={() => setShowModal(false)}><X size={18} /></button>
             </div>
 
-            {error && <div className="sv-error">{error}</div>}
+            {error && (
+              <div className="sv-error" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '10px 14px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <ShieldAlert size={18} color="#DC2626" style={{ flexShrink: 0 }} />
+                  <span style={{ fontWeight: 500 }}>{error}</span>
+                </div>
+                {editO && error.toLowerCase().includes('ceo') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEditRequestTarget(editO);
+                      setShowEditRequestModal(true);
+                    }}
+                    style={{
+                      alignSelf: 'flex-start',
+                      padding: '6px 14px',
+                      borderRadius: '6px',
+                      backgroundColor: '#0F172A',
+                      color: '#FFFFFF',
+                      border: 'none',
+                      fontSize: '0.825rem',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '6px',
+                      marginTop: '4px',
+                      boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                    }}
+                  >
+                    <Lock size={14} style={{ color: '#F59E0B' }} />
+                    Submit Edit Permission Request to CEO
+                  </button>
+                )}
+              </div>
+            )}
+
+            {activePermission && (
+              <div style={{
+                backgroundColor: '#F0FDF4',
+                border: '1px solid #BBF7D0',
+                color: '#15803D',
+                padding: '10px 14px',
+                borderRadius: '8px',
+                marginBottom: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                fontSize: '0.85rem'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <CheckCircle2 size={18} color="#16A34A" />
+                  <div>
+                    <strong style={{ color: '#14532D' }}>CEO Edit Approval Active</strong>
+                    <div style={{ fontSize: '0.75rem', color: '#166534', marginTop: '2px' }}>
+                      Scope: <strong>{activePermission.permissionScope === 'SpecificFields' ? 'Specific Fields Only' : 'Full Document Edit'}</strong> • Single-use authorization {activePermission.expiresAt ? `(expires ${new Date(activePermission.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})` : ''}
+                    </div>
+                  </div>
+                </div>
+                <span style={{ fontSize: '0.725rem', fontWeight: 700, backgroundColor: '#DCFCE7', color: '#15803D', padding: '3px 8px', borderRadius: '4px', border: '1px solid #86EFAC' }}>
+                  UNLOCKED
+                </span>
+              </div>
+            )}
 
             <form onSubmit={handleSave} className="sv-form">
               {/* Section 1: Customer & Reference */}
@@ -1168,8 +1308,8 @@ export default function SalesOrdersView() {
                   <div className="sv-field">
                     <label>File Color</label>
                     <select value={form.fileType || 'Blue'} onChange={e => setForm(p => ({ ...p, fileType: e.target.value }))}>
-                      <option value="Blue">Blue File</option>
-                      <option value="Green">Green File</option>
+                      <option value="Blue">Blue File (Imported)</option>
+                      <option value="Green">Green File (Local)</option>
                     </select>
                   </div>
                   <div className="sv-field">
@@ -1641,6 +1781,25 @@ export default function SalesOrdersView() {
             </div>
           </div>
         </div>
+      )}
+      {/* CEO Edit Request Modal */}
+      {showEditRequestModal && editRequestTarget && (
+        <EditRequestModal
+          isOpen={showEditRequestModal}
+          onClose={() => {
+            setShowEditRequestModal(false);
+            setEditRequestTarget(null);
+          }}
+          documentType="Sales Order"
+          documentId={editRequestTarget._id}
+          documentNumber={editRequestTarget.orderReference || editRequestTarget.orderNumber || 'SO-DOC'}
+          currentUser={currentUser}
+          onRequestSubmitted={() => {
+            setShowModal(false);
+            setFeedback('Edit permission request has been sent to CEO. You can modify once approved.');
+            setTimeout(() => setFeedback(''), 5000);
+          }}
+        />
       )}
     </div>
   );

@@ -20,7 +20,8 @@ import {
   TrendingUp,
   FolderKanban,
   Heart,
-  Megaphone
+  Megaphone,
+  Boxes
 } from 'lucide-react';
 import '../employee/EmployeeSidebar.css';
 
@@ -49,7 +50,8 @@ export default function LogisticsSidebar({
     { id: 'shipments', label: 'Shipments', icon: Truck },
     { id: 'shipment_tracking', label: 'Shipment Tracking', icon: Compass },
     { id: 'shipment_received', label: 'Shipment Received', icon: PackageCheck },
-    { id: 'delivery_notes', label: 'Delivery Notes', icon: FileSpreadsheet },
+    { id: 'grn_creation', label: 'Goods Received (GRN)', icon: PackageCheck },
+    { id: 'import_inventory', label: 'Import Inventory', icon: Boxes },
     { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'leave', label: 'Attendance & Leave', icon: UserCheck },
     { id: 'profile', label: 'Profile', icon: User }
@@ -60,6 +62,8 @@ export default function LogisticsSidebar({
     if (itemId === 'incoming_shipments' && (activeTab === 'incoming' || activeTab === 'incoming_shipments')) return true;
     if (itemId === 'shipment_tracking' && (activeTab === 'tracking' || activeTab === 'shipment_tracking')) return true;
     if (itemId === 'shipment_received' && (activeTab === 'received' || activeTab === 'shipment_received')) return true;
+    if (itemId === 'grn_creation' && ['grn', 'grn_creation', 'grns', 'logistics_grn', 'goods_received', 'goods_receipt_notes'].includes(activeTab)) return true;
+    if (itemId === 'import_inventory' && ['import_inventory', 'imported_inventory', 'logistics_inventory'].includes(activeTab)) return true;
     if (itemId === 'leave' && (activeTab === 'leave' || activeTab === 'attendance_leave')) return true;
     return false;
   };
