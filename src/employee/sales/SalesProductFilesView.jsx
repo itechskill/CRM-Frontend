@@ -420,7 +420,15 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       });
 
       if (response.ok && data.success) {
-        setFeedback(data.message || `Sales Order ${data.data?.order?.orderReference || data.data?.order?.orderNumber} created! Automatically routed to Finance Department for Overdue verification.`);
+        const order = data.data?.order;
+        const sendResult = await apiRequest(`/api/sales-employee/orders/${order._id}/send-to-finance`, {
+          method: 'POST'
+        });
+        if (!sendResult.response.ok || !sendResult.data.success) {
+          alert(sendResult.data.message || 'Sales Order created, but could not be sent to Finance.');
+          return;
+        }
+        setFeedback(sendResult.data.message || `Sales Order ${order.orderReference || order.orderNumber} created! Automatically routed to Finance Department for Overdue verification.`);
         setSoPreFillModal(null);
         fetchFiles();
         setTimeout(() => setFeedback(''), 4500);

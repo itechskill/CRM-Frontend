@@ -492,6 +492,24 @@ export default function App() {
     ? currentRole
     : (getFrontendRole(currentRole) || 'employee');
 
+  useEffect(() => {
+    if (!['sales_member', 'sales_rep', 'sales_person', 'finance'].includes(effectiveRole)) return;
+
+    const preserveOpenForm = (event) => {
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        target.matches('.sv-modal-overlay, .ip-modal-overlay') &&
+        target.querySelector('form')
+      ) {
+        event.stopPropagation();
+      }
+    };
+
+    document.addEventListener('click', preserveOpenForm, true);
+    return () => document.removeEventListener('click', preserveOpenForm, true);
+  }, [effectiveRole]);
+
   // Keep this hook ABOVE every conditional return.
   // React requires hooks to run in the same order on every render.
   useEffect(() => {
