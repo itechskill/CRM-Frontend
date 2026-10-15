@@ -4,6 +4,7 @@ import { Plus, FileCheck, Edit2, Eye, Trash2, X, Save, Search, Calendar, User, D
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
+import { CUSTOMER_PO_ATTACHMENT_ACCEPT, hasCustomerPOAttachment, readCustomerPOAttachment } from './customerPOAttachment';
 
 const STATUS_COLORS = {
   Draft: '#64748B',
@@ -233,8 +234,25 @@ export default function SalesCustomerPOsView() {
     }
   };
 
+  const handleAttachmentChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const attachment = await readCustomerPOAttachment(file);
+      setForm(prev => ({ ...prev, ...attachment }));
+      setError('');
+    } catch (err) {
+      e.target.value = '';
+      setError(err.message);
+    }
+  };
+
   const handleSave = async (e) => {
     e.preventDefault();
+    if (!hasCustomerPOAttachment(form)) {
+      setError('Attach the Customer PO as a PDF, Excel file, or screenshot.');
+      return;
+    }
     setSaving(true);
     setError('');
     try {
@@ -265,6 +283,10 @@ export default function SalesCustomerPOsView() {
   };
 
   const handleOpenConvertToFile = (po) => {
+    if (!hasCustomerPOAttachment(po)) {
+      setError('Attach the Customer PO as a PDF, Excel file, or screenshot before creating a Product File.');
+      return;
+    }
     setConvertModalPO(po);
     setConvertFileType('Blue');
     setConvertFileNumber('');
@@ -427,17 +449,18 @@ export default function SalesCustomerPOsView() {
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px',
-                            background: '#2563EB',
+                            background: hasCustomerPOAttachment(po) ? '#2563EB' : '#94A3B8',
                             color: '#FFFFFF',
                             border: 'none',
                             padding: '4px 10px',
                             borderRadius: '5px',
                             fontSize: '0.72rem',
                             fontWeight: 700,
-                            cursor: 'pointer'
+                            cursor: hasCustomerPOAttachment(po) ? 'pointer' : 'not-allowed'
                           }}
+                          disabled={!hasCustomerPOAttachment(po)}
                           onClick={() => handleOpenConvertToFile(po)}
-                          title="Convert Customer PO to Product File"
+                          title={hasCustomerPOAttachment(po) ? 'Convert Customer PO to Product File' : 'Attach the Customer PO before creating a Product File.'}
                         >
                           <FolderPlus size={12} /> Convert to File
                         </button>
@@ -513,12 +536,25 @@ export default function SalesCustomerPOsView() {
                 </div>
               )}
 
+              <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '4px' }}>Customer PO Attachment</div>
+                {hasCustomerPOAttachment(viewPO) ? (
+                  <a href={viewPO.uploadedDocument} download={viewPO.documentName} style={{ fontSize: '0.85rem', fontWeight: 700, color: '#2563EB' }}>
+                    {viewPO.documentName}
+                  </a>
+                ) : (
+                  <div style={{ fontSize: '0.85rem', color: '#DC2626' }}>No attachment recorded</div>
+                )}
+              </div>
+
               <div className="sv-modal-actions">
                 <button className="sv-btn-cancel" onClick={() => setViewPO(null)}>Close</button>
                 {viewPO.status !== 'Processed' && (
                   <button
                     className="sv-btn-primary"
                     style={{ background: '#2563EB' }}
+                    disabled={!hasCustomerPOAttachment(viewPO)}
+                    title={!hasCustomerPOAttachment(viewPO) ? 'Attach the Customer PO before creating a Product File.' : ''}
                     onClick={() => {
                       const target = viewPO;
                       setViewPO(null);
@@ -585,6 +621,19 @@ export default function SalesCustomerPOsView() {
               <div className="sv-field">
                 <label>Notes / Scope Details</label>
                 <textarea rows={3} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Customer PO terms, special conditions, item details..." />
+              </div>
+
+              <div className="sv-field">
+                <label>Customer PO Attachment *</label>
+                <input
+                  type="file"
+                  accept={CUSTOMER_PO_ATTACHMENT_ACCEPT}
+                  onChange={handleAttachmentChange}
+                  required={!hasCustomerPOAttachment(form)}
+                />
+                <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
+                  {form.documentName || 'Accepted: PDF, Excel, or screenshot (maximum 3 MB).'}
+                </div>
               </div>
 
               <div className="sv-modal-actions">

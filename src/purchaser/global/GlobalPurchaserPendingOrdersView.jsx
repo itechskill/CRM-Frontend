@@ -42,6 +42,11 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
 
   useEffect(() => {
     fetchData();
+
+    const refreshOnFocus = () => fetchData();
+    window.addEventListener('focus', refreshOnFocus);
+
+    return () => window.removeEventListener('focus', refreshOnFocus);
   }, []);
 
   const handleOpenPOModal = (order) => {

@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 
-export default function LocalPurchaserInventoryView({ searchQuery }) {
+export default function LocalPurchaserInventoryView({ searchQuery, currentUser }) {
   const [inventory, setInventory] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,6 +65,7 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
     remarks: ''
   });
   const [submittingProcure, setSubmittingProcure] = useState(false);
+  const isLocalPurchaser = currentUser?.role === 'purchaser' && currentUser?.purchaserSubDept !== 'Global';
 
   const fetchData = async () => {
     setLoading(true);
@@ -268,9 +269,10 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>Warehouse &amp; Local Inventory</h2>
-          <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>Real-time stock level, product directory, item editing, and manual stock entry</p>
+          <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>Real-time stock level and product directory</p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
+          {!isLocalPurchaser && (
           <button
             onClick={() => setShowAddModal(true)}
             style={{
@@ -290,6 +292,7 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
             <Plus size={16} />
             <span>+ Add Goods to Inventory</span>
           </button>
+          )}
           <button
             onClick={fetchData}
             style={{
@@ -310,6 +313,12 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
           </button>
         </div>
       </div>
+
+      {isLocalPurchaser && (
+        <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#1E40AF', padding: '12px 18px', borderRadius: '10px', fontWeight: 600, marginBottom: '20px' }}>
+          Inventory is view-only for Local Purchasers. Inventory IN and OUT are handled by Support.
+        </div>
+      )}
 
       {toast && (
         <div style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#065F46', padding: '12px 18px', borderRadius: '10px', fontWeight: 700, marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -408,8 +417,8 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
       </div>
 
       {/* Main Inventory Table */}
-      <div style={{ backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
+      <div style={{ backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflowX: 'auto', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        <table style={{ width: '100%', minWidth: '1250px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.88rem' }}>
           <thead>
             <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
               <th style={{ padding: '12px 18px', fontWeight: 700 }}>Product Name</th>
@@ -488,6 +497,8 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
                         >
                           <Eye size={14} />
                         </button>
+                        {!isLocalPurchaser && (
+                          <>
                         <button
                           onClick={() => openEditModal(item)}
                           style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', color: '#15803D', borderRadius: '6px', padding: '5px 8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
@@ -502,6 +513,8 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
                         >
                           <Trash2 size={14} />
                         </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -510,7 +523,7 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
             ) : (
               <tr>
                 <td colSpan={9} style={{ padding: '36px', textAlign: 'center', color: '#94A3B8' }}>
-                  No products found in warehouse inventory. Click "+ Add Goods to Inventory" to create one.
+                  {isLocalPurchaser ? 'No products found in warehouse inventory.' : 'No products found in warehouse inventory. Click "+ Add Goods to Inventory" to create one.'}
                 </td>
               </tr>
             )}
@@ -578,6 +591,7 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
             )}
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              {!isLocalPurchaser && (
               <button
                 onClick={() => {
                   const item = viewModalItem;
@@ -588,6 +602,7 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
               >
                 <Edit3 size={14} /> Edit Item
               </button>
+              )}
               <button
                 onClick={() => setViewModalItem(null)}
                 style={{ backgroundColor: '#F1F5F9', color: '#475569', border: 'none', borderRadius: '8px', padding: '8px 18px', fontWeight: 600, cursor: 'pointer' }}
@@ -600,7 +615,7 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
       )}
 
       {/* EDIT PRODUCT MODAL */}
-      {editModalItem && (
+      {!isLocalPurchaser && editModalItem && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -845,7 +860,7 @@ export default function LocalPurchaserInventoryView({ searchQuery }) {
       )}
 
       {/* ADD GOODS TO INVENTORY MODAL */}
-      {showAddModal && (
+      {!isLocalPurchaser && showAddModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

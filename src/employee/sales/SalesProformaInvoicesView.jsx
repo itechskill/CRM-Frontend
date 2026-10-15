@@ -63,7 +63,7 @@ const EMPTY_PROFORMA_FORM = {
   notes: ''
 };
 
-export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigateDeliveryNotes, onClearInitialOrder }) {
+export default function SalesProformaInvoicesView({ initialSalesOrder, onClearInitialOrder }) {
   const [proformas, setProformas] = useState([]);
   const [salesOrders, setSalesOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -518,7 +518,7 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
         body: JSON.stringify({ status: 'Approved' })
       });
       if (response.ok && data.success) {
-        setFeedback(`Proforma Invoice ${pi.proformaNumber} approved by customer! It is now visible in Delivery Notes.`);
+        setFeedback(`Proforma Invoice ${pi.proformaNumber} approved by customer. Continue the linked Sales Order through Finance and procurement.`);
         fetchProformas();
         setTimeout(() => setFeedback(''), 4000);
       } else {
@@ -995,10 +995,10 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
             <Truck size={22} />
           </div>
           <div className="deal-kpi-content">
-            <div className="deal-kpi-label">Next Stage Ready</div>
+            <div className="deal-kpi-label">Workflow</div>
             <div className="deal-kpi-value">{proformas.length}</div>
             <div className="deal-kpi-sub total-pipeline">
-              Ready for Delivery Note creation
+              Linked Sales Orders continue through Finance
             </div>
           </div>
         </div>
@@ -1117,16 +1117,6 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
                             style={{ color: '#059669', background: '#ECFDF5' }}
                           >
                             <CheckCircle2 size={13} />
-                          </button>
-                        )}
-                        {pi.status === 'Approved' && (
-                          <button
-                            className="sv-btn-action-icon"
-                            onClick={() => onNavigateDeliveryNotes ? onNavigateDeliveryNotes(pi) : null}
-                            title="Create Delivery Note from Approved Proforma"
-                            style={{ color: '#0284C7', background: '#F0F9FF' }}
-                          >
-                            <Truck size={13} />
                           </button>
                         )}
                         <button
@@ -1846,18 +1836,6 @@ export default function SalesProformaInvoicesView({ initialSalesOrder, onNavigat
                     }}
                   >
                     <CheckCircle2 size={14} /> Approve Proforma (Customer Accepted)
-                  </button>
-                )}
-                {viewProforma.status === 'Approved' && (
-                  <button
-                    className="sv-btn-primary"
-                    style={{ background: '#0284C7', borderColor: '#0284C7' }}
-                    onClick={() => {
-                      if (onNavigateDeliveryNotes) onNavigateDeliveryNotes(viewProforma);
-                      setViewProforma(null);
-                    }}
-                  >
-                    <Truck size={14} /> Create Delivery Note
                   </button>
                 )}
                 <button

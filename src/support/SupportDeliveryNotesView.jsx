@@ -64,10 +64,9 @@ const EMPTY_FORM = {
   notes: ''
 };
 
-export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
+export default function SupportDeliveryNotesView({ initialSelectedOrder, onClearSelectedOrder }) {
   const [deliveryNotes, setDeliveryNotes] = useState([]);
   const [salesOrders, setSalesOrders] = useState([]);
-  const [proformaInvoices, setProformaInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showModal, setShowModal] = useState(false);
@@ -94,42 +93,28 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
 
   const fetchOrders = useCallback(async () => {
     try {
-      const { response, data } = await apiRequest('/api/sales-employee/orders');
+      const { response, data } = await apiRequest('/api/sales-employee/orders/available-for-delivery');
       if (response.ok && data.success) {
-        const supportOrders = (data.data || []).filter(o =>
-          o.workflowStatus && o.workflowStatus !== 'Sales Order Created'
-        );
         const cutoff = new Date('2026-09-15T00:00:00.000Z');
-        setSalesOrders(supportOrders.filter(d => new Date(d.createdAt) > cutoff));
+        setSalesOrders((data.data || []).filter(d => new Date(d.createdAt) > cutoff));
       }
     } catch (e) {
       console.error('[Fetch Orders for DN Error]:', e);
     }
   }, []);
 
-  const fetchProformas = useCallback(async () => {
-    try {
-      const { response, data } = await apiRequest('/api/sales-employee/proforma-invoices');
-      if (response.ok && data.success) {
-        setProformaInvoices(data.data || []);
-      }
-    } catch (e) {
-      console.error('[Fetch Proformas for DN Error]:', e);
-    }
-  }, []);
-
   useEffect(() => {
     fetchDeliveryNotes();
     fetchOrders();
-    fetchProformas();
-  }, [fetchDeliveryNotes, fetchOrders, fetchProformas]);
+  }, [fetchDeliveryNotes, fetchOrders]);
 
   useEffect(() => {
-    if (initialPreFillOrder) {
-      handleSelectOrder(initialPreFillOrder._id);
+    if (initialSelectedOrder) {
+      handleSelectOrder(initialSelectedOrder._id, initialSelectedOrder);
       setShowModal(true);
+      if (onClearSelectedOrder) onClearSelectedOrder();
     }
-  }, [initialPreFillOrder]);
+  }, [initialSelectedOrder]);
 
   const handleOpenAddModal = () => {
     setForm({
@@ -140,12 +125,12 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
     setShowModal(true);
   };
 
-  const handleSelectOrder = (soId) => {
+  const handleSelectOrder = (soId, fallbackOrder = null) => {
     if (!soId) {
       setForm(prev => ({ ...prev, salesOrderId: '', salesOrderNumber: '' }));
       return;
     }
-    const so = salesOrders.find(o => o._id === soId);
+    const so = salesOrders.find(o => o._id === soId) || fallbackOrder;
     if (!so) return;
 
     const items = (so.items && so.items.length > 0)
@@ -170,34 +155,6 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
       trackingNumber: `TRK-${Math.floor(10000 + Math.random() * 90000)}`,
       items: items,
       notes: `Dispatch for ${so.orderReference || so.orderNumber}`
-    }));
-  };
-
-  const handleSelectProforma = (piId) => {
-    if (!piId) return;
-    const pi = proformaInvoices.find(p => p._id === piId);
-    if (!pi) return;
-
-    const items = (pi.items && pi.items.length > 0)
-      ? pi.items.map(it => ({
-          product: it.description || 'Item',
-          description: it.description || 'Item',
-          demand: Number(it.quantity) || 1,
-          quantity: Number(it.quantity) || 1,
-          unit: 'pcs',
-          availability: 'Available'
-        }))
-      : [{ product: pi.productSummary || 'Proforma Delivery Goods', description: pi.productSummary || 'Proforma Delivery Goods', demand: 1, quantity: 1, unit: 'pcs', availability: 'Available' }];
-
-    setForm(prev => ({
-      ...prev,
-      salesOrderNumber: pi.proformaNumber || '',
-      clientName: pi.clientName || '',
-      recipientName: pi.clientName || '',
-      recipientPhone: pi.clientPhone || '',
-      deliveryAddress: pi.clientAddress || 'Client Facility',
-      items: items,
-      notes: `Dispatch for Approved Proforma ${pi.proformaNumber}`
     }));
   };
 
@@ -230,6 +187,10 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
       alert('Client / Customer name is required.');
       return;
     }
+    if (!form.salesOrderId) {
+      alert('Select a Sales Order that has reached Support and has goods received in office.');
+      return;
+    }
     if (saving) return;
     setSaving(true);
     try {
@@ -241,6 +202,7 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
         setFeedback(`Delivery Note ${data.data?.deliveryNumber || data.data?.deliveryNoteNumber} created successfully!`);
         setShowModal(false);
         fetchDeliveryNotes();
+        fetchOrders();
         setTimeout(() => setFeedback(''), 4000);
       } else {
         alert(data.message || 'Failed to create Delivery Note.');
@@ -714,7 +676,7 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
             </div>
 
             <form onSubmit={handleSaveDN} className="sv-form">
-              {/* TOP WORKFLOW BAR: LINK / MOVE SALES ORDER OR APPROVED PROFORMA INTO DELIVERY NOTE */}
+              {/* TOP WORKFLOW BAR: LINK SALES ORDER IN SUPPORT TO DELIVERY NOTE */}
               <div style={{
                 background: '#F0FDF4',
                 border: '1.5px solid #86EFAC',
@@ -735,6 +697,7 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
                   <select
                     value={form.salesOrderId}
                     onChange={e => handleSelectOrder(e.target.value)}
+                    required
                     style={{
                       width: '100%',
                       padding: '9px 12px',
@@ -757,40 +720,8 @@ export default function SupportDeliveryNotesView({ initialPreFillOrder }) {
                   </select>
                 </div>
 
-                {/* Import from Approved Proforma Invoices */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <FileSpreadsheet size={16} color="#0284C7" />
-                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0369A1' }}>
-                      OR Import from Customer-Approved Proforma Invoice
-                    </label>
-                  </div>
-                  <select
-                    onChange={e => handleSelectProforma(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #BAE6FD',
-                      background: '#FFFFFF',
-                      fontWeight: 700,
-                      fontSize: '0.88rem',
-                      color: '#0F172A'
-                    }}
-                  >
-                    <option value="">-- Select Approved Proforma Invoice --</option>
-                    {proformaInvoices.map(pi => {
-                      return (
-                        <option key={pi._id} value={pi._id}>
-                          {pi.proformaNumber} — {pi.clientName} [{pi.status || 'Issued'}] (Rs. {Number(pi.netAmount || pi.totalAmount || 0).toLocaleString()})
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
                 <div style={{ fontSize: '0.75rem', color: '#047857' }}>
-                  💡 Selecting either an order or approved proforma invoice instantly auto-populates products, quantities, and customer shipping details into this Delivery Note.
+                  Only Sales Orders received by Support after goods arrive in the office are available for Delivery Note creation.
                 </div>
               </div>
 

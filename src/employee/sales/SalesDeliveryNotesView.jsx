@@ -66,10 +66,9 @@ const EMPTY_FORM = {
   notes: ''
 };
 
-export default function SalesDeliveryNotesView({ initialSalesOrder, initialProforma, onClearInitial }) {
+export default function SalesDeliveryNotesView({ initialSalesOrder, onClearInitial }) {
   const [notes, setNotes] = useState([]);
   const [availableOrders, setAvailableOrders] = useState([]);
-  const [availableProformas, setAvailableProformas] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -96,23 +95,12 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
   // ── 1. FETCH DATA ──
   const fetchOrdersForDelivery = useCallback(async () => {
     try {
-      const { response, data } = await apiRequest('/api/sales-employee/orders');
+      const { response, data } = await apiRequest('/api/sales-employee/orders/available-for-delivery');
       if (response.ok && data.success) {
         setAvailableOrders(data.data || []);
       }
     } catch (e) {
       console.error('Fetch orders error:', e);
-    }
-  }, []);
-
-  const fetchProformasForDelivery = useCallback(async () => {
-    try {
-      const { response, data } = await apiRequest('/api/sales-employee/proforma-invoices');
-      if (response.ok && data.success) {
-        setAvailableProformas(data.data || []);
-      }
-    } catch (e) {
-      console.error('Fetch proformas error:', e);
     }
   }, []);
 
@@ -134,8 +122,7 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
   useEffect(() => {
     fetchNotes();
     fetchOrdersForDelivery();
-    fetchProformasForDelivery();
-  }, [fetchNotes, fetchOrdersForDelivery, fetchProformasForDelivery]);
+  }, [fetchNotes, fetchOrdersForDelivery]);
 
   // ── 2. MOVE / TRANSFER SALES ORDER TO DELIVERY NOTE ──
   const handleSelectSalesOrder = (orderId) => {
@@ -183,62 +170,13 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
     }
   };
 
-  // ── 2B. MOVE / TRANSFER APPROVED PROFORMA INVOICE TO DELIVERY NOTE ──
-  const handleSelectProforma = (proformaId) => {
-    if (!proformaId) {
-      setForm(prev => ({
-        ...prev,
-        salesOrderId: '',
-        salesOrderNumber: ''
-      }));
-      return;
-    }
-
-    const selected = availableProformas.find(p => p._id === proformaId);
-    if (selected) {
-      const items = selected.items && selected.items.length > 0
-        ? selected.items.map(it => ({
-            product: it.description || 'Proforma Item',
-            description: it.description || 'Proforma Item',
-            demand: Number(it.quantity) || 1,
-            quantity: Number(it.quantity) || 1,
-            unit: it.unit || 'pcs',
-            availability: 'Available'
-          }))
-        : [{
-            product: 'Commercial Scope Items',
-            description: 'Commercial Scope Items',
-            demand: 1,
-            quantity: 1,
-            unit: 'pcs',
-            availability: 'Available'
-          }];
-
-      setForm(prev => ({
-        ...prev,
-        salesOrderId: selected.salesOrderId || selected._id,
-        salesOrderNumber: selected.proformaNumber ? `${selected.proformaNumber} (${selected.salesOrderNumber || 'Approved PI'})` : (selected.salesOrderNumber || ''),
-        clientName: selected.clientName || '',
-        recipientName: selected.clientName || '',
-        recipientPhone: selected.clientPhone || '',
-        deliveryAddress: selected.clientAddress || `${selected.clientName} Facility / Warehouse`,
-        items: items,
-        notes: `Delivery against Approved Proforma Invoice ${selected.proformaNumber || ''}. Total Amount: Rs. ${Number(selected.netAmount || selected.totalAmount || 0).toLocaleString()} PKR.`
-      }));
-    }
-  };
-
   useEffect(() => {
-    if (initialProforma) {
-      handleOpenCreateModal();
-      handleSelectProforma(initialProforma._id || initialProforma);
-      if (onClearInitial) onClearInitial();
-    } else if (initialSalesOrder) {
+    if (initialSalesOrder) {
       handleOpenCreateModal();
       handleSelectSalesOrder(initialSalesOrder._id || initialSalesOrder);
       if (onClearInitial) onClearInitial();
     }
-  }, [initialProforma, initialSalesOrder]);
+  }, [initialSalesOrder]);
 
   // ── 3. OPEN CREATE / EDIT MODAL ──
   const handleOpenCreateModal = () => {
@@ -334,6 +272,10 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
       setError('Delivery address is required.');
       return;
     }
+    if (!form.salesOrderId) {
+      setError('Select a Sales Order that has reached Support and has goods received in office.');
+      return;
+    }
 
     setSaving(true);
     setError('');
@@ -415,26 +357,34 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
   const handleOpenCreateInvoice = (note) => {
     // Look up matching Sales Order for exact financial amount
     const orderRef = note.salesOrderNumber || note.sourceDocument;
-    const orderId = note.salesOrderId?._id || note.salesOrderId;
+    const populatedOrder = note.salesOrder && typeof note.salesOrder === 'object' ? note.salesOrder : null;
+    const orderId = note.salesOrderId?._id || note.salesOrderId || populatedOrder?._id || note.salesOrder;
     const linkedOrder = availableOrders.find(
       o => (orderId && o._id === orderId) ||
            (orderRef && (o.orderReference === orderRef || o.orderNumber === orderRef))
-    );
+    ) || populatedOrder;
 
     const netAmount = linkedOrder ? (Number(linkedOrder.netAmount) || Number(linkedOrder.totalAmount) || 0) : 0;
-
-    const items = note.items && note.items.length
-      ? note.items.map(it => {
+    const sourceItems = linkedOrder?.items?.length ? linkedOrder.items : note.items;
+    const items = sourceItems && sourceItems.length
+      ? sourceItems.map(it => {
           const qty = Number(it.quantity || it.demand) || 1;
-          const unitPrice = netAmount > 0 && note.items.length === 1 ? (netAmount / qty) : 0;
+          const unitPrice = Number(it.unitPrice) || 0;
           return {
             description: it.product || it.description || 'Delivered Item',
             quantity: qty,
             unitPrice: unitPrice,
-            total: unitPrice * qty
+            total: Number(it.total) || (unitPrice * qty)
           };
         })
       : [{ description: 'Delivered Goods', quantity: 1, unitPrice: netAmount, total: netAmount }];
+
+    const calculatedSubtotal = items.reduce((sum, item) => sum + (Number(item.total) || 0), 0);
+    const subtotal = linkedOrder ? (Number(linkedOrder.totalAmount) || calculatedSubtotal) : calculatedSubtotal;
+    const discount = Number(linkedOrder?.discount) || 0;
+    const tax = Number(linkedOrder?.tax) || 0;
+    const taxableAmount = Math.max(0, subtotal - discount);
+    const taxRate = taxableAmount > 0 && tax > 0 ? Number(((tax / taxableAmount) * 100).toFixed(4)) : 0;
 
     setInvoicePreFill({
       deliveryNoteId: note._id,
@@ -446,6 +396,10 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
       customerPhone: note.recipientPhone || linkedOrder?.clientPhone || '',
       customerAddress: note.deliveryAddress || linkedOrder?.clientAddress || '',
       items: items,
+      subtotal,
+      discount,
+      tax,
+      taxRate,
       amount: netAmount > 0 ? netAmount : '',
       dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
     });
@@ -470,12 +424,13 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
         items: invoicePreFill.items.map(it => ({
           description: it.description,
           quantity: it.quantity,
-          unitPrice: net > 0 && invoicePreFill.items.length === 1 ? net : it.unitPrice,
-          total: net > 0 && invoicePreFill.items.length === 1 ? net : (it.quantity * it.unitPrice)
+          unitPrice: Number(it.unitPrice) || 0,
+          total: Number(it.total) || ((Number(it.quantity) || 1) * (Number(it.unitPrice) || 0))
         })),
-        subtotal: net,
-        tax: 0,
-        discount: 0,
+        subtotal: Number(invoicePreFill.subtotal) || net,
+        tax: Number(invoicePreFill.tax) || 0,
+        taxRate: Number(invoicePreFill.taxRate) || 0,
+        discount: Number(invoicePreFill.discount) || 0,
         amount: net,
         dueDate: invoicePreFill.dueDate,
         status: 'Pending Review'
@@ -1036,7 +991,7 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
             {error && <div className="sv-error">{error}</div>}
 
             <form onSubmit={handleSaveDeliveryNote} className="sv-form">
-              {/* TOP WORKFLOW BAR: LINK / MOVE SALES ORDER OR APPROVED PROFORMA INTO DELIVERY NOTE */}
+              {/* TOP WORKFLOW BAR: LINK SALES ORDER IN SUPPORT TO DELIVERY NOTE */}
               <div style={{
                 background: '#F0FDF4',
                 border: '1.5px solid #86EFAC',
@@ -1057,6 +1012,7 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
                   <select
                     value={form.salesOrderId}
                     onChange={e => handleSelectSalesOrder(e.target.value)}
+                    required
                     style={{
                       width: '100%',
                       padding: '9px 12px',
@@ -1080,41 +1036,8 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, initialProfo
                   </select>
                 </div>
 
-                {/* Import from Approved Proforma Invoices */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
-                    <FileSpreadsheet size={16} color="#0284C7" />
-                    <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#0369A1' }}>
-                      OR Import from Customer-Approved Proforma Invoice
-                    </label>
-                  </div>
-                  <select
-                    onChange={e => handleSelectProforma(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '9px 12px',
-                      borderRadius: '8px',
-                      border: '1px solid #BAE6FD',
-                      background: '#FFFFFF',
-                      fontWeight: 700,
-                      fontSize: '0.88rem',
-                      color: '#0F172A'
-                    }}
-                  >
-                    <option value="">-- Select Approved Proforma Invoice --</option>
-                    {availableProformas.map(pi => {
-                      const isApproved = pi.status === 'Approved';
-                      return (
-                        <option key={pi._id} value={pi._id}>
-                          {pi.proformaNumber} — {pi.clientName} [{pi.status || 'Issued'}] (Rs. {Number(pi.netAmount || pi.totalAmount || 0).toLocaleString()})
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
                 <div style={{ fontSize: '0.75rem', color: '#047857' }}>
-                  💡 Selecting either an order or approved proforma invoice instantly auto-populates products, quantities, and customer shipping details into this Delivery Note.
+                  Only Sales Orders received by Support after goods arrive in the office are available for Delivery Note creation.
                 </div>
               </div>
 

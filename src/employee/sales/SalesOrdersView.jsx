@@ -37,6 +37,7 @@ import {
   Ban
 } from 'lucide-react';
 import './SalesViews.css';
+import { hasCustomerPOAttachment } from './customerPOAttachment';
 
 const DELIVERY_COLORS = {
   'Not Delivered': '#64748B',
@@ -81,6 +82,7 @@ const EMPTY_FORM = {
   salePerson: '',
   fileNo: '',
   fileType: 'Blue',
+  customerPOId: '',
   customerPONumber: '',
   productSummary: '',
   clientEmail: '',
@@ -99,6 +101,7 @@ const EMPTY_FORM = {
 
 export default function SalesOrdersView() {
   const [orders, setOrders] = useState([]);
+  const [customerPOs, setCustomerPOs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('active');
   const [searchTerm, setSearchTerm] = useState('');
@@ -150,6 +153,18 @@ export default function SalesOrdersView() {
   useEffect(() => {
     fetchOrders();
   }, [fetchOrders]);
+
+  useEffect(() => {
+    const fetchCustomerPOs = async () => {
+      try {
+        const { response, data } = await apiRequest('/api/sales-employee/customer-pos');
+        if (response.ok && data.success) setCustomerPOs(data.data || []);
+      } catch (e) {
+        console.error('Error fetching customer POs:', e);
+      }
+    };
+    fetchCustomerPOs();
+  }, []);
 
   const handleCheckStock = async (order) => {
     setCheckingStock(true);
@@ -353,6 +368,7 @@ export default function SalesOrdersView() {
       salePerson: o.salePerson || o.createdBy?.fullName || '',
       fileNo: o.fileNo || o.fileNumber || '',
       fileType: o.fileType || (o.fileNo?.toLowerCase().includes('blue') ? 'Blue' : 'Green'),
+      customerPOId: o.customerPOId?._id || o.customerPOId || '',
       customerPONumber: o.customerPONumber || '',
       productSummary: o.productSummary || '',
       clientEmail: o.clientEmail || '',
@@ -388,6 +404,13 @@ export default function SalesOrdersView() {
     if (!form.clientName.trim()) {
       setError('Customer / Client name is required.');
       return;
+    }
+    if (!editO) {
+      const linkedPO = customerPOs.find(po => po._id === form.customerPOId);
+      if (!linkedPO || !hasCustomerPOAttachment(linkedPO)) {
+        setError('Select a Customer PO with a PDF, Excel file, or screenshot attached.');
+        return;
+      }
     }
     setSaving(true);
     setError('');
@@ -1313,8 +1336,31 @@ export default function SalesOrdersView() {
                     </select>
                   </div>
                   <div className="sv-field">
-                    <label>Customer PO #</label>
-                    <input value={form.customerPONumber} onChange={e => setForm(p => ({ ...p, customerPONumber: e.target.value }))} placeholder="e.g. CPO-0001" />
+                    <label>Customer PO # {!editO && '*'}</label>
+                    {editO ? (
+                      <input value={form.customerPONumber} onChange={e => setForm(p => ({ ...p, customerPONumber: e.target.value }))} placeholder="e.g. CPO-0001" />
+                    ) : (
+                      <select
+                        value={form.customerPOId}
+                        onChange={e => {
+                          const selected = customerPOs.find(po => po._id === e.target.value);
+                          setForm(p => ({
+                            ...p,
+                            customerPOId: e.target.value,
+                            customerPONumber: selected?.poNumber || '',
+                            clientName: selected?.customerName || p.clientName,
+                            totalAmount: selected?.amount || p.totalAmount,
+                            netAmount: selected?.amount || p.netAmount
+                          }));
+                        }}
+                        required
+                      >
+                        <option value="">-- Select attached Customer PO --</option>
+                        {customerPOs.filter(hasCustomerPOAttachment).map(po => (
+                          <option key={po._id} value={po._id}>{po.poNumber} ΓÇö {po.customerName}</option>
+                        ))}
+                      </select>
+                    )}
                   </div>
                 </div>
               </div>

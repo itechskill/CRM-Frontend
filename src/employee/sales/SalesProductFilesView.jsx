@@ -25,6 +25,7 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
+import { hasCustomerPOAttachment } from './customerPOAttachment';
 
 const STATUS_COLORS = {
   Active: '#10B981',
@@ -91,8 +92,8 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
   const fetchDependencies = useCallback(async () => {
     try {
       const [poRes, qRes, ordRes] = await Promise.all([
-        apiRequest('/api/sales-employee/customer-pos'),
-        apiRequest('/api/sales-employee/quotations'),
+        apiRequest('/api/sales-employee/customer-pos?status=all'),
+        apiRequest('/api/sales-employee/quotations?status=all'),
         apiRequest('/api/sales-employee/orders')
       ]);
       if (poRes.response.ok && poRes.data.success) setCustomerPOs(poRes.data.data || []);
@@ -320,6 +321,13 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       setError('Customer name is required.');
       return;
     }
+    if (!editFile) {
+      const linkedPO = customerPOs.find(po => po._id === form.customerPOId);
+      if (!linkedPO || !hasCustomerPOAttachment(linkedPO)) {
+        setError('Select a Customer PO with a PDF, Excel file, or screenshot attached.');
+        return;
+      }
+    }
     setSaving(true);
     setError('');
     try {
@@ -352,6 +360,10 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
   // ── WORKFLOW: AUTOMATICALLY CREATE SALES ORDER FROM PRODUCT FILE ──
   const handleTriggerCreateSO = async (pf) => {
     const linkedPO = customerPOs.find(p => p._id === (pf.customerPOId?._id || pf.customerPOId));
+    if (!linkedPO || !hasCustomerPOAttachment(linkedPO)) {
+      setError('Attach and link the Customer PO before creating a Sales Order.');
+      return;
+    }
     const linkedQuote = quotations.find(q => q._id === (pf.quotationId?._id || pf.quotationId));
     const defaultAmount = linkedPO?.amount || linkedQuote?.netAmount || linkedQuote?.totalAmount || '';
 
@@ -359,19 +371,19 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       ? pf.products.map(p => `${p.quantity}x ${p.name}`).join(', ')
       : (linkedQuote?.productSummary || 'Product Scope');
 
-    const items = pf.products && pf.products.length
-      ? pf.products.map(p => ({
-          description: p.name + (p.description ? ` (${p.description})` : ''),
-          quantity: Number(p.quantity) || 1,
-          unitPrice: 0,
-          total: 0
+    const items = linkedQuote?.items && linkedQuote.items.length
+      ? linkedQuote.items.map(it => ({
+          description: it.description || '',
+          quantity: Number(it.quantity) || 1,
+          unitPrice: Number(it.unitPrice) || 0,
+          total: Number(it.total) || ((Number(it.quantity) || 1) * (Number(it.unitPrice) || 0))
         }))
-      : (linkedQuote?.items && linkedQuote.items.length
-          ? linkedQuote.items.map(it => ({
-              description: it.description || '',
-              quantity: Number(it.quantity) || 1,
-              unitPrice: Number(it.unitPrice) || 0,
-              total: Number(it.total) || 0
+      : (pf.products && pf.products.length
+          ? pf.products.map(p => ({
+              description: p.name + (p.description ? ` (${p.description})` : ''),
+              quantity: Number(p.quantity) || 1,
+              unitPrice: 0,
+              total: 0
             }))
           : [{ description: 'Product Items', quantity: 1, unitPrice: 0, total: 0 }]);
 
@@ -386,6 +398,9 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       quotationId: pf.quotationId?._id || pf.quotationId || linkedQuote?._id || null,
       productSummary: summary,
       totalAmount: defaultAmount,
+      subtotal: Number(linkedQuote?.totalAmount) || Number(defaultAmount) || 0,
+      discount: Number(linkedQuote?.discount) || 0,
+      tax: Number(linkedQuote?.tax) || 0,
       items: items
     });
   };
@@ -396,6 +411,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
     setCreatingSO(true);
     try {
       const net = Number(soPreFillModal.totalAmount) || 0;
+      const subtotal = Number(soPreFillModal.subtotal) || net;
       const payload = {
         orderReference: soPreFillModal.orderReference,
         clientName: soPreFillModal.clientName,
@@ -405,12 +421,14 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
         customerPOId: soPreFillModal.customerPOId || null,
         quotationId: soPreFillModal.quotationId || null,
         productSummary: soPreFillModal.productSummary,
-        totalAmount: net,
+        totalAmount: subtotal,
+        discount: Number(soPreFillModal.discount) || 0,
+        tax: Number(soPreFillModal.tax) || 0,
         netAmount: net,
         items: soPreFillModal.items.map(item => ({
           ...item,
-          unitPrice: net > 0 && soPreFillModal.items.length === 1 ? net : item.unitPrice,
-          total: net > 0 && soPreFillModal.items.length === 1 ? net : ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0))
+          unitPrice: Number(item.unitPrice) || (net > 0 && soPreFillModal.items.length === 1 ? subtotal / (Number(item.quantity) || 1) : 0),
+          total: Number(item.total) || ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)) || (soPreFillModal.items.length === 1 ? subtotal : 0)
         }))
       };
 
@@ -591,6 +609,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                       {pf.status !== 'Completed' && !pf.salesOrderNumber ? (
                         <button
                           onClick={() => handleTriggerCreateSO(pf)}
+                          disabled={!hasCustomerPOAttachment(customerPOs.find(po => po._id === (pf.customerPOId?._id || pf.customerPOId)))}
                           style={{
                             display: 'inline-flex',
                             alignItems: 'center',
@@ -602,9 +621,10 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                             borderRadius: '6px',
                             fontSize: '0.78rem',
                             fontWeight: 700,
-                            cursor: 'pointer'
+                            cursor: hasCustomerPOAttachment(customerPOs.find(po => po._id === (pf.customerPOId?._id || pf.customerPOId))) ? 'pointer' : 'not-allowed',
+                            opacity: hasCustomerPOAttachment(customerPOs.find(po => po._id === (pf.customerPOId?._id || pf.customerPOId))) ? 1 : 0.55
                           }}
-                          title="Auto pre-fill and create Sales Order"
+                          title={hasCustomerPOAttachment(customerPOs.find(po => po._id === (pf.customerPOId?._id || pf.customerPOId))) ? 'Auto pre-fill and create Sales Order' : 'Attach and link the Customer PO before creating a Sales Order.'}
                         >
                           <ShoppingCart size={13} /> → Sales Order
                         </button>
@@ -729,10 +749,10 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                 </div>
                 <div className="sv-grid-2">
                   <div className="sv-field">
-                    <label>Link Customer PO (Auto-fills Quotation & Customer)</label>
-                    <select value={form.customerPOId} onChange={e => handlePOChange(e.target.value)}>
-                      <option value="">-- No Customer PO Linked --</option>
-                      {customerPOs.map(po => (
+                    <label>Link Customer PO (with attachment) *</label>
+                    <select value={form.customerPOId} onChange={e => handlePOChange(e.target.value)} required={!editFile}>
+                      <option value="">-- Select Customer PO --</option>
+                      {customerPOs.filter(po => hasCustomerPOAttachment(po) || po._id === form.customerPOId).map(po => (
                         <option key={po._id} value={po._id}>
                           {po.poNumber} — {po.customerName} (Rs. {Number(po.amount || 0).toLocaleString()})
                         </option>
@@ -980,7 +1000,13 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
               <div className="sv-modal-actions">
                 <button className="sv-btn-cancel" onClick={() => setViewFile(null)}>Close</button>
                 {viewFile.status !== 'Completed' && !viewFile.salesOrderNumber ? (
-                  <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={() => { setViewFile(null); handleTriggerCreateSO(viewFile); }}>
+                  <button
+                    className="sv-btn-primary"
+                    style={{ background: '#2563EB' }}
+                    disabled={!hasCustomerPOAttachment(customerPOs.find(po => po._id === (viewFile.customerPOId?._id || viewFile.customerPOId)))}
+                    title={!hasCustomerPOAttachment(customerPOs.find(po => po._id === (viewFile.customerPOId?._id || viewFile.customerPOId))) ? 'Attach and link the Customer PO before creating a Sales Order.' : ''}
+                    onClick={() => { setViewFile(null); handleTriggerCreateSO(viewFile); }}
+                  >
                     <ShoppingCart size={14} /> Create Sales Order
                   </button>
                 ) : (
