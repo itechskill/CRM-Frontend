@@ -35,6 +35,11 @@ export default function GlobalPurchaserDashboard({ currentUser, onNavigateTab })
 
   useEffect(() => {
     fetchStats();
+
+    const refreshOnFocus = () => fetchStats();
+    window.addEventListener('focus', refreshOnFocus);
+
+    return () => window.removeEventListener('focus', refreshOnFocus);
   }, []);
 
   const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK')}`;

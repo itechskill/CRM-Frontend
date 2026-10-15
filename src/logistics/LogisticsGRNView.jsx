@@ -201,7 +201,7 @@ export default function LogisticsGRNView({ searchQuery, onNavigateTab }) {
           <div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>Goods Received NO (GRN)</h2>
             <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>
-              Verify &amp; record incoming goods against Orders/Shipments, then forward verified goods to Support
+              GRN history and compatibility handoff for Blue orders already awaiting a Logistics GRN; inventory remains Support-only
             </p>
           </div>
         </div>
@@ -248,9 +248,9 @@ export default function LogisticsGRNView({ searchQuery, onNavigateTab }) {
 
       {/* Pending Orders Table */}
       <div style={{ marginBottom: '32px' }}>
-        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', marginBottom: '16px' }}>Pending Blue File Orders Awaiting GRN</h3>
-        <div style={{ backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', marginBottom: '16px' }}>Legacy Blue File Orders Awaiting GRN</h3>
+        <div style={{ backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflowX: 'auto', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+          <table style={{ width: '100%', minWidth: '900px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
             <thead>
               <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
                 <th style={{ padding: '12px 20px', fontWeight: 600 }}>Order Number</th>
@@ -301,8 +301,8 @@ export default function LogisticsGRNView({ searchQuery, onNavigateTab }) {
 
       <h3 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#0F172A', marginBottom: '16px' }}>Goods Received Notes (History)</h3>
       {/* Table of GRNs */}
-      <div style={{ backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+      <div style={{ backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflowX: 'auto', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        <table style={{ width: '100%', minWidth: '1150px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
           <thead>
             <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>GRN Number</th>
@@ -578,7 +578,7 @@ export default function LogisticsGRNView({ searchQuery, onNavigateTab }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                 {formData.salesOrderId ? (
                   <span style={{ fontSize: '0.85rem', color: '#059669', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <ArrowRight size={16} /> Saving this GRN will automatically forward the Blue File to Support.
+                    <ArrowRight size={16} /> Saving this GRN forwards the legacy Blue File to Support without updating inventory.
                   </span>
                 ) : (
                   <span></span>

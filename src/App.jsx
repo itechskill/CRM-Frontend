@@ -715,7 +715,7 @@ export default function App() {
               {activeTab === 'customer_pos' && <EmpSalesCustomerPOsView />}
               {activeTab === 'product_files' && <EmpSalesProductFilesView />}
               {activeTab === 'my_orders' && <EmpSalesOrdersView />}
-              {activeTab === 'proforma_invoices' && <EmpSalesProformaInvoicesView onNavigateDeliveryNotes={() => setActiveTab('delivery_notes')} />}
+              {activeTab === 'proforma_invoices' && <EmpSalesProformaInvoicesView />}
               {activeTab === 'delivery_notes' && <EmpSalesDeliveryNotesView />}
               {activeTab === 'my_invoices' && <EmpSalesInvoicesView />}
               {activeTab === 'my_payments' && <EmpSalesPaymentsView />}
@@ -761,7 +761,7 @@ export default function App() {
               {activeTab === 'deals' && <SalesDealsView />}
               {activeTab === 'pipeline' && <SalesPipelineView />}
               {activeTab === 'orders' && <SalesManagerOrdersView />}
-              {activeTab === 'proforma_invoices' && <EmpSalesProformaInvoicesView onNavigateDeliveryNotes={() => handleSetActiveTab('deliveries')} />}
+              {activeTab === 'proforma_invoices' && <EmpSalesProformaInvoicesView />}
               {activeTab === 'deliveries' && <EmpSalesDeliveryNotesView />}
               {activeTab === 'payments' && <SalesManagerPaymentsView />}
               {activeTab === 'activities' && <SalesManagerActivitiesView />}
@@ -1291,7 +1291,7 @@ export default function App() {
                     <LocalPurchaserPendingOrdersView searchQuery={portalSearch} onNavigateTab={(tab) => handleSetActiveTab(tab)} />
                   )}
                   {activeTab === 'inventory' && (
-                    <LocalPurchaserInventoryView searchQuery={portalSearch} />
+                    <LocalPurchaserInventoryView searchQuery={portalSearch} currentUser={currentUser} />
                   )}
                   {activeTab === 'supplier_pos' && (
                     <LocalPurchaserPOsView searchQuery={portalSearch} />

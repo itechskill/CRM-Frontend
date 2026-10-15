@@ -179,7 +179,7 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
           <div>
             <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>Logistics Import Inventory</h2>
             <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>
-              Centralized stock register for imported goods received from Global Purchaser POs and GRNs
+              View-only imported stock register. Inventory updates are handled by Support.
             </p>
           </div>
         </div>
@@ -205,6 +205,8 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
           </button>
           <button
             onClick={openAddModal}
+            disabled
+            title="Inventory updates are handled by Support"
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -216,11 +218,12 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
               padding: '9px 18px',
               fontWeight: 700,
               fontSize: '0.88rem',
-              cursor: 'pointer',
+              cursor: 'not-allowed',
+              opacity: 0.55,
               boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
             }}
           >
-            <Plus size={18} /> Add Import Item
+            <Plus size={18} /> Support Updates Inventory
           </button>
         </div>
       </div>
@@ -407,6 +410,8 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
                       <td style={{ padding: '13px 16px', textAlign: 'right' }}>
                         <button
                           onClick={() => openEditModal(item)}
+                          disabled
+                          title="Inventory updates are handled by Support"
                           style={{
                             background: '#EFF6FF',
                             border: '1px solid #BFDBFE',
@@ -415,13 +420,14 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
                             padding: '5px 12px',
                             fontSize: '0.8rem',
                             fontWeight: 600,
-                            cursor: 'pointer',
+                            cursor: 'not-allowed',
+                            opacity: 0.55,
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '4px'
                           }}
                         >
-                          <Edit2 size={13} /> Edit
+                          <Edit2 size={13} /> View Only
                         </button>
                       </td>
                     </tr>
@@ -437,7 +443,7 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
               No Imported Goods Found in Inventory
             </h4>
             <p style={{ margin: 0, fontSize: '0.86rem', color: '#94A3B8', maxWidth: '440px', marginInline: 'auto' }}>
-              Goods imported by Global Purchaser or received via Logistics GRN will automatically appear here in the Import Inventory register.
+              Imported goods appear here after Support records Inventory IN.
             </p>
           </div>
         )}

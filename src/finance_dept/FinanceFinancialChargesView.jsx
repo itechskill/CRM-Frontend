@@ -307,8 +307,8 @@ export default function FinanceFinancialChargesView() {
       </div>
 
       {/* Table */}
-      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', overflow: 'hidden' }}>
-        <table className="sv-table" style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+      <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1px solid #E2E8F0', overflowX: 'auto' }}>
+        <table className="sv-table" style={{ width: '100%', minWidth: '1150px', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
           <thead>
             <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', textAlign: 'left', color: '#64748B', fontWeight: 700 }}>
               <th style={{ padding: '12px 16px' }}>Charge ID</th>

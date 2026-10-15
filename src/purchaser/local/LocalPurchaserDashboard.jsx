@@ -40,6 +40,11 @@ export default function LocalPurchaserDashboard({ currentUser, onNavigateTab }) 
 
   useEffect(() => {
     fetchDashboardStats();
+
+    const refreshOnFocus = () => fetchDashboardStats();
+    window.addEventListener('focus', refreshOnFocus);
+
+    return () => window.removeEventListener('focus', refreshOnFocus);
   }, []);
 
   const formatPKR = (num) => {

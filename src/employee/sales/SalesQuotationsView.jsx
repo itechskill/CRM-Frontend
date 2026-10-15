@@ -34,6 +34,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import './SalesViews.css';
+import { CUSTOMER_PO_ATTACHMENT_ACCEPT, readCustomerPOAttachment } from './customerPOAttachment';
 
 const STATUS_COLORS = {
   Quotation: '#2563EB',
@@ -114,6 +115,8 @@ export default function SalesQuotationsView() {
   const [poNumberInput, setPoNumberInput] = useState('');
   const [poDateInput, setPoDateInput] = useState(new Date().toISOString().split('T')[0]);
   const [poNotesInput, setPoNotesInput] = useState('');
+  const [poUploadedDocument, setPoUploadedDocument] = useState('');
+  const [poDocumentName, setPoDocumentName] = useState('');
   const [convertingToPO, setConvertingToPO] = useState(false);
 
   // Real KPI calculations - strictly adhering to Pending Workflow Model
@@ -140,11 +143,34 @@ export default function SalesQuotationsView() {
     setPoNumberInput('');
     setPoDateInput(new Date().toISOString().split('T')[0]);
     setPoNotesInput('');
+    setPoUploadedDocument('');
+    setPoDocumentName('');
+    setError('');
+  };
+
+  const handlePOAttachmentChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const attachment = await readCustomerPOAttachment(file);
+      setPoUploadedDocument(attachment.uploadedDocument);
+      setPoDocumentName(attachment.documentName);
+      setError('');
+    } catch (err) {
+      e.target.value = '';
+      setPoUploadedDocument('');
+      setPoDocumentName('');
+      setError(err.message);
+    }
   };
 
   const handleConfirmConvertToPO = async (e) => {
     e.preventDefault();
     if (!poModalQuote) return;
+    if (!poUploadedDocument || !poDocumentName) {
+      setError('Attach the Customer PO as a PDF, Excel file, or screenshot.');
+      return;
+    }
     setConvertingToPO(true);
     setError('');
     setFeedback('');
@@ -154,7 +180,9 @@ export default function SalesQuotationsView() {
         body: JSON.stringify({
           poNumber: poNumberInput,
           poDate: poDateInput,
-          notes: poNotesInput
+          notes: poNotesInput,
+          uploadedDocument: poUploadedDocument,
+          documentName: poDocumentName
         })
       });
       if (response.ok && data.success) {
@@ -2138,6 +2166,19 @@ export default function SalesQuotationsView() {
                   onChange={e => setPoNotesInput(e.target.value)}
                   placeholder="Customer purchase order terms, references, and acceptance notes..."
                 />
+              </div>
+
+              <div className="sv-field">
+                <label>Customer PO Attachment *</label>
+                <input
+                  type="file"
+                  accept={CUSTOMER_PO_ATTACHMENT_ACCEPT}
+                  onChange={handlePOAttachmentChange}
+                  required
+                />
+                <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '4px' }}>
+                  {poDocumentName || 'Accepted: PDF, Excel, or screenshot (maximum 3 MB).'}
+                </div>
               </div>
 
               <div className="sv-modal-actions">

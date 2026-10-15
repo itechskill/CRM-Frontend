@@ -14,6 +14,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
   const [editPo, setEditPo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
+  const [updatingCheckpoint, setUpdatingCheckpoint] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [filterText, setFilterText] = useState('');
   const [linkedOrder, setLinkedOrder] = useState(null);
@@ -178,7 +179,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       if (linkedOrder) {
         const res = await apiRequest(`/api/purchaser/orders/${linkedOrder._id}/global-po`, 'POST', payload);
         if (res.success) {
-          setToast(`Global PO issued for Sales Order ${linkedOrder.orderReference || linkedOrder.orderNumber}! Order routed to Logistics.`);
+          setToast(`Global PO issued for Sales Order ${linkedOrder.orderReference || linkedOrder.orderNumber}. Complete the procurement checkpoints before Logistics handoff.`);
           setShowModal(false);
           setLinkedOrder(null);
           setFormData({
@@ -344,6 +345,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
   };
 
   const handleOpenLogisticsModal = (po) => {
+    setSubmitting(false);
     setSelectedPoForLogistics(po);
     setLogisticsForm({
       carrier: po.carrier || '',
@@ -381,13 +383,108 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
         fetchData();
         setTimeout(() => setToast(''), 5000);
       } else {
-        alert(res.message || 'Error moving PO to Logistics.');
+        const message = res.message || 'Error moving PO to Logistics.';
+        setSubmitting(false);
+        setTimeout(() => alert(message), 0);
       }
     } catch (err) {
       console.error('Error sending order to logistics:', err);
-      alert('Failed to send order to logistics.');
+      setSubmitting(false);
+      setTimeout(() => alert('Failed to send order to logistics.'), 0);
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const checkpoints = ['In Manufacturing', 'Ready to Pick Up', 'Picked Up'];
+
+  const getLinkedOrder = (po) => {
+    const salesOrderId = po.salesOrderId?._id || po.salesOrderId;
+    return pendingOrders.find(order => String(order._id) === String(salesOrderId));
+  };
+
+  const getCheckpointIndex = (po) => {
+    const status = getLinkedOrder(po)?.supplierPO?.status || po.status || '';
+    if (['Picked Up', 'In Transit', 'In Logistics', 'Shipped', 'Partially Received', 'Fully Received', 'Completed'].includes(status)) return 2;
+    return checkpoints.indexOf(status);
+  };
+
+  const hasMovedToLogistics = (po) => {
+    const order = getLinkedOrder(po);
+    const status = order?.supplierPO?.status || po.status;
+    return order?.currentDepartment === 'Logistics' || order?.workflowStatus === 'In Logistics' || ['In Logistics', 'In Transit', 'Shipped', 'Partially Received', 'Fully Received', 'Completed'].includes(status);
+  };
+
+  const renderCheckpoints = (po) => {
+    if (!po.salesOrderId) return <span style={{ color: '#94A3B8' }}>Not linked</span>;
+
+    const completedIndex = getCheckpointIndex(po);
+    const movedToLogistics = hasMovedToLogistics(po);
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '150px' }}>
+        {checkpoints.map((checkpoint, index) => {
+          const checked = index <= completedIndex;
+          const updateKey = `${po._id}-${checkpoint}`;
+          const disabled = checked || movedToLogistics || index !== completedIndex + 1 || Boolean(updatingCheckpoint);
+          return (
+            <label key={checkpoint} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: checked ? '#166534' : '#475569', fontSize: '0.76rem', fontWeight: checked ? 700 : 600, cursor: disabled ? 'default' : 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={disabled}
+                onChange={() => handleCheckpointUpdate(po, checkpoint)}
+              />
+              {updatingCheckpoint === updateKey ? 'Updating...' : checkpoint}
+            </label>
+          );
+        })}
+      </div>
+    );
+  };
+
+  const handleCheckpointUpdate = async (po, checkpoint) => {
+    const order = getLinkedOrder(po);
+    if (!order) {
+      alert('The linked Blue Sales Order could not be found. Refresh the page and try again.');
+      return;
+    }
+
+    const updateKey = `${po._id}-${checkpoint}`;
+    setUpdatingCheckpoint(updateKey);
+    try {
+      const checkpointRes = await apiRequest(`/api/purchaser/orders/${order._id}/global-checkpoint`, 'POST', { checkpoint });
+      if (!checkpointRes.success) {
+        alert(checkpointRes.message || 'Error updating the procurement checkpoint.');
+        return;
+      }
+
+      if (checkpoint === 'Picked Up') {
+        const handoffRes = await apiRequest(`/api/purchaser/orders/${order._id}/send-to-logistics`, 'POST', {
+          supplierName: po.supplierName,
+          supplierCountry: po.supplierCountry,
+          supplierPoNumber: po.poNumber,
+          salesOrderId: order._id,
+          salesOrderNumber: po.salesOrderNumber,
+          portOfLoading: po.portOfLoading,
+          portOfDischarge: po.portOfDischarge
+        });
+        if (!handoffRes.success) {
+          alert(`${checkpointRes.message} Logistics handoff did not complete: ${handoffRes.message || 'Please retry.'}`);
+          await fetchData();
+          return;
+        }
+        setToast(`Picked Up completed for PO #${po.poNumber}. The order moved to Logistics.`);
+      } else {
+        setToast(`${checkpoint} completed for PO #${po.poNumber}. The order remains with Global Purchasing.`);
+      }
+
+      await fetchData();
+      setTimeout(() => setToast(''), 5000);
+    } catch (err) {
+      console.error('Error updating Global Purchasing checkpoint:', err);
+      alert('Failed to update the Global Purchasing checkpoint.');
+    } finally {
+      setUpdatingCheckpoint('');
     }
   };
 
@@ -400,6 +497,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     (po.supplierCountry || '').toLowerCase().includes(searchVal) ||
     (po.salesOrderNumber || '').toLowerCase().includes(searchVal)
   );
+  const ordersAwaitingPO = pendingOrders.filter(order => !order.supplierPO?.poNumber);
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -439,15 +537,15 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       )}
 
       {/* PENDING SALES ORDERS FOR GLOBAL PROCUREMENT */}
-      {pendingOrders.length > 0 && (
+      {ordersAwaitingPO.length > 0 && (
         <div style={{ backgroundColor: '#FFF', borderRadius: '16px', border: '1.5px solid #3B82F6', padding: '20px', marginBottom: '28px', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.1)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
             <div>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#1E40AF', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Globe size={20} color="#2563EB" /> Blue File Sales Orders — Pending International PO ({pendingOrders.length})
+                <Globe size={20} color="#2563EB" /> Blue File Sales Orders — Pending International PO ({ordersAwaitingPO.length})
               </h3>
               <p style={{ margin: '2px 0 0 0', fontSize: '0.84rem', color: '#64748B' }}>
-                Customer advance verified &amp; approved by Finance. Issue International Supplier PO and route to Logistics.
+                Customer advance verified &amp; approved by Finance. Issue the International Supplier PO, then complete the three procurement checkpoints.
               </p>
             </div>
             <span style={{ padding: '4px 12px', background: '#EFF6FF', color: '#2563EB', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800 }}>
@@ -467,7 +565,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                 </tr>
               </thead>
               <tbody>
-                {pendingOrders.map(ord => (
+                {ordersAwaitingPO.map(ord => (
                   <tr key={ord._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
                     <td style={{ padding: '12px 14px', fontWeight: 700, color: '#0F172A' }}>
                       {ord.orderReference || ord.orderNumber}
@@ -511,8 +609,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       </div>
 
       {/* Global POs Table */}
-      <div style={{ backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflow: 'hidden', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+      <div style={{ backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflowX: 'auto', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
+        <table style={{ width: '100%', minWidth: '1400px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
           <thead>
             <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>PO Number</th>
@@ -521,13 +619,14 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Linked Order</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Loading Port</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Total (PKR)</th>
+              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Procurement Checkpoints</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Status</th>
               <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading Global POs...</td></tr>
+              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading Global POs...</td></tr>
             ) : filtered.length > 0 ? (
               filtered.map((po) => (
                 <tr key={po._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -539,6 +638,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                   <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
                     {formatPKR(po.totalAmount || po.totalAmountPKR || 0)}
                   </td>
+                  <td style={{ padding: '14px 20px' }}>{renderCheckpoints(po)}</td>
                   <td style={{ padding: '14px 20px' }}>
                     <span style={{
                       padding: '4px 10px',
@@ -579,31 +679,41 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                       >
                         <Trash2 size={13} /> {deletingId === po._id ? '...' : 'Delete'}
                       </button>
-                      <button
-                        onClick={() => handleOpenLogisticsModal(po)}
-                        style={{
-                          background: po.status === 'In Logistics' || po.status === 'In Transit' ? '#F1F5F9' : '#0284C7',
-                          color: po.status === 'In Logistics' || po.status === 'In Transit' ? '#475569' : '#FFF',
-                          border: po.status === 'In Logistics' || po.status === 'In Transit' ? '1px solid #CBD5E1' : 'none',
-                          padding: '6px 10px',
-                          borderRadius: '6px',
-                          fontSize: '0.78rem',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '4px'
-                        }}
-                        title="Send PO details, flight/vessel and tracking number to Logistics Department"
-                      >
-                        <Plane size={13} /> {po.status === 'In Logistics' || po.status === 'In Transit' ? 'Logistics Info' : 'Move to Logistics'}
-                      </button>
+                      {hasMovedToLogistics(po) ? (
+                        <span
+                          style={{ background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                          title="This order has already been handed to Logistics"
+                        >
+                          <Plane size={13} /> Sent to Logistics
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleOpenLogisticsModal(po)}
+                          disabled={getCheckpointIndex(po) < 2}
+                          style={{
+                            background: getCheckpointIndex(po) < 2 ? '#F1F5F9' : '#0284C7',
+                            color: getCheckpointIndex(po) < 2 ? '#475569' : '#FFF',
+                            border: getCheckpointIndex(po) < 2 ? '1px solid #CBD5E1' : 'none',
+                            padding: '6px 10px',
+                            borderRadius: '6px',
+                            fontSize: '0.78rem',
+                            fontWeight: 700,
+                            cursor: getCheckpointIndex(po) < 2 ? 'not-allowed' : 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px'
+                          }}
+                          title={getCheckpointIndex(po) < 2 ? 'Complete Picked Up before Logistics handoff' : 'Send PO details to Logistics Department'}
+                        >
+                          <Plane size={13} /> Move to Logistics
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
               ))
             ) : (
-              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Global POs found.</td></tr>
+              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Global POs found.</td></tr>
             )}
           </tbody>
         </table>

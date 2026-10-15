@@ -12,8 +12,7 @@ import {
   Calendar,
   Eye,
   Edit3,
-  ExternalLink,
-  ClipboardCheck
+  ExternalLink
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import './LogisticsPortal.css';
@@ -22,8 +21,7 @@ export default function LogisticsShipmentsView({
   activeTab,
   filterMode,
   searchQuery,
-  currentUser,
-  onNavigateTab
+  currentUser
 }) {
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,8 +56,10 @@ export default function LogisticsShipmentsView({
     carrier: '',
     shippingMethod: 'Air Freight',
     trackingNumber: '',
+    awbNumber: '',
     departureLocation: '',
     arrivalLocation: '',
+    transitLocation: '',
     description: '',
     referenceDocs: '',
     remarks: '',
@@ -67,6 +67,7 @@ export default function LogisticsShipmentsView({
     trackingNote: ''
   });
   const [submittingTracking, setSubmittingTracking] = useState(false);
+  const [updatingCustoms, setUpdatingCustoms] = useState('');
 
   // Office receipt modal
   const [receiveModalShipment, setReceiveModalShipment] = useState(null);
@@ -75,6 +76,13 @@ export default function LogisticsShipmentsView({
     remarks: ''
   });
   const [submittingReceive, setSubmittingReceive] = useState(false);
+
+  const formatDateTimeLocal = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    const pad = (part) => String(part).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  };
 
   const fetchShipments = async () => {
     setLoading(true);
@@ -115,16 +123,18 @@ export default function LogisticsShipmentsView({
   const openTrackingModal = (shp) => {
     setTrackingModalShipment(shp);
     setTrackingForm({
-      etd: shp.etd ? new Date(shp.etd).toISOString().split('T')[0] : '',
-      eta: shp.eta ? new Date(shp.eta).toISOString().split('T')[0] : '',
-      actualDepartureDate: shp.actualDepartureDate ? new Date(shp.actualDepartureDate).toISOString().split('T')[0] : '',
-      actualArrivalDate: shp.actualArrivalDate ? new Date(shp.actualArrivalDate).toISOString().split('T')[0] : '',
+      etd: formatDateTimeLocal(shp.etd),
+      eta: formatDateTimeLocal(shp.eta),
+      actualDepartureDate: formatDateTimeLocal(shp.actualDepartureDate),
+      actualArrivalDate: formatDateTimeLocal(shp.actualArrivalDate),
       flightNumber: shp.flightNumber || '',
       carrier: shp.carrier || '',
       shippingMethod: shp.shippingMethod || 'Air Freight',
       trackingNumber: shp.trackingNumber || '',
+      awbNumber: shp.awbNumber || '',
       departureLocation: shp.departureLocation || '',
       arrivalLocation: shp.arrivalLocation || '',
+      transitLocation: shp.transitLocation || '',
       description: shp.description || '',
       referenceDocs: shp.referenceDocs || '',
       remarks: shp.remarks || '',
@@ -175,16 +185,10 @@ export default function LogisticsShipmentsView({
         body: JSON.stringify(receiveForm)
       });
       if (response.ok && data.success) {
-        setFeedback(`Shipment ${receiveModalShipment.shipmentId} confirmed received in office! Redirecting to Goods Receipt Note (GRN)...`);
+        setFeedback(`Shipment ${receiveModalShipment.shipmentId} confirmed received in office and moved to Support.`);
         setReceiveModalShipment(null);
         fetchShipments();
-        if (onNavigateTab) {
-          setTimeout(() => {
-            onNavigateTab('grn_creation');
-          }, 1000);
-        } else {
-          setTimeout(() => setFeedback(''), 5000);
-        }
+        setTimeout(() => setFeedback(''), 5000);
       } else {
         alert(data.message || 'Failed to confirm office receipt.');
       }
@@ -193,6 +197,118 @@ export default function LogisticsShipmentsView({
     } finally {
       setSubmittingReceive(false);
     }
+  };
+
+  const handleLegacySupportHandoff = async (shipment) => {
+    setSubmittingReceive(true);
+    try {
+      const { response, data } = await apiRequest(`/api/logistics/shipments/${shipment._id}/receive-in-office`, {
+        method: 'POST',
+        body: JSON.stringify({ remarks: 'Legacy Pending Logistics GRN order handed directly to Support.' })
+      });
+      if (response.ok && data.success) {
+        setFeedback(`Shipment ${shipment.shipmentId} moved from the legacy GRN queue to Support.`);
+        await fetchShipments();
+        setTimeout(() => setFeedback(''), 5000);
+      } else {
+        alert(data.message || 'Failed to move the legacy order to Support.');
+      }
+    } catch (err) {
+      alert('Error moving the legacy order to Support.');
+    } finally {
+      setSubmittingReceive(false);
+    }
+  };
+
+  const orderedCustomsStates = ['GD Filed', 'Assessment in Process', 'Duty in Process', 'Duty Paid'];
+
+  const getCustomsIndex = (shipment) => {
+    if (shipment.receivedInOffice || shipment.customsClearanceStatus === 'Received in Office') return 4;
+    return orderedCustomsStates.indexOf(shipment.customsClearanceStatus || '');
+  };
+
+  const handleCustomsUpdate = async (shipment, state) => {
+    const updateKey = `${shipment._id}-${state}`;
+    setUpdatingCustoms(updateKey);
+    try {
+      const { response, data } = await apiRequest(`/api/logistics/shipments/${shipment._id}/customs-clearance`, {
+        method: 'POST',
+        body: JSON.stringify({ state })
+      });
+      if (response.ok && data.success) {
+        setFeedback(data.message);
+        await fetchShipments();
+        setTimeout(() => setFeedback(''), 4500);
+      } else {
+        alert(data.message || 'Failed to update customs clearance.');
+      }
+    } catch (err) {
+      alert('Error updating customs clearance.');
+    } finally {
+      setUpdatingCustoms('');
+    }
+  };
+
+  const renderCustomsClearance = (shipment) => {
+    const currentState = shipment.customsClearanceStatus || '';
+    const completedIndex = getCustomsIndex(shipment);
+    const received = completedIndex === 4;
+    const gdLocked = completedIndex >= 0 || received;
+
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '180px' }}>
+        <div style={{ fontSize: '0.74rem', fontWeight: 700, color: currentState === 'GD Not Filed' ? '#B45309' : (completedIndex >= 0 ? '#166534' : '#475569') }}>
+          GD filed:
+          <label style={{ marginLeft: '6px', cursor: gdLocked || Boolean(updatingCustoms) ? 'default' : 'pointer' }}>
+            <input
+              type="radio"
+              name={`gd-${shipment._id}`}
+              checked={currentState === 'GD Filed' || completedIndex > 0}
+              disabled={gdLocked || Boolean(updatingCustoms)}
+              onChange={() => handleCustomsUpdate(shipment, 'GD Filed')}
+            /> Yes
+          </label>
+          <label style={{ marginLeft: '6px', cursor: currentState === 'GD Not Filed' || gdLocked || Boolean(updatingCustoms) ? 'default' : 'pointer' }}>
+            <input
+              type="radio"
+              name={`gd-${shipment._id}`}
+              checked={currentState === 'GD Not Filed'}
+              disabled={currentState === 'GD Not Filed' || gdLocked || Boolean(updatingCustoms)}
+              onChange={() => handleCustomsUpdate(shipment, 'GD Not Filed')}
+            /> No
+          </label>
+          {updatingCustoms.startsWith(`${shipment._id}-GD`) && <span style={{ marginLeft: '5px', color: '#64748B' }}>Saving...</span>}
+        </div>
+
+        {orderedCustomsStates.slice(1).map((state, offset) => {
+          const index = offset + 1;
+          const checked = index <= completedIndex;
+          const updateKey = `${shipment._id}-${state}`;
+          const disabled = checked || received || index !== completedIndex + 1 || Boolean(updatingCustoms);
+          return (
+            <label key={state} style={{ display: 'flex', alignItems: 'center', gap: '6px', color: checked ? '#166534' : '#475569', fontSize: '0.74rem', fontWeight: checked ? 700 : 600, cursor: disabled ? 'default' : 'pointer' }}>
+              <input
+                type="checkbox"
+                checked={checked}
+                disabled={disabled}
+                onChange={() => handleCustomsUpdate(shipment, state)}
+              />
+              {updatingCustoms === updateKey ? 'Saving...' : state}
+            </label>
+          );
+        })}
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: received ? '#166534' : '#475569', fontSize: '0.74rem', fontWeight: received ? 700 : 600, cursor: received || currentState !== 'Duty Paid' ? 'default' : 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={received}
+            disabled={received || currentState !== 'Duty Paid' || Boolean(updatingCustoms)}
+            onChange={() => openReceiveModal(shipment)}
+          />
+          Received in Office
+        </label>
+      </div>
+    );
   };
 
   const getStatusBadge = (st) => {
@@ -253,7 +369,7 @@ export default function LogisticsShipmentsView({
             {currentMode === 'tracking'
               ? 'In-transit international cargo, flight numbers, airway bills (AWB), and live ETA schedules'
               : currentMode === 'received'
-              ? 'Shipments physically inspected and confirmed in Fortline warehouse, transitioned to Support'
+              ? 'Shipments confirmed in office and handed directly to Support'
               : 'Complete register of Blue File international shipments, carrier tracking, and receiving'}
           </p>
         </div>
@@ -371,6 +487,7 @@ export default function LogisticsShipmentsView({
                   <th style={{ padding: '12px 16px', minWidth: '140px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Supplier &amp; Country</th>
                   <th style={{ padding: '12px 16px', minWidth: '140px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Carrier &amp; Flight #</th>
                   <th style={{ padding: '12px 16px', minWidth: '120px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>ETD / ETA</th>
+                  <th style={{ padding: '12px 16px', minWidth: '200px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Customs Clearance</th>
                   <th style={{ padding: '12px 16px', minWidth: '110px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Status</th>
                   <th style={{ padding: '12px 16px', minWidth: '140px', textAlign: 'right', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Actions</th>
                 </tr>
@@ -380,6 +497,8 @@ export default function LogisticsShipmentsView({
                   const badge = getStatusBadge(shp.status);
                   const salesPersonName = shp.salePerson || shp.salesPerson?.fullName || 'Sales Person';
                   const isReceived = shp.receivedInOffice || shp.status === 'Received in Office';
+                  const canReceive = shp.customsClearanceStatus === 'Duty Paid';
+                  const isLegacyPendingGRN = shp.salesOrder?.workflowStatus === 'Pending Logistics GRN';
 
                   return (
                     <tr key={shp._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -397,6 +516,11 @@ export default function LogisticsShipmentsView({
                         }}>
                           {shp.shipmentId}
                         </span>
+                        {shp.awbNumber && (
+                          <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '3px' }}>
+                            AWB: {shp.awbNumber}
+                          </div>
+                        )}
                         {shp.trackingNumber && (
                           <div style={{ fontSize: '0.74rem', color: '#64748B', marginTop: '3px' }}>
                             Trk: {shp.trackingNumber}
@@ -437,12 +561,13 @@ export default function LogisticsShipmentsView({
                       </td>
                       <td style={{ padding: '14px 16px' }}>
                         <div style={{ fontSize: '0.8rem', color: '#475569' }}>
-                          <strong>ETD:</strong> {shp.etd ? new Date(shp.etd).toLocaleDateString() : '—'}
+                          <strong>ETD:</strong> {shp.etd ? new Date(shp.etd).toLocaleString() : '—'}
                         </div>
                         <div style={{ fontSize: '0.8rem', color: '#0F172A', fontWeight: 600 }}>
-                          <strong>ETA:</strong> {shp.eta ? new Date(shp.eta).toLocaleDateString() : '—'}
+                          <strong>ETA:</strong> {shp.eta ? new Date(shp.eta).toLocaleString() : '—'}
                         </div>
                       </td>
+                      <td style={{ padding: '14px 16px' }}>{renderCustomsClearance(shp)}</td>
                       <td style={{ padding: '14px 16px' }}>
                         <span
                           style={{
@@ -487,22 +612,25 @@ export default function LogisticsShipmentsView({
                             <button
                               className="sv-btn-primary"
                               onClick={() => openReceiveModal(shp)}
+                              disabled={!canReceive}
                               style={{
                                 padding: '5px 9px',
                                 fontSize: '0.78rem',
-                                backgroundColor: '#16A34A',
+                                backgroundColor: canReceive ? '#16A34A' : '#CBD5E1',
                                 border: 'none',
-                                boxShadow: 'none'
+                                boxShadow: 'none',
+                                cursor: canReceive ? 'pointer' : 'not-allowed'
                               }}
-                              title="Confirm Shipment Received in Office"
+                              title={canReceive ? 'Confirm Shipment Received in Office' : 'Complete Duty Paid before receiving in office'}
                             >
                               <PackageCheck size={13} />
                               <span>Receive</span>
                             </button>
-                          ) : (
+                          ) : isLegacyPendingGRN ? (
                             <button
                               className="sv-btn-primary"
-                              onClick={() => onNavigateTab && onNavigateTab('grn_creation')}
+                              onClick={() => handleLegacySupportHandoff(shp)}
+                              disabled={submittingReceive}
                               style={{
                                 padding: '5px 9px',
                                 fontSize: '0.78rem',
@@ -510,11 +638,15 @@ export default function LogisticsShipmentsView({
                                 border: 'none',
                                 boxShadow: 'none'
                               }}
-                              title="Record Goods Receipt Note (GRN)"
+                              title="Move this legacy Pending Logistics GRN order directly to Support"
                             >
-                              <ClipboardCheck size={13} />
-                              <span>Create GRN</span>
+                              <PackageCheck size={13} />
+                              <span>{submittingReceive ? 'Sending...' : 'Send to Support'}</span>
                             </button>
+                          ) : (
+                            <span style={{ color: '#15803D', fontSize: '0.76rem', fontWeight: 700 }}>
+                              Sent to Support
+                            </span>
                           )}
                         </div>
                       </td>
@@ -537,7 +669,7 @@ export default function LogisticsShipmentsView({
                 {currentMode === 'tracking'
                   ? 'There are currently no shipments in transit. When shipments are dispatched, track their flights and schedules here.'
                   : currentMode === 'received'
-                  ? 'Confirmed office deliveries will be catalogued here for warehouse inspection and Support handoff.'
+                  ? 'Confirmed office deliveries are handed directly to Support for Inventory IN and Delivery Note creation.'
                   : 'No international shipment records match your search or filter parameters.'}
               </p>
             </div>
@@ -606,10 +738,20 @@ export default function LogisticsShipmentsView({
                 </div>
 
                 <div className="logistics-form-group">
-                  <label>Tracking Number (AWB / B/L #)</label>
+                  <label>AWB Number</label>
                   <input
                     type="text"
                     placeholder="e.g. 176-12345678"
+                    value={trackingForm.awbNumber}
+                    onChange={(e) => setTrackingForm({ ...trackingForm, awbNumber: e.target.value })}
+                  />
+                </div>
+
+                <div className="logistics-form-group">
+                  <label>Tracking / B/L Number</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. MSCU1234567"
                     value={trackingForm.trackingNumber}
                     onChange={(e) => setTrackingForm({ ...trackingForm, trackingNumber: e.target.value })}
                   />
@@ -618,7 +760,7 @@ export default function LogisticsShipmentsView({
                 <div className="logistics-form-group">
                   <label>ETD (Estimated Time of Departure)</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={trackingForm.etd}
                     onChange={(e) => setTrackingForm({ ...trackingForm, etd: e.target.value })}
                   />
@@ -627,7 +769,7 @@ export default function LogisticsShipmentsView({
                 <div className="logistics-form-group">
                   <label>ETA (Estimated Time of Arrival)</label>
                   <input
-                    type="date"
+                    type="datetime-local"
                     value={trackingForm.eta}
                     onChange={(e) => setTrackingForm({ ...trackingForm, eta: e.target.value })}
                   />
@@ -650,6 +792,34 @@ export default function LogisticsShipmentsView({
                     placeholder="e.g. Karachi Airport (KHI), Pakistan"
                     value={trackingForm.arrivalLocation}
                     onChange={(e) => setTrackingForm({ ...trackingForm, arrivalLocation: e.target.value })}
+                  />
+                </div>
+
+                <div className="logistics-form-group">
+                  <label>Transit Location / Route</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Dubai (DXB) transit"
+                    value={trackingForm.transitLocation}
+                    onChange={(e) => setTrackingForm({ ...trackingForm, transitLocation: e.target.value })}
+                  />
+                </div>
+
+                <div className="logistics-form-group">
+                  <label>Actual Departure Date &amp; Time</label>
+                  <input
+                    type="datetime-local"
+                    value={trackingForm.actualDepartureDate}
+                    onChange={(e) => setTrackingForm({ ...trackingForm, actualDepartureDate: e.target.value })}
+                  />
+                </div>
+
+                <div className="logistics-form-group">
+                  <label>Actual Arrival Date &amp; Time</label>
+                  <input
+                    type="datetime-local"
+                    value={trackingForm.actualArrivalDate}
+                    onChange={(e) => setTrackingForm({ ...trackingForm, actualArrivalDate: e.target.value })}
                   />
                 </div>
 
@@ -747,7 +917,7 @@ export default function LogisticsShipmentsView({
             <form onSubmit={handleConfirmReceived} className="logistics-modal-body">
               <div className="logistics-confirm-notice">
                 <p>
-                  Confirming this shipment as <strong>Received in Office</strong> will officially transition the Blue File order to the <strong>Support Department</strong> for Goods Received confirmation, Inventory check, and Delivery Note creation.
+                  Confirming <strong>Received in Office</strong> sends the Blue File directly to <strong>Support</strong> for Inventory IN and Delivery Note creation. Logistics does not update inventory.
                 </p>
               </div>
 

@@ -33,6 +33,40 @@ import {
 import '../employee/sales/SalesViews.css';
 import './InvoicePaymentForms.css';
 
+const getSalesOrderInvoiceItems = (salesOrder) => {
+  if (!salesOrder) return [];
+
+  const expectedSubtotal = Number(salesOrder.totalAmount) || Number(salesOrder.netAmount) || 0;
+  const mappedItems = (salesOrder.items || []).map(item => {
+    const quantity = Number(item.quantity) || 1;
+    const storedUnitPrice = Number(item.unitPrice) || 0;
+    const storedTotal = Number(item.total) || 0;
+    const total = storedTotal || (quantity * storedUnitPrice);
+    const unitPrice = total > 0 && Math.abs((quantity * storedUnitPrice) - total) > 0.01
+      ? total / quantity
+      : storedUnitPrice;
+
+    return {
+      description: item.description || item.product || 'Item',
+      quantity,
+      unitPrice,
+      total
+    };
+  });
+
+  const mappedSubtotal = mappedItems.reduce((sum, item) => sum + item.total, 0);
+  if (mappedItems.length > 0 && (!expectedSubtotal || Math.abs(mappedSubtotal - expectedSubtotal) <= 0.01)) {
+    return mappedItems;
+  }
+
+  return expectedSubtotal > 0 ? [{
+    description: salesOrder.productSummary || 'General Service / Products',
+    quantity: 1,
+    unitPrice: expectedSubtotal,
+    total: expectedSubtotal
+  }] : mappedItems;
+};
+
 export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder, onClearInitialOrder, searchQuery }) {
   const [invoices, setInvoices] = useState([]);
   const [salesOrders, setSalesOrders] = useState([]);
@@ -152,16 +186,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     // Auto-map line items from delivery note or sales order
     let items = [];
     if (so?.items && so.items.length > 0) {
-      items = so.items.map(it => {
-        const qty = Number(it.quantity) || 1;
-        const up = Number(it.unitPrice) || 0;
-        return {
-          description: it.description || it.product || 'Item',
-          quantity: qty,
-          unitPrice: up,
-          total: qty * up
-        };
-      });
+      items = getSalesOrderInvoiceItems(so);
     } else if (dn.items && dn.items.length > 0) {
       items = dn.items.map(it => {
         const qty = Number(it.quantity) || Number(it.demand) || 1;
@@ -183,11 +208,11 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
       }];
     }
 
-    const subtotal = items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+    const subtotal = Number(so?.totalAmount) || items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
     const disc = Number(so?.discount) || 0;
     const taxRate = Number(so?.taxRate) || 0;
     const tax = Number(so?.tax) || (taxRate > 0 ? (subtotal - disc) * (taxRate / 100) : 0);
-    const net = Math.max(0, subtotal - disc + tax);
+    const net = Number(so?.netAmount) || Math.max(0, subtotal - disc + tax);
 
     setForm(prev => ({
       ...prev,
@@ -228,18 +253,13 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     }
 
     const items = (so.items && so.items.length > 0)
-      ? so.items.map(it => ({
-          description: it.description || 'Item',
-          quantity: Number(it.quantity) || 1,
-          unitPrice: Number(it.unitPrice) || 0,
-          total: (Number(it.quantity) || 1) * (Number(it.unitPrice) || 0)
-        }))
+      ? getSalesOrderInvoiceItems(so)
       : [{ description: so.productSummary || 'General Service / Products', quantity: 1, unitPrice: Number(so.netAmount || so.totalAmount) || 0, total: Number(so.netAmount || so.totalAmount) || 0 }];
 
-    const subtotal = items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
+    const subtotal = Number(so.totalAmount) || items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
     const disc = Number(so.discount) || 0;
     const tax = Number(so.tax) || 0;
-    const net = Math.max(0, subtotal - disc + tax);
+    const net = Number(so.netAmount) || Math.max(0, subtotal - disc + tax);
 
     setSelectedDN(null);
     setForm(prev => ({

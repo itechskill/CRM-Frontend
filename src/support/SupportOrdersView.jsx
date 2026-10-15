@@ -515,6 +515,25 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 </div>
               </div>
 
+              {viewOrder.fileType === 'Blue' && viewOrder.shipmentDetails && (
+                <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1E3A8A', marginBottom: '8px' }}>
+                    International Shipment Details
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px 14px', fontSize: '0.8rem', color: '#334155' }}>
+                    <div><strong>Shipment:</strong> {viewOrder.shipmentDetails.shipmentId || viewOrder.shipmentNumber || 'ΓÇö'}</div>
+                    <div><strong>AWB:</strong> {viewOrder.shipmentDetails.awbNumber || 'ΓÇö'}</div>
+                    <div><strong>Tracking / B/L:</strong> {viewOrder.shipmentDetails.trackingNumber || 'ΓÇö'}</div>
+                    <div><strong>Carrier / Flight:</strong> {[viewOrder.shipmentDetails.carrier, viewOrder.shipmentDetails.flightNumber].filter(Boolean).join(' / ') || 'ΓÇö'}</div>
+                    <div><strong>Route:</strong> {[viewOrder.shipmentDetails.departureLocation, viewOrder.shipmentDetails.transitLocation, viewOrder.shipmentDetails.arrivalLocation].filter(Boolean).join(' ΓåÆ ') || 'ΓÇö'}</div>
+                    <div><strong>ETD:</strong> {viewOrder.shipmentDetails.etd ? new Date(viewOrder.shipmentDetails.etd).toLocaleString() : 'ΓÇö'}</div>
+                    <div><strong>ETA:</strong> {viewOrder.shipmentDetails.eta ? new Date(viewOrder.shipmentDetails.eta).toLocaleString() : 'ΓÇö'}</div>
+                    <div><strong>Customs:</strong> {viewOrder.shipmentDetails.customsClearanceStatus || 'ΓÇö'}</div>
+                    <div><strong>Shipment Status:</strong> {viewOrder.shipmentDetails.status || 'ΓÇö'}</div>
+                  </div>
+                </div>
+              )}
+
               {/* Ordered Products Table */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -650,7 +669,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                                 color: it.status === 'In Stock' ? '#047857' : '#DC2626',
                                 border: `1px solid ${it.status === 'In Stock' ? '#A7F3D0' : '#FECACA'}`
                               }}>
-                                {it.status === 'In Stock' ? 'Available' : 'Insufficient Stock'}
+                                {it.status === 'In Stock' ? 'Available' : (it.status || 'Insufficient Stock')}
                               </span>
                             </td>
                           </tr>
@@ -685,12 +704,14 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 <button className="sv-btn-cancel" onClick={() => setViewOrder(null)}>Close</button>
                 <button
                   className="sv-btn-primary"
+                  disabled={!viewOrder.goodsReceivedInOffice?.received}
+                  title={!viewOrder.goodsReceivedInOffice?.received ? 'Confirm goods received in office before creating the Delivery Note.' : ''}
                   onClick={() => {
                     const orderToDeliver = viewOrder;
                     setViewOrder(null);
                     if (onNavigateDeliveryNotes) onNavigateDeliveryNotes(orderToDeliver);
                   }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', opacity: viewOrder.goodsReceivedInOffice?.received ? 1 : 0.55 }}
                 >
                   <Truck size={15} /> Create Delivery Note
                 </button>
