@@ -16,9 +16,6 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
     supplierName: '',
     supplierCountry: 'China',
     poNumber: '',
-    portOfLoading: '',
-    portOfDischarge: 'Karachi Port',
-    estimatedArrival: '',
     paymentTerms: 'LC at Sight',
     items: [],
     remarks: ''
@@ -72,9 +69,6 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
       supplierName: '',
       supplierCountry: 'China',
       poNumber: `GPO-${Date.now().toString().slice(-6)}`,
-      portOfLoading: '',
-      portOfDischarge: 'Karachi Port',
-      estimatedArrival: '',
       paymentTerms: 'LC at Sight',
       items: orderItems,
       remarks: `International PO for Sales Order ${order.orderNumber || order.orderReference}`
@@ -145,9 +139,6 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
         supplierId: formData.supplierId && formData.supplierId !== 'NEW' ? formData.supplierId : undefined,
         supplierName: formData.supplierName.trim(),
         supplierCountry: formData.supplierCountry || 'China',
-        portOfLoading: formData.portOfLoading,
-        portOfDischarge: formData.portOfDischarge,
-        estimatedArrival: formData.estimatedArrival,
         paymentTerms: formData.paymentTerms,
         items: formData.items,
         totalAmountPKR: calculateTotal(),
@@ -398,43 +389,6 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                     placeholder="e.g. China, Germany, USA"
                     value={formData.supplierCountry}
                     onChange={(e) => setFormData({ ...formData, supplierCountry: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                    Port of Loading
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Ningbo / Shanghai Port"
-                    value={formData.portOfLoading}
-                    onChange={(e) => setFormData({ ...formData, portOfLoading: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                    Port of Discharge
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.portOfDischarge}
-                    onChange={(e) => setFormData({ ...formData, portOfDischarge: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                    Estimated Arrival Date (ETA)
-                  </label>
-                  <input
-                    type="date"
-                    value={formData.estimatedArrival}
-                    onChange={(e) => setFormData({ ...formData, estimatedArrival: e.target.value })}
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
                   />
                 </div>
