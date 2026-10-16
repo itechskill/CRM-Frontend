@@ -32,6 +32,11 @@ import {
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 
+const toMoneyCents = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100);
+const fromMoneyCents = (cents) => cents / 100;
+const formatMoney = (value) => Number(value || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const getRemainingAmount = (total, paid) => fromMoneyCents(Math.max(0, toMoneyCents(total) - toMoneyCents(paid)));
+
 export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, initialTab }) {
   const [invoices, setInvoices] = useState([]);
   const [ordersRequiringApproval, setOrdersRequiringApproval] = useState([]);
@@ -73,15 +78,15 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
       if (inv.isDraft || ['Draft', 'Pending Finance Finalization', 'Cancelled'].includes(inv.status)) return false;
       if (!inv.dueDate) return false;
       const isPastDue = new Date(inv.dueDate) < now;
-      const remaining = Math.max(0, (Number(inv.amount) || 0) - (Number(inv.paidAmount) || 0));
+      const remaining = getRemainingAmount(inv.amount, inv.paidAmount);
       return isPastDue && remaining > 0;
     });
 
     let totalOverdue = 0;
     let maxDays = 0;
     const items = overdueInvs.map(inv => {
-      const remaining = Math.max(0, (Number(inv.amount) || 0) - (Number(inv.paidAmount) || 0));
-      totalOverdue += remaining;
+      const remaining = getRemainingAmount(inv.amount, inv.paidAmount);
+      totalOverdue = fromMoneyCents(toMoneyCents(totalOverdue) + toMoneyCents(remaining));
       const diffMs = now - new Date(inv.dueDate);
       const days = Math.max(0, Math.floor(diffMs / (1000 * 60 * 60 * 24)));
       if (days > maxDays) maxDays = days;
@@ -403,16 +408,16 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
     const rows = itemsList.map(it => [
       it.description || 'Item',
       it.quantity || 1,
-      `PKR ${(Number(it.unitPrice) || 0).toLocaleString()}`,
-      `PKR ${(Number(it.total) || 0).toLocaleString()}`
+      `PKR ${formatMoney(it.unitPrice)}`,
+      `PKR ${formatMoney(it.total)}`
     ]);
 
     if (isOverdue) {
       rows.push([
         'Overdue Financial Charge (3% Late Fee applied past due date)',
         '1',
-        `PKR ${lateCharge.toLocaleString()}`,
-        `PKR ${lateCharge.toLocaleString()}`
+        `PKR ${formatMoney(lateCharge)}`,
+        `PKR ${formatMoney(lateCharge)}`
       ]);
     }
 
@@ -427,15 +432,15 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
     const finalY = doc.lastAutoTable.finalY + 10;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Invoice Subtotal: PKR ${amount.toLocaleString()}`, 196, finalY, { align: 'right' });
+    doc.text(`Invoice Subtotal: PKR ${formatMoney(amount)}`, 196, finalY, { align: 'right' });
     if (isOverdue) {
       doc.setTextColor(220, 38, 38);
-      doc.text(`Overdue 3% Charge: PKR ${lateCharge.toLocaleString()}`, 196, finalY + 6, { align: 'right' });
+      doc.text(`Overdue 3% Charge: PKR ${formatMoney(lateCharge)}`, 196, finalY + 6, { align: 'right' });
       doc.setTextColor(15, 23, 42);
-      doc.text(`Total Payable with Charges: PKR ${totalWithCharge.toLocaleString()}`, 196, finalY + 12, { align: 'right' });
-      doc.text(`Amount Paid: PKR ${Number(inv.paidAmount || 0).toLocaleString()}`, 196, finalY + 18, { align: 'right' });
+      doc.text(`Total Payable with Charges: PKR ${formatMoney(totalWithCharge)}`, 196, finalY + 12, { align: 'right' });
+      doc.text(`Amount Paid: PKR ${formatMoney(inv.paidAmount)}`, 196, finalY + 18, { align: 'right' });
     } else {
-      doc.text(`Amount Paid: PKR ${Number(inv.paidAmount || 0).toLocaleString()}`, 196, finalY + 6, { align: 'right' });
+      doc.text(`Amount Paid: PKR ${formatMoney(inv.paidAmount)}`, 196, finalY + 6, { align: 'right' });
     }
 
     doc.save(`${inv.invoiceType ? inv.invoiceType.replace(' ', '_') : 'Invoice'}_${inv.invoiceNumber}.pdf`);
@@ -459,7 +464,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
     const rows = filteredInvoices.map((inv, idx) => {
       const total = Number(inv.amount) || 0;
       const paid = Number(inv.paidAmount) || 0;
-      const remaining = Math.max(0, total - paid);
+      const remaining = getRemainingAmount(total, paid);
       return [
         (idx + 1).toString(),
         inv.invoiceNumber || `INV-${idx + 1}`,
@@ -467,9 +472,9 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
         inv.salesOrderNumber || '—',
         inv.deliveryNoteNumber || '—',
         inv.invoiceType || (inv.isDraft ? 'Draft' : 'Commercial'),
-        `PKR ${total.toLocaleString()}`,
-        `PKR ${paid.toLocaleString()}`,
-        `PKR ${remaining.toLocaleString()}`,
+        `PKR ${formatMoney(total)}`,
+        `PKR ${formatMoney(paid)}`,
+        `PKR ${formatMoney(remaining)}`,
         inv.status || 'Pending'
       ];
     });
@@ -510,7 +515,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(5, 150, 105);
-    doc.text(`Total Invoiced: PKR ${totalAmt.toLocaleString()}`, 14, finalY > 195 ? 195 : finalY);
+    doc.text(`Total Invoiced: PKR ${formatMoney(totalAmt)}`, 14, finalY > 195 ? 195 : finalY);
 
     doc.save(`Fortline_Invoices_Register_${new Date().toISOString().split('T')[0]}.pdf`);
   };
@@ -521,7 +526,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
     const rows = filteredInvoices.map((inv, idx) => {
       const total = Number(inv.amount) || 0;
       const paid = Number(inv.paidAmount) || 0;
-      const remaining = Math.max(0, total - paid);
+      const remaining = getRemainingAmount(total, paid);
       return [
         idx + 1,
         `"${inv.invoiceNumber || ''}"`,
@@ -678,7 +683,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
           <span className="sv-ts-label">Finalized Invoices</span>
           <span className="sv-ts-value" style={{ color: '#2563EB' }}>{finalizedInvoices.length}</span>
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
-            PKR {finalizedInvoices.reduce((s, i) => s + (Number(i.amount) || 0), 0).toLocaleString()} Total
+            PKR {formatMoney(fromMoneyCents(finalizedInvoices.reduce((sum, invoice) => sum + toMoneyCents(invoice.amount), 0)))} Total
           </span>
         </div>
       </div>
@@ -830,17 +835,17 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                 <div style={{ background: 'rgba(255,255,255,0.06)', padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 600 }}>Awaiting Orders Value</div>
                   <div style={{ fontSize: '1rem', fontWeight: 800, color: '#10B981' }}>
-                    PKR {filteredOrdersToApprove.reduce((s, o) => s + (Number(o.netAmount || o.totalAmount) || 0), 0).toLocaleString()}
+                    PKR {formatMoney(fromMoneyCents(filteredOrdersToApprove.reduce((sum, order) => sum + toMoneyCents(order.netAmount || order.totalAmount), 0)))}
                   </div>
                 </div>
 
                 <div style={{ background: 'rgba(255,255,255,0.06)', padding: '8px 14px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.1)' }}>
                   <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 600 }}>Total Overdue Debt on Queue</div>
                   <div style={{ fontSize: '1rem', fontWeight: 800, color: '#EF4444' }}>
-                    PKR {filteredOrdersToApprove.reduce((s, o) => {
+                    PKR {formatMoney(filteredOrdersToApprove.reduce((s, o) => {
                       const live = getCustomerOverdueDetails(o.clientName);
                       return s + Math.max(live.totalOverdue, Number(o.customerOverdueAtCreation || 0));
-                    }, 0).toLocaleString()}
+                    }, 0))}
                   </div>
                 </div>
 
@@ -896,7 +901,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                           {o.salePerson || o.salesPerson?.fullName || 'Sales Person'}
                         </td>
                         <td style={{ fontWeight: 800, color: '#059669', fontSize: '0.95rem' }}>
-                          PKR {orderAmt.toLocaleString()}
+                          PKR {formatMoney(orderAmt)}
                           {o.fileType && (
                             <span style={{ display: 'block', fontSize: '0.72rem', color: o.fileType === 'Blue' ? '#1D4ED8' : '#047857', fontWeight: 700 }}>
                               {o.fileType} File
@@ -907,7 +912,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                           {hasOverdue ? (
                             <div>
                               <div style={{ fontWeight: 800, color: '#DC2626', fontSize: '0.92rem' }}>
-                                PKR {overdueAmt.toLocaleString()}
+                                PKR {formatMoney(overdueAmt)}
                               </div>
                               <button
                                 type="button"
@@ -944,7 +949,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                                   <AlertTriangle size={11} /> HIGH RISK (Debt &ge; Order)
                                 </span>
                                 <div style={{ fontSize: '0.7rem', color: '#B91C1C', marginTop: '2px' }}>
-                                  Exposure: PKR {(overdueAmt + orderAmt).toLocaleString()}
+                                  Exposure: PKR {formatMoney(fromMoneyCents(toMoneyCents(overdueAmt) + toMoneyCents(orderAmt)))}
                                 </div>
                               </div>
                             ) : (
@@ -1117,7 +1122,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                       {o.salePerson || o.salesPerson?.fullName || 'Sales Person'}
                     </td>
                     <td style={{ fontWeight: 800, color: '#059669' }}>
-                      PKR {Number(o.netAmount || o.totalAmount || 0).toLocaleString()}
+                      PKR {formatMoney(o.netAmount || o.totalAmount)}
                     </td>
                     <td>
                       {o.fileType === 'Blue' ? (
@@ -1196,7 +1201,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                 {filteredInvoices.map((inv) => {
                   const total = Number(inv.amount) || 0;
                   const paid = Number(inv.paidAmount) || 0;
-                  const remaining = Math.max(0, total - paid);
+                  const remaining = getRemainingAmount(total, paid);
                   const isPaid = remaining === 0;
                   const isPendingFinalization = inv.status === 'Pending Finance Finalization' || (inv.status === 'Submitted' && inv.isDraft !== false);
                   const isFinalized = inv.status === 'Finalized' || inv.isDraft === false;
@@ -1230,13 +1235,13 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                         )}
                       </td>
                       <td style={{ fontWeight: 800, color: '#059669' }}>
-                        PKR {total.toLocaleString()}
+                        PKR {formatMoney(total)}
                       </td>
                       <td style={{ fontWeight: 700, color: '#2563EB' }}>
-                        PKR {paid.toLocaleString()}
+                        PKR {formatMoney(paid)}
                       </td>
                       <td style={{ fontWeight: 800, color: isPaid ? '#059669' : '#DC2626' }}>
-                        PKR {remaining.toLocaleString()}
+                        PKR {formatMoney(remaining)}
                       </td>
                       <td>
                         {isPendingFinalization ? (
@@ -1330,7 +1335,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
             <div>
               <p style={{ color: '#475569', fontSize: '0.88rem', margin: '0 0 16px' }}>
                 Customer: <strong>{finalizeTarget.clientName}</strong><br />
-                Amount: <strong style={{ color: '#059669' }}>PKR {Number(finalizeTarget.amount || 0).toLocaleString()}</strong>
+                Amount: <strong style={{ color: '#059669' }}>PKR {formatMoney(finalizeTarget.amount)}</strong>
               </p>
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontWeight: 700, fontSize: '0.85rem', color: '#1E293B', marginBottom: '8px' }}>
@@ -1585,10 +1590,10 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                             <td style={{ padding: '10px 14px', fontWeight: 600, color: '#0F172A' }}>{item.description || 'Item'}</td>
                             <td style={{ padding: '10px 14px', textAlign: 'center' }}>{item.quantity || 1}</td>
                             <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>
-                              PKR {(Number(item.unitPrice) || 0).toLocaleString()}
+                              PKR {formatMoney(item.unitPrice)}
                             </td>
                             <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700, color: '#0F172A' }}>
-                              PKR {(Number(item.total) || ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0))).toLocaleString()}
+                              PKR {formatMoney(Number(item.total) || ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)))}
                             </td>
                           </tr>
                         ))
@@ -1597,8 +1602,8 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                           <td style={{ padding: '10px 14px' }}>1</td>
                           <td style={{ padding: '10px 14px', fontWeight: 600 }}>General Invoiced Services / Deliverables</td>
                           <td style={{ padding: '10px 14px', textAlign: 'center' }}>1</td>
-                          <td style={{ padding: '10px 14px', textAlign: 'right' }}>PKR {Number(viewInvoice.amount || 0).toLocaleString()}</td>
-                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700 }}>PKR {Number(viewInvoice.amount || 0).toLocaleString()}</td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right' }}>PKR {formatMoney(viewInvoice.amount)}</td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 700 }}>PKR {formatMoney(viewInvoice.amount)}</td>
                         </tr>
                       )}
                     </tbody>
@@ -1622,34 +1627,34 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                 <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '16px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
                     <span style={{ color: '#64748B' }}>Subtotal:</span>
-                    <span style={{ fontWeight: 600, color: '#0F172A' }}>PKR {Number(viewInvoice.subtotal || viewInvoice.amount || 0).toLocaleString()}</span>
+                    <span style={{ fontWeight: 600, color: '#0F172A' }}>PKR {formatMoney(viewInvoice.subtotal || viewInvoice.amount)}</span>
                   </div>
                   {Number(viewInvoice.discount) > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
                       <span style={{ color: '#DC2626' }}>Discount:</span>
-                      <span style={{ fontWeight: 600, color: '#DC2626' }}>- PKR {Number(viewInvoice.discount).toLocaleString()}</span>
+                      <span style={{ fontWeight: 600, color: '#DC2626' }}>- PKR {formatMoney(viewInvoice.discount)}</span>
                     </div>
                   )}
                   {Number(viewInvoice.tax) > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.85rem' }}>
                       <span style={{ color: '#64748B' }}>Tax ({viewInvoice.taxRate || 0}%):</span>
-                      <span style={{ fontWeight: 600, color: '#0F172A' }}>+ PKR {Number(viewInvoice.tax).toLocaleString()}</span>
+                      <span style={{ fontWeight: 600, color: '#0F172A' }}>+ PKR {formatMoney(viewInvoice.tax)}</span>
                     </div>
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '1.5px solid #CBD5E1', borderBottom: '1.5px solid #CBD5E1', marginTop: '6px', marginBottom: '8px' }}>
                     <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '1rem' }}>Total Invoice Amount:</span>
-                    <span style={{ fontWeight: 800, color: '#059669', fontSize: '1.15rem' }}>PKR {Number(viewInvoice.amount || 0).toLocaleString()}</span>
+                    <span style={{ fontWeight: 800, color: '#059669', fontSize: '1.15rem' }}>PKR {formatMoney(viewInvoice.amount)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
                     <span style={{ color: '#2563EB', fontWeight: 600 }}>Amount Paid:</span>
-                    <span style={{ fontWeight: 700, color: '#2563EB' }}>PKR {Number(viewInvoice.paidAmount || 0).toLocaleString()}</span>
+                    <span style={{ fontWeight: 700, color: '#2563EB' }}>PKR {formatMoney(viewInvoice.paidAmount)}</span>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.88rem' }}>
-                    <span style={{ color: Math.max(0, (Number(viewInvoice.amount) || 0) - (Number(viewInvoice.paidAmount) || 0)) === 0 ? '#059669' : '#DC2626', fontWeight: 700 }}>
+                    <span style={{ color: toMoneyCents(getRemainingAmount(viewInvoice.amount, viewInvoice.paidAmount)) === 0 ? '#059669' : '#DC2626', fontWeight: 700 }}>
                       Remaining Balance:
                     </span>
-                    <span style={{ fontWeight: 800, color: Math.max(0, (Number(viewInvoice.amount) || 0) - (Number(viewInvoice.paidAmount) || 0)) === 0 ? '#059669' : '#DC2626' }}>
-                      PKR {Math.max(0, (Number(viewInvoice.amount) || 0) - (Number(viewInvoice.paidAmount) || 0)).toLocaleString()}
+                    <span style={{ fontWeight: 800, color: toMoneyCents(getRemainingAmount(viewInvoice.amount, viewInvoice.paidAmount)) === 0 ? '#059669' : '#DC2626' }}>
+                      PKR {formatMoney(getRemainingAmount(viewInvoice.amount, viewInvoice.paidAmount))}
                     </span>
                   </div>
                 </div>
@@ -1694,7 +1699,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                   </>
                 )}
 
-                {Math.max(0, (Number(viewInvoice.amount) || 0) - (Number(viewInvoice.paidAmount) || 0)) > 0 && !viewInvoice.isDraft && (
+                {toMoneyCents(getRemainingAmount(viewInvoice.amount, viewInvoice.paidAmount)) > 0 && !viewInvoice.isDraft && (
                   <button
                     className="sv-btn-primary"
                     onClick={() => {
@@ -1784,28 +1789,28 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                     <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.06)' }}>
                       <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>New Order Value</div>
                       <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#0F172A' }}>
-                        PKR {orderAmt.toLocaleString()}
+                        PKR {formatMoney(orderAmt)}
                       </div>
                     </div>
 
                     <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.06)' }}>
                       <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Total Past-Due Debt</div>
                       <div style={{ fontSize: '0.92rem', fontWeight: 800, color: hasOverdue ? '#DC2626' : '#16A34A' }}>
-                        PKR {liveOverdue.totalOverdue.toLocaleString()}
+                        PKR {formatMoney(liveOverdue.totalOverdue)}
                       </div>
                     </div>
 
                     <div style={{ background: '#FFFFFF', padding: '8px 10px', borderRadius: '8px', border: '1px solid rgba(0,0,0,0.06)' }}>
                       <div style={{ fontSize: '0.72rem', color: '#64748B', fontWeight: 600 }}>Total Exposure</div>
                       <div style={{ fontSize: '0.92rem', fontWeight: 800, color: hasOverdue ? '#B91C1C' : '#059669' }}>
-                        PKR {totalExposure.toLocaleString()}
+                        PKR {formatMoney(totalExposure)}
                       </div>
                     </div>
                   </div>
 
                   {hasOverdue && (
                     <div style={{ marginTop: '10px', fontSize: '0.78rem', color: '#991B1B', lineHeight: '1.4', background: 'rgba(255,255,255,0.7)', padding: '6px 10px', borderRadius: '6px' }}>
-                      <strong>Warning:</strong> Customer has <strong>PKR {liveOverdue.totalOverdue.toLocaleString()}</strong> in unpaid invoices (oldest is {liveOverdue.maxOverdueDays} days overdue). Approving this order will route it to procurement.
+                      <strong>Warning:</strong> Customer has <strong>PKR {formatMoney(liveOverdue.totalOverdue)}</strong> in unpaid invoices (oldest is {liveOverdue.maxOverdueDays} days overdue). Approving this order will route it to procurement.
                     </div>
                   )}
                 </div>
@@ -1917,7 +1922,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                       Overdue Invoices Breakdown: {overdueDetailModalOrder.clientName}
                     </h3>
                     <span style={{ fontSize: '0.78rem', color: '#7F1D1D' }}>
-                      Incoming Sales Order: {overdueDetailModalOrder.orderReference || overdueDetailModalOrder.orderNumber} (PKR {orderAmt.toLocaleString()})
+                      Incoming Sales Order: {overdueDetailModalOrder.orderReference || overdueDetailModalOrder.orderNumber} (PKR {formatMoney(orderAmt)})
                     </span>
                   </div>
                 </div>
@@ -1937,7 +1942,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                   <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 14px' }}>
                     <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Total Overdue Debt</div>
                     <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#DC2626' }}>
-                      PKR {liveOverdue.totalOverdue.toLocaleString()}
+                      PKR {formatMoney(liveOverdue.totalOverdue)}
                     </div>
                   </div>
 
@@ -1958,7 +1963,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                   <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 14px' }}>
                     <div style={{ fontSize: '0.74rem', color: '#64748B', fontWeight: 600 }}>Total Combined Exposure</div>
                     <div style={{ fontSize: '1.05rem', fontWeight: 800, color: '#7C2D12' }}>
-                      PKR {(liveOverdue.totalOverdue + orderAmt).toLocaleString()}
+                      PKR {formatMoney(fromMoneyCents(toMoneyCents(liveOverdue.totalOverdue) + toMoneyCents(orderAmt)))}
                     </div>
                   </div>
                 </div>
@@ -1993,10 +1998,10 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                                 {inv.daysOverdue} days overdue
                               </span>
                             </td>
-                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{Number(inv.amount || 0).toLocaleString()}</td>
-                            <td style={{ textAlign: 'right', color: '#059669' }}>{Number(inv.paidAmount || 0).toLocaleString()}</td>
+                            <td style={{ textAlign: 'right', fontWeight: 600 }}>{formatMoney(inv.amount)}</td>
+                            <td style={{ textAlign: 'right', color: '#059669' }}>{formatMoney(inv.paidAmount)}</td>
                             <td style={{ textAlign: 'right', fontWeight: 800, color: '#DC2626' }}>
-                              PKR {Number(inv.remaining || 0).toLocaleString()}
+                              PKR {formatMoney(inv.remaining)}
                             </td>
                             <td>
                               <span className="sv-badge" style={{ background: '#FEF3C7', color: '#92400E' }}>
@@ -2097,14 +2102,14 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                 <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 14px' }}>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>Net Order Total</div>
                   <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#059669' }}>
-                    PKR {Number(viewOrder.netAmount || viewOrder.totalAmount || 0).toLocaleString()}
+                    PKR {formatMoney(viewOrder.netAmount || viewOrder.totalAmount)}
                   </div>
                 </div>
 
                 <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 14px' }}>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>Customer Overdue at Creation</div>
                   <div style={{ fontSize: '0.95rem', fontWeight: 700, color: viewOrder.customerOverdueAtCreation > 0 ? '#DC2626' : '#16A34A' }}>
-                    {viewOrder.customerOverdueAtCreation > 0 ? `PKR ${Number(viewOrder.customerOverdueAtCreation).toLocaleString()}` : 'PKR 0 (Clear)'}
+                    {viewOrder.customerOverdueAtCreation > 0 ? `PKR ${formatMoney(viewOrder.customerOverdueAtCreation)}` : 'PKR 0.00 (Clear)'}
                   </div>
                 </div>
 
@@ -2163,8 +2168,8 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                         <td>{idx + 1}</td>
                         <td style={{ fontWeight: 600 }}>{it.description || 'Product / Service Item'}</td>
                         <td style={{ textAlign: 'right' }}>{it.quantity || 1}</td>
-                        <td style={{ textAlign: 'right' }}>{Number(it.unitPrice || 0).toLocaleString()}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{Number(it.total || (it.quantity || 1) * (it.unitPrice || 0)).toLocaleString()}</td>
+                        <td style={{ textAlign: 'right' }}>{formatMoney(it.unitPrice)}</td>
+                        <td style={{ textAlign: 'right', fontWeight: 700 }}>{formatMoney(Number(it.total) || (it.quantity || 1) * (it.unitPrice || 0))}</td>
                       </tr>
                     ))}
                   </tbody>

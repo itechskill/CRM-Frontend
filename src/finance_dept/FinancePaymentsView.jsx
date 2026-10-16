@@ -24,6 +24,10 @@ import {
 import '../employee/sales/SalesViews.css';
 import '../accounts/InvoicePaymentForms.css';
 
+const toMoneyCents = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100);
+const fromMoneyCents = (cents) => cents / 100;
+const formatMoney = (value) => Number(value || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export default function FinancePaymentsView({ initialPreFillInvoice, initialInvoice, onClearInitialInvoice, searchQuery }) {
   const [payments, setPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
@@ -44,7 +48,8 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     paymentType: 'Partial',
     paymentMethod: 'Bank Transfer',
     paymentDate: new Date().toISOString().split('T')[0],
-    notes: ''
+    notes: '',
+    allocations: []
   });
 
   const fetchPayments = useCallback(async () => {
@@ -93,16 +98,23 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     setSelectedInvoice(inv);
     const totalAmount = Number(inv.amount) || 0;
     const alreadyPaid = Number(inv.paidAmount) || 0;
-    const remaining = Math.max(0, totalAmount - alreadyPaid);
+    const remaining = fromMoneyCents(Math.max(0, toMoneyCents(totalAmount) - toMoneyCents(alreadyPaid)));
 
     setForm(prev => ({
       ...prev,
       invoiceId: inv._id || inv.id || '',
       invoiceNumber: inv.invoiceNumber || '',
       customerName: inv.clientName || inv.customerName || '',
-      salesOrderId: inv.salesOrderId || null,
+      salesOrderId: inv.salesOrderId?._id || inv.salesOrderId || null,
       salesOrderNumber: inv.salesOrderNumber || '',
       amount: remaining > 0 ? remaining : totalAmount,
+      allocations: [{
+        invoiceId: inv._id || inv.id || '',
+        invoiceNumber: inv.invoiceNumber || '',
+        salesOrderId: inv.salesOrderId?._id || inv.salesOrderId || null,
+        salesOrderNumber: inv.salesOrderNumber || '',
+        amount: remaining > 0 ? remaining : totalAmount
+      }],
       paymentType: remaining > 0 ? 'Full' : 'Partial',
       notes: `Payment recorded against Invoice ${inv.invoiceNumber || ''}${inv.salesOrderNumber ? ` (Order ${inv.salesOrderNumber})` : ''}`
     }));
@@ -121,13 +133,24 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     if (!selectedInvoice) return;
     const total = Number(selectedInvoice.amount) || 0;
     const paid = Number(selectedInvoice.paidAmount) || 0;
-    const rem = Math.max(0, total - paid);
+    const remCents = Math.max(0, toMoneyCents(total) - toMoneyCents(paid));
+    const rem = fromMoneyCents(remCents);
 
     if (type === 'full') {
-      setForm(prev => ({ ...prev, amount: rem, paymentType: 'Full' }));
+      setForm(prev => ({
+        ...prev,
+        amount: rem,
+        allocations: prev.allocations.map((allocation, index) => index === 0 ? { ...allocation, amount: rem } : allocation),
+        paymentType: 'Full'
+      }));
     } else if (type === 'half') {
-      const half = Math.round(rem / 2);
-      setForm(prev => ({ ...prev, amount: half, paymentType: 'Partial' }));
+      const half = fromMoneyCents(Math.round(remCents / 2));
+      setForm(prev => ({
+        ...prev,
+        amount: half,
+        allocations: prev.allocations.map((allocation, index) => index === 0 ? { ...allocation, amount: half } : allocation),
+        paymentType: 'Partial'
+      }));
     }
   };
 
@@ -143,15 +166,62 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
       paymentType: 'Full',
       paymentMethod: 'Bank Transfer',
       paymentDate: new Date().toISOString().split('T')[0],
-      notes: ''
+      notes: '',
+      allocations: []
     });
     setShowModal(true);
   };
 
+  const addInvoiceAllocation = () => {
+    setForm(prev => ({
+      ...prev,
+      allocations: [...(prev.allocations.length ? prev.allocations : [{
+        invoiceId: prev.invoiceId,
+        invoiceNumber: prev.invoiceNumber,
+        salesOrderId: prev.salesOrderId,
+        salesOrderNumber: prev.salesOrderNumber,
+        amount: prev.amount
+      }]), { invoiceId: '', invoiceNumber: '', salesOrderId: null, salesOrderNumber: '', amount: 0 }]
+    }));
+  };
+
+  const updateInvoiceAllocation = (index, invoiceId, amount) => {
+    setForm(prev => {
+      const allocations = [...prev.allocations];
+      if (invoiceId !== undefined) {
+        const invoice = invoices.find(item => item._id === invoiceId);
+        const remaining = invoice
+          ? fromMoneyCents(Math.max(0, toMoneyCents(invoice.amount) - toMoneyCents(invoice.paidAmount)))
+          : 0;
+        allocations[index] = {
+          invoiceId,
+          invoiceNumber: invoice?.invoiceNumber || '',
+          salesOrderId: invoice?.salesOrderId?._id || invoice?.salesOrderId || null,
+          salesOrderNumber: invoice?.salesOrderNumber || '',
+          amount: remaining
+        };
+      } else {
+        allocations[index] = { ...allocations[index], amount };
+      }
+      return { ...prev, allocations, amount: fromMoneyCents(allocations.reduce((sum, allocation) => sum + toMoneyCents(allocation.amount), 0)) };
+    });
+  };
+
+  const removeInvoiceAllocation = (index) => {
+    setForm(prev => {
+      const allocations = prev.allocations.filter((_, allocationIndex) => allocationIndex !== index);
+      return { ...prev, allocations, amount: fromMoneyCents(allocations.reduce((sum, allocation) => sum + toMoneyCents(allocation.amount), 0)) };
+    });
+  };
+
   const handleSavePayment = async (e) => {
     e.preventDefault();
-    if (!form.customerName.trim() || !form.amount || Number(form.amount) <= 0) {
+    if (!form.customerName.trim() || toMoneyCents(form.amount) <= 0) {
       alert('Customer name and a valid payment amount (> 0) are required.');
+      return;
+    }
+    if (form.allocations.length > 1 && form.allocations.some(allocation => !allocation.invoiceId || toMoneyCents(allocation.amount) <= 0)) {
+      alert('Select an invoice and enter an amount greater than 0.00 for every allocation.');
       return;
     }
 
@@ -159,11 +229,15 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     try {
       const { response, data } = await apiRequest('/api/sales-employee/payments', {
         method: 'POST',
-        body: JSON.stringify(form)
+        body: JSON.stringify({
+          ...form,
+          amount: fromMoneyCents(toMoneyCents(form.amount)),
+          allocations: form.allocations.length > 1 ? form.allocations : undefined
+        })
       });
 
       if (response.ok && data.success) {
-        setFeedback(`Payment ${data.data?.paymentRefNumber || ''} of PKR ${Number(form.amount).toLocaleString()} recorded successfully!`);
+        setFeedback(`Payment ${data.data?.paymentRefNumber || ''} of PKR ${formatMoney(form.amount)} recorded successfully!`);
         setShowModal(false);
         fetchPayments();
         fetchInvoices();
@@ -205,11 +279,17 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     autoTable(doc, {
       startY: 64,
       head: [['Transaction Details', 'Reference', 'Amount Settled (PKR)']],
-      body: [[
-        `Payment against Invoice ${pay.invoiceNumber || 'Direct'}\n${pay.notes || ''}`,
-        pay.paymentRefNumber || 'REC',
-        `PKR ${Number(pay.amount || 0).toLocaleString()}`
-      ]],
+      body: Array.isArray(pay.allocations) && pay.allocations.length > 0
+        ? pay.allocations.map(allocation => [
+            `Payment against Invoice ${allocation.invoiceNumber || 'Direct'}`,
+            allocation.salesOrderNumber || pay.paymentRefNumber || 'REC',
+            `PKR ${formatMoney(allocation.amount)}`
+          ])
+        : [[
+            `Payment against Invoice ${pay.invoiceNumber || 'Direct'}\n${pay.notes || ''}`,
+            pay.paymentRefNumber || 'REC',
+            `PKR ${formatMoney(pay.amount)}`
+          ]],
       theme: 'grid',
       headStyles: { fillColor: [5, 150, 105] }
     });
@@ -218,7 +298,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     doc.setFontSize(13);
     doc.setFont(undefined, 'bold');
     doc.setTextColor(5, 150, 105);
-    doc.text(`Total Settled: PKR ${Number(pay.amount || 0).toLocaleString()}`, 120, finalY);
+    doc.text(`Total Settled: PKR ${formatMoney(pay.amount)}`, 120, finalY);
 
     doc.save(`${pay.paymentRefNumber || 'Payment_Receipt'}.pdf`);
   };
@@ -244,7 +324,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
       pay.customerName || 'Customer',
       pay.invoiceNumber || '—',
       pay.salesOrderNumber || '—',
-      `PKR ${(Number(pay.amount) || 0).toLocaleString()}`,
+      `PKR ${formatMoney(pay.amount)}`,
       pay.paymentType || 'Full',
       pay.paymentMethod || 'Bank Transfer',
       pay.paymentDate ? new Date(pay.paymentDate).toLocaleDateString('en-GB') : '—'
@@ -284,7 +364,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(5, 150, 105);
-    doc.text(`Total Collections: PKR ${totalCollected.toLocaleString()} (${filteredPayments.length} Receipts)`, 14, finalY > 195 ? 195 : finalY);
+    doc.text(`Total Collections: PKR ${formatMoney(totalCollected)} (${filteredPayments.length} Receipts)`, 14, finalY > 195 ? 195 : finalY);
 
     doc.save(`Fortline_Customer_Payments_${new Date().toISOString().split('T')[0]}.pdf`);
   };
@@ -333,14 +413,14 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     );
   });
 
-  const totalCollected = payments.reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-  const bankTransferTotal = payments.filter(p => p.paymentMethod === 'Bank Transfer').reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
-  const chequeTotal = payments.filter(p => p.paymentMethod === 'Cheque').reduce((sum, p) => sum + (Number(p.amount) || 0), 0);
+  const totalCollected = fromMoneyCents(payments.reduce((sum, p) => sum + toMoneyCents(p.amount), 0));
+  const bankTransferTotal = fromMoneyCents(payments.filter(p => p.paymentMethod === 'Bank Transfer').reduce((sum, p) => sum + toMoneyCents(p.amount), 0));
+  const chequeTotal = fromMoneyCents(payments.filter(p => p.paymentMethod === 'Cheque').reduce((sum, p) => sum + toMoneyCents(p.amount), 0));
 
   // Unsettled / unpaid invoices count
   const unpaidInvoices = invoices.filter(inv => {
-    const rem = Math.max(0, (Number(inv.amount) || 0) - (Number(inv.paidAmount) || 0));
-    return rem > 0;
+    const remainingCents = Math.max(0, toMoneyCents(inv.amount) - toMoneyCents(inv.paidAmount));
+    return remainingCents > 0;
   });
 
   return (
@@ -390,21 +470,21 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
         <div className="sv-target-card" style={{ borderLeft: '4px solid #059669' }}>
           <span className="sv-ts-label">Total Collections</span>
           <span className="sv-ts-value" style={{ color: '#059669' }}>
-            PKR {totalCollected.toLocaleString()}
+            PKR {formatMoney(totalCollected)}
           </span>
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>{payments.length} payment receipts</span>
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #2563EB' }}>
           <span className="sv-ts-label">Bank Transfers</span>
           <span className="sv-ts-value" style={{ color: '#2563EB' }}>
-            PKR {bankTransferTotal.toLocaleString()}
+            PKR {formatMoney(bankTransferTotal)}
           </span>
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Direct account deposits</span>
         </div>
         <div className="sv-target-card" style={{ borderLeft: '4px solid #D97706' }}>
           <span className="sv-ts-label">Cheque Collections</span>
           <span className="sv-ts-value" style={{ color: '#D97706' }}>
-            PKR {chequeTotal.toLocaleString()}
+            PKR {formatMoney(chequeTotal)}
           </span>
           <span style={{ fontSize: '0.78rem', color: '#64748B' }}>Cleared &amp; deposited</span>
         </div>
@@ -468,7 +548,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                   </td>
                   <td>{p.salesOrderNumber || '—'}</td>
                   <td style={{ fontWeight: 800, color: '#059669' }}>
-                    PKR {Number(p.amount || 0).toLocaleString()}
+                    PKR {formatMoney(p.amount)}
                   </td>
                   <td>
                     <span className="sv-badge" style={{
@@ -569,13 +649,13 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                     onChange={(e) => handleSelectInvoice(e.target.value)}
                   >
                     <option value="">-- Choose Invoice to Settle --</option>
-                    {invoices.map(inv => {
+                    {invoices.filter(inv => toMoneyCents(inv.amount) - toMoneyCents(inv.paidAmount) > 0).map(inv => {
                       const total = Number(inv.amount) || 0;
                       const paid = Number(inv.paidAmount) || 0;
-                      const rem = Math.max(0, total - paid);
+                      const rem = fromMoneyCents(Math.max(0, toMoneyCents(total) - toMoneyCents(paid)));
                       return (
                         <option key={inv._id} value={inv._id}>
-                          {inv.invoiceNumber} — {inv.clientName} (Total: PKR {total.toLocaleString()} | Remaining: PKR {rem.toLocaleString()})
+                          {inv.invoiceNumber} — {inv.clientName} (Total: PKR {formatMoney(total)} | Remaining: PKR {formatMoney(rem)})
                         </option>
                       );
                     })}
@@ -588,19 +668,19 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                         <div className="ip-payment-metric-card">
                           <div className="ip-payment-metric-label">Invoice Total</div>
                           <div className="ip-payment-metric-value" style={{ color: '#0F172A' }}>
-                            PKR {Number(selectedInvoice.amount || 0).toLocaleString()}
+                            PKR {formatMoney(selectedInvoice.amount)}
                           </div>
                         </div>
                         <div className="ip-payment-metric-card">
                           <div className="ip-payment-metric-label" style={{ color: '#059669' }}>Already Paid</div>
                           <div className="ip-payment-metric-value" style={{ color: '#059669' }}>
-                            PKR {Number(selectedInvoice.paidAmount || 0).toLocaleString()}
+                            PKR {formatMoney(selectedInvoice.paidAmount)}
                           </div>
                         </div>
                         <div className="ip-payment-metric-card remaining-card">
                           <div className="ip-payment-metric-label" style={{ color: '#DC2626' }}>Remaining Balance</div>
                           <div className="ip-payment-metric-value" style={{ color: '#DC2626' }}>
-                            PKR {Math.max(0, (Number(selectedInvoice.amount) || 0) - (Number(selectedInvoice.paidAmount) || 0)).toLocaleString()}
+                            PKR {formatMoney(fromMoneyCents(Math.max(0, toMoneyCents(selectedInvoice.amount) - toMoneyCents(selectedInvoice.paidAmount))))}
                           </div>
                         </div>
                       </div>
@@ -622,6 +702,58 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                           ½ Pay Half Balance (50%)
                         </button>
                       </div>
+                    </div>
+                  )}
+
+                  {selectedInvoice && form.allocations.length < 2 && (
+                    <button
+                      type="button"
+                      className="ip-quick-pill half-pill"
+                      onClick={addInvoiceAllocation}
+                      style={{ marginTop: '12px' }}
+                    >
+                      <Plus size={14} /> Split this receipt across another invoice
+                    </button>
+                  )}
+
+                  {form.allocations.length > 1 && (
+                    <div style={{ marginTop: '14px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {form.allocations.map((allocation, index) => (
+                        <div key={`${index}-${allocation.invoiceId}`} style={{ display: 'grid', gridTemplateColumns: '1fr 150px 34px', gap: '8px', alignItems: 'center' }}>
+                          <select
+                            className="ip-input payment-focus"
+                            value={allocation.invoiceId}
+                            onChange={(event) => updateInvoiceAllocation(index, event.target.value, undefined)}
+                            required
+                          >
+                            <option value="">-- Select invoice --</option>
+                            {invoices.filter(invoice => {
+                              const sameCustomer = (invoice.clientName || invoice.customerName || '').trim().toLowerCase() === form.customerName.trim().toLowerCase();
+                              const selectedElsewhere = form.allocations.some((item, itemIndex) => itemIndex !== index && item.invoiceId === invoice._id);
+                              const remainingCents = Math.max(0, toMoneyCents(invoice.amount) - toMoneyCents(invoice.paidAmount));
+                              return sameCustomer && !selectedElsewhere && remainingCents > 0;
+                            }).map(invoice => (
+                              <option key={invoice._id} value={invoice._id}>{invoice.invoiceNumber} - PKR {formatMoney(fromMoneyCents(Math.max(0, toMoneyCents(invoice.amount) - toMoneyCents(invoice.paidAmount))))}</option>
+                            ))}
+                          </select>
+                          <input
+                            type="number"
+                            min="0.01"
+                            step="0.01"
+                            className="ip-input payment-focus"
+                            value={allocation.amount}
+                            onChange={(event) => updateInvoiceAllocation(index, undefined, Math.max(0, Number(event.target.value) || 0))}
+                            required
+                          />
+                          {index > 0 ? (
+                            <button type="button" className="ip-close-btn" onClick={() => removeInvoiceAllocation(index)} title="Remove allocation"><X size={16} /></button>
+                          ) : <span />}
+                        </div>
+                      ))}
+                      <button type="button" className="ip-quick-pill half-pill" onClick={addInvoiceAllocation}>
+                        <Plus size={14} /> Add another invoice
+                      </button>
+                      <div style={{ textAlign: 'right', fontWeight: 800, color: '#059669' }}>Receipt total: PKR {formatMoney(form.amount)}</div>
                     </div>
                   )}
                 </div>
@@ -651,11 +783,20 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                       </label>
                       <input
                         type="number"
-                        min="1"
+                        min="0.01"
+                        step="0.01"
                         className="ip-input payment-focus"
                         style={{ fontSize: '1.05rem', fontWeight: 800, color: '#059669' }}
                         value={form.amount}
-                        onChange={(e) => setForm({ ...form, amount: Math.max(0, parseFloat(e.target.value) || 0) })}
+                        readOnly={form.allocations.length > 1}
+                        onChange={(e) => {
+                          const amount = Math.max(0, Number(e.target.value) || 0);
+                          setForm(prev => ({
+                            ...prev,
+                            amount,
+                            allocations: prev.allocations.map((allocation, index) => index === 0 ? { ...allocation, amount } : allocation)
+                          }));
+                        }}
                         required
                       />
                     </div>
