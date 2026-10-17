@@ -1126,7 +1126,7 @@ export default function App() {
                   }}
                 />
               )}
-              {activeTab === 'local_payables' && <LocalPurchaserPayablesView searchQuery={portalSearch} readOnly />}
+              {activeTab === 'local_payables' && <LocalPurchaserPayablesView searchQuery={portalSearch} readOnly canRecordPayments />}
               {activeTab === 'financial_charges' && <FinanceFinancialChargesView searchQuery={portalSearch} />}
               {(activeTab === 'finance_reports' || activeTab === 'reports') && <FinanceReportsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}

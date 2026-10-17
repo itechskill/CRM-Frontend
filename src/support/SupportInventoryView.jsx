@@ -34,8 +34,10 @@ export default function SupportInventoryView() {
   const [editItem, setEditItem] = useState(null);
   const [saving, setSaving] = useState(false);
   const [inventoryInItem, setInventoryInItem] = useState(null);
-  const [inventoryInForm, setInventoryInForm] = useState({ quantity: 1, reference: '', orderNumber: '', remarks: '' });
+  const [inventoryInForm, setInventoryInForm] = useState({ quantity: 1, reference: '', salesOrderId: '', remarks: '' });
   const [addingInventory, setAddingInventory] = useState(false);
+  const [salesOrders, setSalesOrders] = useState([]);
+  const [movementItem, setMovementItem] = useState(null);
 
   const [form, setForm] = useState({
     name: '',
@@ -52,10 +54,12 @@ export default function SupportInventoryView() {
   const fetchInventory = async () => {
     setLoading(true);
     try {
-      const { response, data } = await apiRequest('/api/sales-employee/inventory');
-      if (response.ok && data.success) {
-        setItems(data.data || []);
-      }
+      const [inventoryResult, ordersResult] = await Promise.all([
+        apiRequest('/api/sales-employee/inventory'),
+        apiRequest('/api/sales-employee/orders?status=all')
+      ]);
+      if (inventoryResult.response.ok && inventoryResult.data.success) setItems(inventoryResult.data.data || []);
+      if (ordersResult.response.ok && ordersResult.data.success) setSalesOrders(ordersResult.data.data || []);
     } catch (e) {
       console.error('[Fetch Inventory Error]:', e);
     } finally {
@@ -75,7 +79,11 @@ export default function SupportInventoryView() {
       (item.name && item.name.toLowerCase().includes(term)) ||
       (item.sku && item.sku.toLowerCase().includes(term)) ||
       (item.category && item.category.toLowerCase().includes(term)) ||
-      (item.location && item.location.toLowerCase().includes(term))
+      (item.location && item.location.toLowerCase().includes(term)) ||
+      (item.stockMovements || []).some((movement) =>
+        (movement.grnNumber || '').toLowerCase().includes(term) ||
+        (movement.orderNumber || '').toLowerCase().includes(term)
+      )
     );
   });
 
@@ -145,7 +153,7 @@ export default function SupportInventoryView() {
 
   const handleOpenInventoryIn = (item) => {
     setInventoryInItem(item);
-    setInventoryInForm({ quantity: 1, reference: '', orderNumber: '', remarks: '' });
+    setInventoryInForm({ quantity: 1, reference: '', salesOrderId: '', remarks: '' });
   };
 
   const handleInventoryIn = async (e) => {
@@ -158,6 +166,7 @@ export default function SupportInventoryView() {
         body: JSON.stringify({ ...inventoryInForm, quantity: Number(inventoryInForm.quantity) })
       });
       if (response.ok && data.success) {
+        alert(data.message || `Inventory added under ${data.grnNumber}.`);
         setInventoryInItem(null);
         fetchInventory();
       } else {
@@ -188,6 +197,7 @@ export default function SupportInventoryView() {
     const rows = filteredItems.map((item, idx) => {
       const available = (item.quantityOnHand || 0) - (item.reservedQuantity || 0);
       const totalVal = (item.quantityOnHand || 0) * (item.unitPrice || 0);
+      const latestGrn = [...(item.stockMovements || [])].reverse().find((movement) => movement.grnNumber)?.grnNumber || '-';
       return [
         (idx + 1).toString(),
         item.name || 'Product Item',
@@ -199,6 +209,7 @@ export default function SupportInventoryView() {
         `${available} ${item.unit || 'pcs'}`,
         `Rs. ${(item.unitPrice || 0).toLocaleString()}`,
         `Rs. ${totalVal.toLocaleString()}`,
+        latestGrn,
         item.status || 'In Stock'
       ];
     });
@@ -206,7 +217,7 @@ export default function SupportInventoryView() {
     autoTable(doc, {
       startY: 32,
       margin: { left: 14, right: 14 },
-      head: [['#', 'Product Name', 'SKU', 'Category', 'Location', 'Total Qty', 'Reserved', 'Available', 'Unit Price', 'Stock Value', 'Status']],
+      head: [['#', 'Product Name', 'SKU', 'Category', 'Location', 'Total Qty', 'Reserved', 'Available', 'Unit Price', 'Stock Value', 'Latest GRN', 'Status']],
       body: rows,
       theme: 'grid',
       headStyles: {
@@ -231,7 +242,8 @@ export default function SupportInventoryView() {
         7: { cellWidth: 20, halign: 'center', fontStyle: 'bold' },
         8: { cellWidth: 26, halign: 'right' },
         9: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
-        10: { cellWidth: 23, halign: 'center' }
+        10: { cellWidth: 25, halign: 'center' },
+        11: { cellWidth: 23, halign: 'center' }
       }
     });
 
@@ -247,7 +259,7 @@ export default function SupportInventoryView() {
 
   // Full Inventory List Excel CSV Export
   const handleExportExcel = () => {
-    const headers = ['#', 'Product Name', 'SKU Code', 'Category', 'Unit', 'Total Stock', 'Reserved Qty', 'Available Qty', 'Min Alert Level', 'Unit Price (PKR)', 'Total Value (PKR)', 'Location', 'Status', 'Description'];
+    const headers = ['#', 'Product Name', 'SKU Code', 'Category', 'Unit', 'Total Stock', 'Reserved Qty', 'Available Qty', 'Min Alert Level', 'Unit Price (PKR)', 'Total Value (PKR)', 'Location', 'GRN Numbers', 'Status', 'Description'];
     const rows = filteredItems.map((item, idx) => {
       const available = (item.quantityOnHand || 0) - (item.reservedQuantity || 0);
       const totalVal = (item.quantityOnHand || 0) * (item.unitPrice || 0);
@@ -264,6 +276,7 @@ export default function SupportInventoryView() {
         item.unitPrice || 0,
         totalVal,
         `"${(item.location || '').replace(/"/g, '""')}"`,
+        `"${(item.stockMovements || []).map((movement) => movement.grnNumber).filter(Boolean).join('; ')}"`,
         `"${item.status || 'In Stock'}"`,
         `"${(item.description || '').replace(/"/g, '""')}"`
       ];
@@ -288,7 +301,7 @@ export default function SupportInventoryView() {
           <Search size={16} color="#94A3B8" />
           <input
             type="text"
-            placeholder="Search SKU code, product name, category, warehouse location..."
+            placeholder="Search SKU, product, location, GRN or order..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -339,6 +352,7 @@ export default function SupportInventoryView() {
                 <th>Total Stock</th>
                 <th>Reserved</th>
                 <th>Available</th>
+                <th>Latest GRN</th>
                 <th>Status</th>
                 <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
@@ -374,6 +388,9 @@ export default function SupportInventoryView() {
                     <td style={{ fontWeight: 800, color: available > 0 ? '#059669' : '#DC2626' }}>
                       {available} {item.unit}
                     </td>
+                    <td style={{ fontWeight: 700, color: '#2563EB' }}>
+                      {[...(item.stockMovements || [])].reverse().find((movement) => movement.grnNumber)?.grnNumber || '-'}
+                    </td>
                     <td>
                       <span className="sv-badge" style={{ background: statusBg, color: statusColor, border: `1px solid ${statusBorder}` }}>
                         {item.status}
@@ -386,6 +403,9 @@ export default function SupportInventoryView() {
                         </button>
                         <button className="sv-btn-action-icon" onClick={() => handleOpenEdit(item)} title="Edit Stock Item">
                           <Edit2 size={14} />
+                        </button>
+                        <button className="sv-btn-action-icon" onClick={() => setMovementItem(item)} title="View stock movement history">
+                          <FileText size={14} />
                         </button>
                       </div>
                     </td>
@@ -746,8 +766,15 @@ export default function SupportInventoryView() {
                   <input className="sv-input" placeholder="Bill / receipt reference" value={inventoryInForm.reference} onChange={(e) => setInventoryInForm({ ...inventoryInForm, reference: e.target.value })} />
                 </div>
                 <div className="sv-field">
-                  <label>Order Number</label>
-                  <input className="sv-input" placeholder="SO-0000" value={inventoryInForm.orderNumber} onChange={(e) => setInventoryInForm({ ...inventoryInForm, orderNumber: e.target.value })} />
+                  <label>Sales Order (optional)</label>
+                  <select className="sv-input" value={inventoryInForm.salesOrderId} onChange={(e) => setInventoryInForm({ ...inventoryInForm, salesOrderId: e.target.value })}>
+                    <option value="">No linked Sales Order</option>
+                    {salesOrders.map((order) => (
+                      <option key={order._id} value={order._id}>
+                        {order.orderReference || order.orderNumber} - {order.clientName || 'Customer'}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div className="sv-field">
                   <label>Remarks</label>
@@ -761,6 +788,40 @@ export default function SupportInventoryView() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {movementItem && (
+        <div className="sv-modal-overlay" onClick={() => setMovementItem(null)}>
+          <div className="sv-modal" style={{ maxWidth: '760px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="sv-modal-header" style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>Stock Movement History</h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748B' }}>{movementItem.name} | {movementItem.sku || 'No SKU'}</p>
+              </div>
+              <button onClick={() => setMovementItem(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={18} /></button>
+            </div>
+            <div style={{ marginTop: '16px', overflowX: 'auto' }}>
+              <table className="sv-table" style={{ minWidth: '680px' }}>
+                <thead><tr><th>Date</th><th>Type</th><th>Quantity</th><th>GRN</th><th>Sales Order</th><th>Reference</th></tr></thead>
+                <tbody>
+                  {[...(movementItem.stockMovements || [])].reverse().map((movement, index) => (
+                    <tr key={movement._id || `${movement.timestamp}-${index}`}>
+                      <td>{movement.timestamp ? new Date(movement.timestamp).toLocaleString() : '-'}</td>
+                      <td>{movement.type || '-'}</td>
+                      <td>{Number(movement.quantity || 0).toLocaleString()} {movementItem.unit || 'pcs'}</td>
+                      <td style={{ fontWeight: 700, color: '#2563EB' }}>{movement.grnNumber || '-'}</td>
+                      <td>{movement.orderNumber || '-'}</td>
+                      <td>{movement.reference || '-'}</td>
+                    </tr>
+                  ))}
+                  {(movementItem.stockMovements || []).length === 0 && (
+                    <tr><td colSpan={6} style={{ textAlign: 'center', color: '#94A3B8' }}>No stock movements recorded.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}

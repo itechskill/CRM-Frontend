@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 
+const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
 export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigateTab }) {
   const [orders, setOrders] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -37,6 +39,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
     poNumber: '',
     expectedDeliveryDate: '',
     paymentTerms: 'Net 30',
+    gstRate: 0,
     items: [],
     notes: ''
   });
@@ -68,7 +71,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
     return () => window.removeEventListener('focus', refreshOnFocus);
   }, []);
 
-  const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK')}`;
+  const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   // 1. Check Inventory Handler
   const handleCheckInventory = async (order) => {
@@ -78,12 +81,12 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
       if (res.success) {
         setAnalysisModal({
           order,
-          analysis: res.data?.itemAnalysis || order.inventoryAnalysis || [],
-          status: res.data?.status || (order.inventoryCheckStatus || 'In Stock'),
-          totalOrdered: res.data?.totalOrdered || 0,
-          totalAvailable: res.data?.totalAvailable || 0,
-          totalStockValue: res.data?.totalStockValue || 0,
-          orderTotalAmount: res.data?.orderTotalAmount || Number(order.netAmount || order.totalAmount || 0),
+          analysis: res.data?.data?.itemAnalysis || order.inventoryAnalysis || [],
+          status: res.data?.data?.status || (order.inventoryCheckStatus || 'In Stock'),
+          totalOrdered: res.data?.data?.totalOrdered || 0,
+          totalAvailable: res.data?.data?.totalAvailable || 0,
+          totalStockValue: res.data?.data?.totalStockValue || 0,
+          orderTotalAmount: res.data?.data?.orderTotalAmount || Number(order.netAmount || order.totalAmount || 0),
           message: res.message
         });
         fetchOrders();
@@ -116,9 +119,10 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
     setPoForm({
       supplierId: '',
       supplierName: '',
-      poNumber: `LPO-${Date.now().toString().slice(-6)}`,
+      poNumber: '',
       expectedDeliveryDate: '',
       paymentTerms: 'Net 30',
+      gstRate: 0,
       items: orderItems,
       notes: `Local Supplier PO for Sales Order #${order.orderNumber || order.orderReference} (${order.clientName})`
     });
@@ -145,7 +149,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
     if (field === 'quantity' || field === 'unitPrice') {
       const q = Number(updated[idx].quantity || 0);
       const u = Number(updated[idx].unitPrice || 0);
-      updated[idx].totalAmount = q * u;
+      updated[idx].totalAmount = roundMoney(q * u);
     }
     setPoForm(prev => ({ ...prev, items: updated }));
   };
@@ -166,34 +170,50 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
   };
 
   const calculateTotalPoValue = () => {
-    return poForm.items.reduce((sum, it) => sum + (Number(it.totalAmount) || 0), 0);
+    return roundMoney(poForm.items.reduce((sum, it) => sum + (Number(it.totalAmount) || 0), 0));
   };
+
+  const calculateGST = () => roundMoney(calculateTotalPoValue() * (Number(poForm.gstRate) || 0) / 100);
 
   const handleSubmitPo = async (e) => {
     e.preventDefault();
-    if (!poForm.supplierName.trim()) {
+    if (!poForm.supplierId || (poForm.supplierId === 'NEW' && !poForm.supplierName.trim())) {
       alert('Please select or specify a local supplier.');
       return;
     }
     setSubmittingPo(true);
     try {
+      let supplierId = poForm.supplierId;
+      if (supplierId === 'NEW') {
+        const supplierRes = await apiRequest('/api/purchaser/suppliers', 'POST', {
+          name: poForm.supplierName.trim(),
+          supplierType: 'Local',
+          country: 'Pakistan'
+        });
+        if (!supplierRes.success) {
+          alert(supplierRes.message || 'Unable to add the Local supplier.');
+          return;
+        }
+        supplierId = supplierRes.data?.data?._id || supplierRes.data?.supplier?._id;
+      }
       const payload = {
-        poNumber: poForm.poNumber,
-        supplierId: poForm.supplierId !== 'NEW' ? poForm.supplierId : undefined,
-        supplierName: poForm.supplierName,
+        supplierId,
         poType: 'Local',
         expectedDeliveryDate: poForm.expectedDeliveryDate || undefined,
         paymentTerms: poForm.paymentTerms,
         salesOrderId: selectedOrder ? selectedOrder._id : undefined,
         salesOrderNumber: selectedOrder ? (selectedOrder.orderNumber || selectedOrder.orderReference) : undefined,
         items: poForm.items,
-        totalAmount: calculateTotalPoValue(),
+        subtotal: calculateTotalPoValue(),
+        gstRate: Number(poForm.gstRate) || 0,
+        totalAmount: roundMoney(calculateTotalPoValue() + calculateGST()),
         notes: poForm.notes
       };
 
       const res = await apiRequest('/api/purchaser/pos', 'POST', payload);
       if (res.success) {
-        setToast(`Local Supplier PO #${payload.poNumber} created successfully! You can now receive goods via GRN.`);
+        const assignedPoNumber = res.data?.data?.poNumber || res.data?.po?.poNumber || 'assigned';
+        setToast(`Local Supplier PO #${assignedPoNumber} created successfully!`);
         setShowPoModal(false);
         setSelectedOrder(null);
         fetchOrders();
@@ -215,7 +235,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
       return;
     }
     try {
-      const res = await apiRequest(`/api/purchaser/orders/${order._id}/complete-procurement`, 'POST');
+      const res = await apiRequest(`/api/purchaser/orders/${order._id}/inventory-check`, 'POST', { moveToSupport: true });
       if (res.success) {
         setToast(`Sales Order #${order.orderNumber || order.orderReference} successfully routed to Support Department!`);
         fetchOrders();
@@ -451,7 +471,8 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
 
       {/* Inventory Check Analysis Modal */}
       {analysisModal && (() => {
-        const isAllInStock = analysisModal.status === 'In Stock' || (analysisModal.analysis || []).every(it => (it.shortageQuantity || it.shortageQty || 0) === 0);
+        const analysisRows = analysisModal.analysis || [];
+        const isAllInStock = analysisRows.length > 0 && analysisRows.every(it => it.status === 'Available');
         const order = analysisModal.order;
 
         return (
@@ -512,6 +533,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                         <th style={{ padding: '10px 12px', textAlign: 'center' }}>Required Qty</th>
                         <th style={{ padding: '10px 12px', textAlign: 'center' }}>In Stock Qty</th>
                         <th style={{ padding: '10px 12px', textAlign: 'center' }}>Shortage Qty</th>
+                        <th style={{ padding: '10px 12px', textAlign: 'left' }}>Matched Inventory Item</th>
                         <th style={{ padding: '10px 12px', textAlign: 'right' }}>Unit Price (PKR)</th>
                         <th style={{ padding: '10px 12px', textAlign: 'right' }}>Total Value</th>
                         <th style={{ padding: '10px 12px', textAlign: 'center' }}>Stock Status</th>
@@ -528,11 +550,22 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
 
                         return (
                           <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', background: hasShortage ? '#FFFDF5' : '#FFFFFF' }}>
-                            <td style={{ padding: '10px 12px', fontWeight: 600, color: '#0F172A' }}>{it.productName}</td>
+                            <td style={{ padding: '10px 12px', fontWeight: 600, color: '#0F172A' }}>
+                              {it.productName}
+                              {it.quantityAssumed && <div style={{ fontSize: '0.7rem', color: '#D97706', marginTop: '2px' }}>Quantity unknown, assumed 1</div>}
+                            </td>
                             <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700 }}>{reqQ}</td>
                             <td style={{ padding: '10px 12px', textAlign: 'center', color: '#059669', fontWeight: 700 }}>{availQ}</td>
                             <td style={{ padding: '10px 12px', textAlign: 'center', color: hasShortage ? '#DC2626' : '#64748B', fontWeight: 700 }}>
                               {shortQ}
+                            </td>
+                            <td style={{ padding: '10px 12px', color: '#475569', fontSize: '0.78rem' }}>
+                              {it.matchedInventoryItem ? (
+                                <>
+                                  <strong>{it.matchedInventoryItem.name}</strong>
+                                  <div>SKU: {it.matchedInventoryItem.sku || '—'} &bull; {it.matchedInventoryItem.category || 'Uncategorized'} &bull; {it.matchedInventoryItem.location || 'No location'}</div>
+                                </>
+                              ) : (it.matchNote || 'No exact name/SKU match')}
                             </td>
                             <td style={{ padding: '10px 12px', textAlign: 'right', color: '#475569' }}>
                               {uPrice > 0 ? formatPKR(uPrice) : '—'}
@@ -549,7 +582,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                                 backgroundColor: hasShortage ? '#FEE2E2' : '#DEF7EC',
                                 color: hasShortage ? '#991B1B' : '#03543F'
                               }}>
-                                {hasShortage ? `Shortage (${shortQ})` : '✓ In Stock'}
+                                {it.status || (hasShortage ? `Partly available (shortage ${shortQ})` : 'Available')}
                               </span>
                             </td>
                           </tr>
@@ -594,7 +627,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                   </button>
 
                   {/* 1. BUTTON TO MOVE TO SUPPORT */}
-                  <button
+                  {isAllInStock && <button
                     type="button"
                     onClick={() => {
                       const targetOrd = analysisModal.order;
@@ -616,7 +649,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                     }}
                   >
                     <Send size={16} /> Move to Support Department (Generate DN)
-                  </button>
+                  </button>}
 
                   {/* 2. BUTTON TO ISSUE SUPPLIER PO (IF SHORTAGE) */}
                   {!isAllInStock && (
@@ -688,7 +721,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                     {Array.isArray(suppliers) && suppliers.map(s => (
                       <option key={s._id} value={s._id}>{s.name} ({s.city || 'Local'})</option>
                     ))}
-                    <option value="NEW">+ Add New Supplier Name Directly</option>
+                    <option value="NEW">+ Add New Supplier</option>
                   </select>
                 </div>
 
@@ -702,19 +735,21 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                     placeholder="Enter local vendor / shop name"
                     value={poForm.supplierName}
                     onChange={(e) => setPoForm(prev => ({ ...prev, supplierName: e.target.value }))}
+                    readOnly={poForm.supplierId !== 'NEW'}
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
                   />
                 </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                    Supplier PO Number <span style={{ color: '#EF4444' }}>*</span>
+                    Supplier PO Number
                   </label>
                   <input
                     type="text"
-                    required
                     value={poForm.poNumber}
-                    onChange={(e) => setPoForm(prev => ({ ...prev, poNumber: e.target.value }))}
+                    readOnly
+                    placeholder="Assigned on issue"
+                    aria-label="Supplier PO number assigned on issue"
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
                   />
                 </div>
@@ -780,6 +815,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                     <input
                       type="number"
                       min="0"
+                      step="0.01"
                       placeholder="Unit Price (PKR)"
                       required
                       value={it.unitPrice}
@@ -800,10 +836,16 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                 ))}
               </div>
 
-              {/* Total Summary */}
-              <div style={{ backgroundColor: '#ECFDF5', borderRadius: '10px', padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <span style={{ fontWeight: 700, color: '#065F46' }}>Total Local PO Value (PKR)</span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 800, color: '#059669' }}>{formatPKR(calculateTotalPoValue())}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>GST (%)</label>
+                  <input type="number" min="0" step="0.01" value={poForm.gstRate} onChange={(e) => setPoForm(prev => ({ ...prev, gstRate: e.target.value }))} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1' }} />
+                </div>
+                <div style={{ backgroundColor: '#ECFDF5', borderRadius: '10px', padding: '12px 16px', color: '#065F46' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><strong>{formatPKR(calculateTotalPoValue())}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST</span><strong>{formatPKR(calculateGST())}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontWeight: 800 }}><span>Total including GST</span><span>{formatPKR(calculateTotalPoValue() + calculateGST())}</span></div>
+                </div>
               </div>
 
               <div style={{ marginBottom: '20px' }}>

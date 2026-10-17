@@ -120,7 +120,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
         referenceDate: shipment.actualArrivalDate
           ? new Date(shipment.actualArrivalDate).toISOString().split('T')[0]
           : today,
-        supplierName: o.supplierPO?.supplierName || shipment.supplierName || '',
+        supplierName: o.supplierPO?.supplierName || shipment.supplierName || '-',
         carrier: o.fileType === 'Blue' ? (shipment.carrier || '') : '',
         containerNo: o.fileType === 'Blue' ? (shipment.containerNumber || shipment.trackingNumber || '') : '',
         portOfLoading: o.fileType === 'Blue' ? (shipment.origin || shipment.departureLocation || '') : '',
@@ -360,7 +360,12 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                     </span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    {o.inventoryReceived || isOrderCompletedInSupport(o) ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    {o.inventoryFulfilledFromExistingStock ? (
+                      <span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                        <CheckCircle2 size={12} /> Using existing warehouse stock
+                      </span>
+                    ) : o.inventoryReceived || isOrderCompletedInSupport(o) ? (
                       <span style={{
                         padding: '3px 8px',
                         borderRadius: '12px',
@@ -396,6 +401,12 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                         <PackageCheck size={12} /> {(o.inventoryReceipts || []).length ? 'Receive Remaining' : 'Receive Goods'}
                       </button>
                     )}
+                    {(o.inventoryGrnNumbers || []).length > 0 && (
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#2563EB' }}>
+                        GRN: {o.inventoryGrnNumbers.join(', ')}
+                      </span>
+                    )}
+                    </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
@@ -506,6 +517,12 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 </div>
               )}
 
+              {(viewOrder.inventoryGrnNumbers || []).length > 0 && (
+                <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', color: '#1E3A8A', fontSize: '0.82rem' }}>
+                  <strong>Inventory IN GRN:</strong> {viewOrder.inventoryGrnNumbers.join(', ')}
+                </div>
+              )}
+
               {/* Ordered Products Table */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -608,7 +625,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                       <span>
                         {stockCheckResult.isFullyInStock
                           ? '✓ All ordered items are Available in stock. Ready to create Delivery Note.'
-                          : '⚠️ Insufficient Stock Detected. Delivery Note creation requires caution.'}
+                          : 'Insufficient stock. Use Receive Goods / Inventory IN before creating the Delivery Note.'}
                       </span>
                     </div>
 
@@ -625,7 +642,10 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                       <tbody>
                         {stockCheckResult.items && stockCheckResult.items.map((it, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0' }}>
-                            <td style={{ padding: '6px 8px', fontWeight: 600 }}>{it.productName}</td>
+                            <td style={{ padding: '6px 8px', fontWeight: 600 }}>
+                              {it.productName}
+                              {it.quantityAssumed && <div style={{ fontSize: '0.68rem', color: '#D97706', marginTop: '2px' }}>Quantity unknown, assumed 1</div>}
+                            </td>
                             <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 700 }}>{it.requiredQty} {it.unit}</td>
                             <td style={{ padding: '6px 8px', textAlign: 'center', color: '#059669', fontWeight: 700 }}>{it.availableQty} {it.unit}</td>
                             <td style={{ padding: '6px 8px', textAlign: 'center', color: it.shortageQty > 0 ? '#DC2626' : '#64748B', fontWeight: 700 }}>
@@ -676,14 +696,16 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 <button className="sv-btn-cancel" onClick={() => setViewOrder(null)}>Close</button>
                 <button
                   className="sv-btn-primary"
-                  disabled={!viewOrder.goodsReceivedInOffice?.received}
-                  title={!viewOrder.goodsReceivedInOffice?.received ? 'Confirm goods received in office before creating the Delivery Note.' : ''}
+                  disabled={!viewOrder.goodsReceivedInOffice?.received || checkingStock || !stockCheckResult?.isFullyInStock}
+                  title={!viewOrder.goodsReceivedInOffice?.received
+                    ? 'Confirm goods received in office before creating the Delivery Note.'
+                    : (!stockCheckResult?.isFullyInStock ? 'Add inventory first using Receive Goods / Inventory IN.' : '')}
                   onClick={() => {
                     const orderToDeliver = viewOrder;
                     setViewOrder(null);
                     if (onNavigateDeliveryNotes) onNavigateDeliveryNotes(orderToDeliver);
                   }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', opacity: viewOrder.goodsReceivedInOffice?.received ? 1 : 0.55 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', opacity: viewOrder.goodsReceivedInOffice?.received && stockCheckResult?.isFullyInStock ? 1 : 0.55 }}
                 >
                   <Truck size={15} /> Create Delivery Note
                 </button>
@@ -738,20 +760,20 @@ function ReceiveGoodsModal({ order, preview, form, loading, submitting, onClose,
           <form onSubmit={onSubmit} style={{ marginTop: '16px' }}>
             <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
               <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
-                {order.fileType === 'Blue' ? 'BL / AWB & shipment reference' : 'Local supplier delivery / bill reference'}
+                {order.fileType === 'Blue' ? 'BL / AWB & shipment reference' : 'Supplier bill details'}
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
                 <div>
-                  <label style={labelStyle}>{order.fileType === 'Blue' ? 'BL / AWB Number' : 'Supplier Delivery / Bill Reference'}</label>
+                  <label style={labelStyle}>{order.fileType === 'Blue' ? 'BL / AWB Number' : 'Supplier Bill No.'}</label>
                   <input className="sv-input" value={form.referenceNumber} onChange={(e) => onChange({ ...form, referenceNumber: e.target.value })} />
                 </div>
                 <div>
-                  <label style={labelStyle}>Reference Date</label>
+                  <label style={labelStyle}>{order.fileType === 'Blue' ? 'Reference Date' : 'Supplier Bill Date'}</label>
                   <input type="date" className="sv-input" value={form.referenceDate} onChange={(e) => onChange({ ...form, referenceDate: e.target.value })} />
                 </div>
                 <div>
                   <label style={labelStyle}>Supplier</label>
-                  <input className="sv-input" value={form.supplierName} onChange={(e) => onChange({ ...form, supplierName: e.target.value })} />
+                  <input className="sv-input" value={form.supplierName || '-'} readOnly style={{ background: '#F8FAFC' }} />
                 </div>
                 {order.fileType === 'Blue' && (
                   <>
@@ -787,6 +809,7 @@ function ReceiveGoodsModal({ order, preview, form, loading, submitting, onClose,
                     <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 110px 130px', gap: '12px', alignItems: 'end' }}>
                       <div>
                         <div style={{ fontWeight: 800, color: '#0F172A' }}>{line.productName}</div>
+                        {line.quantityAssumed && <div style={{ fontSize: '0.72rem', color: '#D97706', marginTop: '2px', fontWeight: 700 }}>Quantity unknown, assumed 1</div>}
                         <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
                           Ordered: {line.orderedQty} | Previously received: {line.previouslyReceivedQty} | Remaining: {line.remainingQty}
                         </div>

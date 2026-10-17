@@ -2,15 +2,25 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, X, CheckCircle2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 
-export default function LocalPurchaserPayablesView({ searchQuery, readOnly = false }) {
+export default function LocalPurchaserPayablesView({ searchQuery, readOnly = false, canRecordPayments = !readOnly }) {
   const [payables, setPayables] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
   const [supplierPOs, setSupplierPOs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [filterText, setFilterText] = useState('');
   const [toast, setToast] = useState('');
+  const [paymentTarget, setPaymentTarget] = useState(null);
+  const [historyTarget, setHistoryTarget] = useState(null);
+  const [paymentSubmitting, setPaymentSubmitting] = useState(false);
+  const [paymentForm, setPaymentForm] = useState({
+    paymentId: '',
+    amount: '',
+    date: new Date().toISOString().split('T')[0],
+    method: 'Bank Transfer',
+    reference: '',
+    note: ''
+  });
 
   const [formData, setFormData] = useState({
     supplierId: '',
@@ -31,16 +41,12 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [payRes, suppRes, poRes] = await Promise.all([
+      const [payRes, poRes] = await Promise.all([
         apiRequest('/api/purchaser/payables'),
-        readOnly ? Promise.resolve({ success: true, data: [] }) : apiRequest('/api/purchaser/suppliers?type=Local'),
         readOnly ? Promise.resolve({ success: true, data: [] }) : apiRequest('/api/purchaser/pos?subType=Local')
       ]);
       if (payRes.success) {
         setPayables(Array.isArray(payRes.payables) ? payRes.payables : (Array.isArray(payRes.data) ? payRes.data : []));
-      }
-      if (suppRes.success) {
-        setSuppliers(Array.isArray(suppRes.suppliers) ? suppRes.suppliers : (Array.isArray(suppRes.data) ? suppRes.data : []));
       }
       if (poRes.success) {
         setSupplierPOs(Array.isArray(poRes.pos) ? poRes.pos : (Array.isArray(poRes.data) ? poRes.data : []));
@@ -74,25 +80,10 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
     }
   };
 
-  const handleSupplierSelect = (e) => {
-    const val = e.target.value;
-    const s = (Array.isArray(suppliers) ? suppliers : []).find(sup => sup.name === val);
-    if (s) {
-      setFormData(prev => ({
-        ...prev,
-        supplierId: s._id,
-        supplierName: s.name,
-        supplierContact: s.phone || s.email || ''
-      }));
-    } else {
-      setFormData(prev => ({ ...prev, supplierName: val }));
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.supplierName || !formData.amountPKR) {
-      alert('Please fill supplier name and amount in PKR.');
+    if (!formData.supplierPoId || !formData.supplierName || !formData.amountPKR) {
+      alert('Please select a Local Supplier PO and enter the amount in PKR.');
       return;
     }
     setSubmitting(true);
@@ -135,6 +126,72 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
   };
 
   const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const amountFromCents = (value) => (Number(value || 0) / 100);
+  const payableTotal = (payable) => Number.isInteger(payable.totalAmountCents)
+    ? amountFromCents(payable.totalAmountCents)
+    : Number(payable.amount || payable.amountPKR || 0);
+  const payablePaid = (payable) => Number.isInteger(payable.paidAmountCents)
+    ? amountFromCents(payable.paidAmountCents)
+    : (payable.status === 'Paid' ? payableTotal(payable) : 0);
+  const payableOutstanding = (payable) => Number.isInteger(payable.outstandingAmountCents)
+    ? amountFromCents(payable.outstandingAmountCents)
+    : Math.max(0, payableTotal(payable) - payablePaid(payable));
+  const createPaymentId = () => globalThis.crypto?.randomUUID?.()
+    || `pay-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  const openPaymentModal = (payable) => {
+    setPaymentTarget(payable);
+    setPaymentForm({
+      paymentId: createPaymentId(),
+      amount: payableOutstanding(payable).toFixed(2),
+      date: new Date().toISOString().split('T')[0],
+      method: 'Bank Transfer',
+      reference: '',
+      note: ''
+    });
+  };
+
+  const handlePaymentSubmit = async (event) => {
+    event.preventDefault();
+    const amountCents = Math.round((Number(paymentForm.amount) + Number.EPSILON) * 100);
+    if (!paymentTarget || !Number.isSafeInteger(amountCents) || amountCents <= 0) {
+      alert('Enter a valid payment amount.');
+      return;
+    }
+    setPaymentSubmitting(true);
+    try {
+      const result = await apiRequest(`/api/purchaser/payables/${paymentTarget._id}/payments`, 'POST', {
+        paymentId: paymentForm.paymentId,
+        amountCents,
+        date: paymentForm.date,
+        method: paymentForm.method,
+        reference: paymentForm.reference,
+        note: paymentForm.note
+      });
+      if (!result.success) {
+        alert(result.message || 'Unable to record the payment.');
+        return;
+      }
+      setToast(result.message || 'Supplier payment recorded successfully.');
+      setPaymentTarget(null);
+      await fetchData();
+      setTimeout(() => setToast(''), 4500);
+    } catch (err) {
+      console.error('Error recording supplier payment:', err);
+      alert('Unable to record the payment.');
+    } finally {
+      setPaymentSubmitting(false);
+    }
+  };
+  const getPayableGrnNumbers = (payable) => Array.from(new Set([
+    ...(Array.isArray(payable.grns) ? payable.grns.map((grn) => grn?.grnNumber) : []),
+    payable.grn?.grnNumber
+  ].filter(Boolean)));
+  const getSupplierBills = (payable) => Array.from(new Map(
+    (Array.isArray(payable.grns) ? payable.grns : [])
+      .filter(grn => grn?.supplierBillNumber)
+      .map(grn => [grn.supplierBillNumber, grn])
+  ).values());
 
   const searchVal = (filterText || searchQuery || '').toLowerCase();
   const filtered = payables.filter(p =>
@@ -147,8 +204,8 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
     (p.paymentTerms || '').toLowerCase().includes(searchVal)
   );
 
-  const totalPending = filtered.filter(p => p.status === 'Pending').reduce((sum, p) => sum + (Number(p.amount || p.amountPKR) || 0), 0);
-  const totalPaid = filtered.filter(p => p.status === 'Paid').reduce((sum, p) => sum + (Number(p.amount || p.amountPKR) || 0), 0);
+  const totalPending = filtered.reduce((sum, payable) => sum + payableOutstanding(payable), 0);
+  const totalPaid = filtered.reduce((sum, payable) => sum + payablePaid(payable), 0);
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -221,7 +278,7 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Supplier</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Payment Method</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Instrument / Ref #</th>
-              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Amount (PKR)</th>
+              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Amounts (PKR)</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Due / PDC Date</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Status</th>
               <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'center' }}>Action</th>
@@ -238,7 +295,16 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
                     {pay.poNumber && <span style={{ display: 'block', fontSize: '0.74rem', color: '#475569' }}>PO: {pay.poNumber}</span>}
                     {pay.salesOrderNumber && <span style={{ display: 'block', fontSize: '0.74rem', color: '#2563EB' }}>SO: {pay.salesOrderNumber}</span>}
                     {pay.paymentTerms && <span style={{ display: 'block', fontSize: '0.74rem', color: '#64748B' }}>Terms: {pay.paymentTerms}</span>}
-                    {pay.grnNumber && <span style={{ display: 'block', fontSize: '0.74rem', color: '#2563EB' }}>{pay.grnNumber}</span>}
+                    {getPayableGrnNumbers(pay).length > 0 && (
+                      <span style={{ display: 'block', fontSize: '0.74rem', color: '#2563EB' }}>
+                        GRN: {getPayableGrnNumbers(pay).join(', ')}
+                      </span>
+                    )}
+                    {getSupplierBills(pay).map(grn => (
+                      <span key={grn._id || grn.supplierBillNumber} style={{ display: 'block', fontSize: '0.74rem', color: '#475569' }}>
+                        Supplier Bill: {grn.supplierBillNumber}{grn.supplierBillDate ? ` (${new Date(grn.supplierBillDate).toLocaleDateString()})` : ''}
+                      </span>
+                    ))}
                   </td>
                   <td style={{ padding: '14px 20px', fontWeight: 600, color: '#0F172A' }}>{pay.supplierName}</td>
                   <td style={{ padding: '14px 20px' }}>
@@ -247,7 +313,16 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
                     </span>
                   </td>
                   <td style={{ padding: '14px 20px', color: '#64748B' }}>{pay.chequeNumber || pay.pdcNumber || '-'}</td>
-                  <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>{formatPKR(pay.amount || pay.amountPKR)}</td>
+                  <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
+                    <span style={{ display: 'block' }}>Total: {formatPKR(payableTotal(pay))}</span>
+                    <span style={{ display: 'block', fontSize: '0.74rem', color: '#059669' }}>Paid: {formatPKR(payablePaid(pay))}</span>
+                    <span style={{ display: 'block', fontSize: '0.74rem', color: '#D97706' }}>Outstanding: {formatPKR(payableOutstanding(pay))}</span>
+                    {(Number(pay.gstRate) > 0 || Number(pay.gstAmount) > 0) && (
+                      <span style={{ display: 'block', fontSize: '0.72rem', color: '#64748B', fontWeight: 500 }}>
+                        Subtotal {formatPKR(pay.subtotal)} + GST {Number(pay.gstRate || 0).toFixed(2)}% ({formatPKR(pay.gstAmount)})
+                      </span>
+                    )}
+                  </td>
                   <td style={{ padding: '14px 20px', color: '#64748B' }}>
                     {pay.dueDate ? new Date(pay.dueDate).toLocaleDateString() : (pay.pdcDate ? new Date(pay.pdcDate).toLocaleDateString() : '-')}
                   </td>
@@ -257,7 +332,24 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
                     </span>
                   </td>
                   <td style={{ padding: '14px 20px', textAlign: 'center' }}>
-                    {pay.status !== 'Paid' && <span style={{ color: '#64748B', fontSize: '0.75rem' }}>Settlement by Finance - coming soon</span>}
+                    <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '6px' }}>
+                      {canRecordPayments && payableOutstanding(pay) > 0 && !pay.isBlockedByAdvance && (
+                        <button
+                          type="button"
+                          onClick={() => openPaymentModal(pay)}
+                          style={{ border: 'none', borderRadius: '6px', padding: '6px 9px', background: '#D97706', color: '#FFF', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}
+                        >
+                          Record Payment
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setHistoryTarget(pay)}
+                        style={{ border: '1px solid #CBD5E1', borderRadius: '6px', padding: '6px 9px', background: '#FFF', color: '#475569', fontWeight: 700, cursor: 'pointer', fontSize: '0.75rem' }}
+                      >
+                        History ({Array.isArray(pay.payments) ? pay.payments.length : 0})
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
@@ -281,14 +373,15 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
               {/* Linked PO selection */}
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                  Link to Local Supplier PO (Optional)
+                  Link to Local Supplier PO *
                 </label>
                 <select
                   value={formData.supplierPONumber}
                   onChange={handlePOSelect}
+                  required
                   style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
                 >
-                  <option value="">-- Manual Entry or Select Supplier PO --</option>
+                  <option value="">-- Select Supplier PO --</option>
                   {(Array.isArray(supplierPOs) ? supplierPOs : []).map(po => (
                     <option key={po._id} value={po.poNumber}>
                       {po.poNumber} — {po.supplierName} ({formatPKR(po.totalAmount || po.totalAmountPKR || 0)})
@@ -302,16 +395,12 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Supplier Name *</label>
                   <input
                     type="text"
-                    list="supplier-options"
                     value={formData.supplierName}
-                    onChange={handleSupplierSelect}
-                    placeholder="Enter or select supplier"
+                    readOnly
+                    placeholder="Filled from the selected PO"
                     required
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', background: '#F8FAFC' }}
                   />
-                  <datalist id="supplier-options">
-                    {(Array.isArray(suppliers) ? suppliers : []).map(s => <option key={s._id} value={s.name} />)}
-                  </datalist>
                 </div>
 
                 <div>
@@ -384,6 +473,76 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {paymentTarget && canRecordPayments && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '560px', width: '100%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>Record Supplier Payment</h3>
+                <span style={{ color: '#64748B', fontSize: '0.82rem' }}>{paymentTarget.payableNumber} · Outstanding {formatPKR(payableOutstanding(paymentTarget))}</span>
+              </div>
+              <button type="button" onClick={() => setPaymentTarget(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748B' }}><X size={20} /></button>
+            </div>
+            <form onSubmit={handlePaymentSubmit} style={{ padding: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Amount (PKR) *
+                  <input type="number" min="0.01" step="0.01" max={payableOutstanding(paymentTarget).toFixed(2)} required value={paymentForm.amount} onChange={e => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))} style={{ display: 'block', width: '100%', marginTop: '5px', padding: '9px', border: '1px solid #CBD5E1', borderRadius: '8px' }} />
+                </label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Payment Date *
+                  <input type="date" required value={paymentForm.date} onChange={e => setPaymentForm(prev => ({ ...prev, date: e.target.value }))} style={{ display: 'block', width: '100%', marginTop: '5px', padding: '9px', border: '1px solid #CBD5E1', borderRadius: '8px' }} />
+                </label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Method *
+                  <select required value={paymentForm.method} onChange={e => setPaymentForm(prev => ({ ...prev, method: e.target.value }))} style={{ display: 'block', width: '100%', marginTop: '5px', padding: '9px', border: '1px solid #CBD5E1', borderRadius: '8px' }}>
+                    <option value="Bank Transfer">Bank Transfer</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="PDC">PDC</option>
+                  </select>
+                </label>
+                <label style={{ fontSize: '0.82rem', fontWeight: 700 }}>Reference *
+                  <input type="text" required value={paymentForm.reference} onChange={e => setPaymentForm(prev => ({ ...prev, reference: e.target.value }))} style={{ display: 'block', width: '100%', marginTop: '5px', padding: '9px', border: '1px solid #CBD5E1', borderRadius: '8px' }} />
+                </label>
+              </div>
+              <label style={{ display: 'block', marginTop: '14px', fontSize: '0.82rem', fontWeight: 700 }}>Note (optional)
+                <textarea rows="2" value={paymentForm.note} onChange={e => setPaymentForm(prev => ({ ...prev, note: e.target.value }))} style={{ display: 'block', width: '100%', marginTop: '5px', padding: '9px', border: '1px solid #CBD5E1', borderRadius: '8px' }} />
+              </label>
+              <div style={{ marginTop: '20px', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button type="button" onClick={() => setPaymentTarget(null)} style={{ border: 'none', borderRadius: '8px', padding: '9px 16px', background: '#F1F5F9', fontWeight: 700, cursor: 'pointer' }}>Cancel</button>
+                <button type="submit" disabled={paymentSubmitting} style={{ border: 'none', borderRadius: '8px', padding: '9px 16px', background: '#D97706', color: '#FFF', fontWeight: 700, cursor: paymentSubmitting ? 'not-allowed' : 'pointer' }}>{paymentSubmitting ? 'Recording...' : 'Record Payment'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {historyTarget && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '720px', width: '100%', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>Payment History</h3>
+                <span style={{ color: '#64748B', fontSize: '0.82rem' }}>{historyTarget.payableNumber} · {historyTarget.supplierName}</span>
+              </div>
+              <button type="button" onClick={() => setHistoryTarget(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748B' }}><X size={20} /></button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '18px', fontWeight: 700 }}>
+                <span>Total: {formatPKR(payableTotal(historyTarget))}</span>
+                <span style={{ color: '#059669' }}>Paid: {formatPKR(payablePaid(historyTarget))}</span>
+                <span style={{ color: '#D97706' }}>Outstanding: {formatPKR(payableOutstanding(historyTarget))}</span>
+              </div>
+              {Array.isArray(historyTarget.payments) && historyTarget.payments.length > 0 ? historyTarget.payments.map(payment => (
+                <div key={payment.paymentId} style={{ border: '1px solid #E2E8F0', borderRadius: '8px', padding: '12px', marginBottom: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', fontWeight: 700 }}><span>{formatPKR(amountFromCents(payment.amountCents))}</span><span>{new Date(payment.date || payment.recordedAt).toLocaleDateString()}</span></div>
+                  <div style={{ color: '#475569', fontSize: '0.82rem', marginTop: '5px' }}>{payment.method} · Ref: {payment.reference}</div>
+                  <div style={{ color: '#64748B', fontSize: '0.78rem', marginTop: '3px' }}>Recorded by {payment.recordedByName || '-'}{payment.note ? ` · ${payment.note}` : ''}</div>
+                </div>
+              )) : <p style={{ color: '#64748B' }}>No payments have been recorded.</p>}
+            </div>
           </div>
         </div>
       )}

@@ -1367,7 +1367,7 @@ export default function SalesOrdersView() {
                   </div>
                   <div className="sv-field">
                     <label>File-No#</label>
-                    <input value={form.fileNo} onChange={e => setForm(p => ({ ...p, fileNo: e.target.value }))} placeholder="e.g. 1016 Green" />
+                    <input value={form.fileNo} readOnly placeholder="Assigned automatically on save" style={{ background: '#F1F5F9' }} />
                   </div>
                   <div className="sv-field">
                     <label>File Color</label>
@@ -1599,7 +1599,10 @@ export default function SalesOrdersView() {
                   <tbody>
                     {stockCheckResult.items.map((item, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1E293B' }}>{item.productName}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1E293B' }}>
+                          {item.productName}
+                          {item.quantityAssumed && <div style={{ fontSize: '0.7rem', color: '#D97706', marginTop: '2px' }}>Quantity unknown, assumed 1</div>}
+                        </td>
                         <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700 }}>{item.requiredQty} {item.unit}</td>
                         <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: item.availableQty >= item.requiredQty ? '#059669' : '#DC2626' }}>
                           {item.availableQty} {item.unit}
