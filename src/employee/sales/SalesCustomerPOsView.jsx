@@ -288,8 +288,8 @@ export default function SalesCustomerPOsView() {
       return;
     }
     setConvertModalPO(po);
-    setConvertFileType('Blue');
-    setConvertFileNumber('');
+    setConvertFileType(po.fileType || 'Blue');
+    setConvertFileNumber(po.fileNumber || '');
     setConvertNotes(po.notes || '');
     setError('');
   };
@@ -679,7 +679,7 @@ export default function SalesCustomerPOsView() {
               <div className="sv-grid-2">
                 <div className="sv-field">
                   <label>File Type *</label>
-                  <select value={convertFileType} onChange={e => setConvertFileType(e.target.value)}>
+                  <select value={convertFileType} onChange={e => setConvertFileType(e.target.value)} disabled={Boolean(convertModalPO.fileNumber)}>
                     <option value="Blue">Blue File (Imported)</option>
                     <option value="Green">Green File (Local)</option>
                   </select>
@@ -688,8 +688,9 @@ export default function SalesCustomerPOsView() {
                   <label>File Number</label>
                   <input
                     value={convertFileNumber}
-                    onChange={e => setConvertFileNumber(e.target.value)}
-                    placeholder="Auto-generated if empty (e.g. 1016 Green)"
+                    readOnly
+                    placeholder="Assigned automatically on conversion"
+                    style={{ background: '#F1F5F9' }}
                   />
                 </div>
               </div>
