@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { CreditCard, Plus, Search, X, CheckCircle2, AlertCircle, Clock, Check } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Plus, Search, X, CheckCircle2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 
-export default function LocalPurchaserPayablesView({ searchQuery }) {
+export default function LocalPurchaserPayablesView({ searchQuery, readOnly = false }) {
   const [payables, setPayables] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [supplierPOs, setSupplierPOs] = useState([]);
@@ -28,13 +28,13 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
     remarks: ''
   });
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [payRes, suppRes, poRes] = await Promise.all([
         apiRequest('/api/purchaser/payables'),
-        apiRequest('/api/purchaser/suppliers?type=Local'),
-        apiRequest('/api/purchaser/pos?subType=Local')
+        readOnly ? Promise.resolve({ success: true, data: [] }) : apiRequest('/api/purchaser/suppliers?type=Local'),
+        readOnly ? Promise.resolve({ success: true, data: [] }) : apiRequest('/api/purchaser/pos?subType=Local')
       ]);
       if (payRes.success) {
         setPayables(Array.isArray(payRes.payables) ? payRes.payables : (Array.isArray(payRes.data) ? payRes.data : []));
@@ -50,11 +50,11 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [readOnly]);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [fetchData]);
 
   const handlePOSelect = (e) => {
     const poNum = e.target.value;
@@ -104,7 +104,7 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
       };
       const res = await apiRequest('/api/purchaser/payables', 'POST', payload);
       if (res.success) {
-        setToast(`Payable of PKR ${Number(formData.amountPKR).toLocaleString()} recorded successfully!`);
+        setToast(`Payable of ${formatPKR(formData.amountPKR)} recorded successfully!`);
         setShowModal(false);
         setFormData({
           supplierId: '',
@@ -134,25 +134,7 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
     }
   };
 
-  const handleMarkPaid = async (payable) => {
-    if (!window.confirm(`Mark payment to "${payable.supplierName}" of PKR ${Number(payable.amount || payable.amountPKR || 0).toLocaleString()} as Settled / Paid?`)) {
-      return;
-    }
-    try {
-      const res = await apiRequest(`/api/purchaser/payables/${payable._id}`, 'PUT', { status: 'Paid', paymentStatus: 'Paid' });
-      if (res.success) {
-        setToast(`Payable #${payable.payableNumber || payable._id} marked as Paid!`);
-        fetchData();
-        setTimeout(() => setToast(''), 4000);
-      } else {
-        alert(res.message || 'Failed to update payable status.');
-      }
-    } catch (err) {
-      alert('Error updating payable status.');
-    }
-  };
-
-  const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK')}`;
+  const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const searchVal = (filterText || searchQuery || '').toLowerCase();
   const filtered = payables.filter(p =>
@@ -160,7 +142,9 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
     (p.payableNumber || '').toLowerCase().includes(searchVal) ||
     (p.chequeNumber || '').toLowerCase().includes(searchVal) ||
     (p.pdcNumber || '').toLowerCase().includes(searchVal) ||
-    (p.supplierPONumber || '').toLowerCase().includes(searchVal)
+    (p.poNumber || '').toLowerCase().includes(searchVal) ||
+    (p.salesOrderNumber || '').toLowerCase().includes(searchVal) ||
+    (p.paymentTerms || '').toLowerCase().includes(searchVal)
   );
 
   const totalPending = filtered.filter(p => p.status === 'Pending').reduce((sum, p) => sum + (Number(p.amount || p.amountPKR) || 0), 0);
@@ -171,9 +155,9 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>Local Payables</h2>
-          <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>Record and monitor Cash, Cheque, and Post-Dated Cheque (PDC) payments to local suppliers</p>
+          <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>{readOnly ? 'Review Local Supplier PO payables' : 'Record and monitor local supplier payables'}</p>
         </div>
-        <button
+        {!readOnly && <button
           onClick={() => setShowModal(true)}
           style={{
             display: 'flex',
@@ -191,7 +175,7 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
         >
           <Plus size={18} />
           <span>Record Local Payment</span>
-        </button>
+        </button>}
       </div>
 
       {toast && (
@@ -250,13 +234,16 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
               filtered.map((pay) => (
                 <tr key={pay._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
                   <td style={{ padding: '14px 20px', fontWeight: 700, color: '#D97706' }}>
-                    {pay.payableNumber || (pay.supplierPONumber ? `PO: ${pay.supplierPONumber}` : 'Payable')}
+                    {pay.payableNumber || 'Payable'}
+                    {pay.poNumber && <span style={{ display: 'block', fontSize: '0.74rem', color: '#475569' }}>PO: {pay.poNumber}</span>}
+                    {pay.salesOrderNumber && <span style={{ display: 'block', fontSize: '0.74rem', color: '#2563EB' }}>SO: {pay.salesOrderNumber}</span>}
+                    {pay.paymentTerms && <span style={{ display: 'block', fontSize: '0.74rem', color: '#64748B' }}>Terms: {pay.paymentTerms}</span>}
                     {pay.grnNumber && <span style={{ display: 'block', fontSize: '0.74rem', color: '#2563EB' }}>{pay.grnNumber}</span>}
                   </td>
                   <td style={{ padding: '14px 20px', fontWeight: 600, color: '#0F172A' }}>{pay.supplierName}</td>
                   <td style={{ padding: '14px 20px' }}>
                     <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, backgroundColor: pay.paymentMethod === 'Cash' ? '#DEF7EC' : pay.paymentMethod === 'PDC' ? '#EFF6FF' : '#FEF3C7', color: pay.paymentMethod === 'Cash' ? '#03543F' : pay.paymentMethod === 'PDC' ? '#1D4ED8' : '#92400E' }}>
-                      {pay.paymentMethod}
+                      {pay.paymentMethod || 'Not selected'}
                     </span>
                   </td>
                   <td style={{ padding: '14px 20px', color: '#64748B' }}>{pay.chequeNumber || pay.pdcNumber || '-'}</td>
@@ -270,14 +257,7 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
                     </span>
                   </td>
                   <td style={{ padding: '14px 20px', textAlign: 'center' }}>
-                    {pay.status !== 'Paid' && (
-                      <button
-                        onClick={() => handleMarkPaid(pay)}
-                        style={{ background: '#ECFDF5', border: '1px solid #A7F3D0', color: '#047857', padding: '6px 12px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <Check size={13} /> Settle
-                      </button>
-                    )}
+                    {pay.status !== 'Paid' && <span style={{ color: '#64748B', fontSize: '0.75rem' }}>Settlement by Finance - coming soon</span>}
                   </td>
                 </tr>
               ))
@@ -289,7 +269,7 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
       </div>
 
       {/* Modal */}
-      {showModal && (
+      {!readOnly && showModal && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FEF3C7' }}>
@@ -311,7 +291,7 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
                   <option value="">-- Manual Entry or Select Supplier PO --</option>
                   {(Array.isArray(supplierPOs) ? supplierPOs : []).map(po => (
                     <option key={po._id} value={po.poNumber}>
-                      {po.poNumber} — {po.supplierName} (PKR {Number(po.totalAmount || po.totalAmountPKR || 0).toLocaleString()})
+                      {po.poNumber} — {po.supplierName} ({formatPKR(po.totalAmount || po.totalAmountPKR || 0)})
                     </option>
                   ))}
                 </select>
@@ -338,7 +318,8 @@ export default function LocalPurchaserPayablesView({ searchQuery }) {
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Amount (PKR) *</label>
                   <input
                     type="number"
-                    min="1"
+                    min="0.01"
+                    step="0.01"
                     value={formData.amountPKR}
                     onChange={(e) => setFormData(prev => ({ ...prev, amountPKR: e.target.value }))}
                     placeholder="e.g. 150000"

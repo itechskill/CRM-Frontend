@@ -85,6 +85,7 @@ export default function AccountsSidebar({
 
   const accountingNav = [
     { id: 'expenses', label: 'Expenses & Bills', icon: Receipt },
+    { id: 'local_payables', label: 'Local Payables', icon: Landmark },
     { id: 'payroll', label: 'Payroll & Salaries', icon: DollarSign },
     { id: 'acc_reports', label: 'Financial Reports', icon: PieChart },
   ];

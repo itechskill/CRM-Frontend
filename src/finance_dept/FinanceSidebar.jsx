@@ -49,6 +49,7 @@ export default function FinanceSidebar({
     { id: 'finance_invoices', label: 'Submitted Invoices', icon: FileText },
     { id: 'finance_payments', label: 'Customer Payments', icon: CreditCard },
     { id: 'finance_receivables', label: 'Accounts Receivable', icon: DollarSign },
+    { id: 'local_payables', label: 'Local Payables', icon: DollarSign },
     { id: 'financial_charges', label: 'Financial Charges', icon: Calculator },
     { id: 'finance_reports', label: 'Financial Reports', icon: BarChart3 }
   ];

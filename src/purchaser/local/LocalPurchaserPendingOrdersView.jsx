@@ -36,6 +36,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
     supplierName: '',
     poNumber: '',
     expectedDeliveryDate: '',
+    paymentTerms: 'Net 30',
     items: [],
     notes: ''
   });
@@ -117,6 +118,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
       supplierName: '',
       poNumber: `LPO-${Date.now().toString().slice(-6)}`,
       expectedDeliveryDate: '',
+      paymentTerms: 'Net 30',
       items: orderItems,
       notes: `Local Supplier PO for Sales Order #${order.orderNumber || order.orderReference} (${order.clientName})`
     });
@@ -181,6 +183,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
         supplierName: poForm.supplierName,
         poType: 'Local',
         expectedDeliveryDate: poForm.expectedDeliveryDate || undefined,
+        paymentTerms: poForm.paymentTerms,
         salesOrderId: selectedOrder ? selectedOrder._id : undefined,
         salesOrderNumber: selectedOrder ? (selectedOrder.orderNumber || selectedOrder.orderReference) : undefined,
         items: poForm.items,
@@ -724,6 +727,19 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                     type="date"
                     value={poForm.expectedDeliveryDate}
                     onChange={(e) => setPoForm(prev => ({ ...prev, expectedDeliveryDate: e.target.value }))}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
+                    Payment Terms
+                  </label>
+                  <input
+                    type="text"
+                    value={poForm.paymentTerms}
+                    onChange={(e) => setPoForm(prev => ({ ...prev, paymentTerms: e.target.value }))}
+                    placeholder="e.g. Net 30"
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
                   />
                 </div>

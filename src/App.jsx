@@ -537,8 +537,8 @@ export default function App() {
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
       admin: ['dashboard', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
-      accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
-      finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'financial_charges', 'finance_reports', 'reports', 'profile'],
+      accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'local_payables', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
+      finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'finance_reports', 'reports', 'profile'],
       marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'],
       ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile']
@@ -997,7 +997,7 @@ export default function App() {
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'local_payables', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'].includes(activeTab)) && (
                 <AccountsDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
@@ -1041,6 +1041,7 @@ export default function App() {
                   onCloseModal={() => setIsAccModalOpen(false)}
                 />
               )}
+              {activeTab === 'local_payables' && <LocalPurchaserPayablesView searchQuery={portalSearch} readOnly />}
               {activeTab === 'acc_reports' && (
                 <AccountantReportsView
                   isModalOpen={isAccModalOpen}
@@ -1083,7 +1084,7 @@ export default function App() {
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'financial_charges', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
                 <FinanceDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => handleSetActiveTab(tab)}
@@ -1125,6 +1126,7 @@ export default function App() {
                   }}
                 />
               )}
+              {activeTab === 'local_payables' && <LocalPurchaserPayablesView searchQuery={portalSearch} readOnly />}
               {activeTab === 'financial_charges' && <FinanceFinancialChargesView searchQuery={portalSearch} />}
               {(activeTab === 'finance_reports' || activeTab === 'reports') && <FinanceReportsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
@@ -1297,7 +1299,7 @@ export default function App() {
                     <LocalPurchaserPOsView searchQuery={portalSearch} />
                   )}
                   {activeTab === 'grn' && (
-                    <LocalPurchaserGRNsView searchQuery={portalSearch} />
+                    <LocalPurchaserGRNsView searchQuery={portalSearch} onNavigateTab={(tab) => handleSetActiveTab(tab)} />
                   )}
                   {activeTab === 'local_payables' && (
                     <LocalPurchaserPayablesView searchQuery={portalSearch} />

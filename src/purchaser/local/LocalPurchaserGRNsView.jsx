@@ -221,7 +221,7 @@ export default function LocalPurchaserGRNsView({ searchQuery, onNavigateTab }) {
         setShowPayableModal(false);
         setSelectedGrnForPayable(null);
         if (onNavigateTab) {
-          onNavigateTab('payables');
+          onNavigateTab('local_payables');
         }
         setTimeout(() => setToast(''), 5000);
       } else {

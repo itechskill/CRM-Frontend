@@ -864,7 +864,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
               <div className="sv-form-section">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <div className="sv-form-section-title" style={{ margin: 0 }}>
-                    <Package size={14} color="#7C3AED" /> Dispatched Products (Live Stock Deducted)
+                    <Package size={14} color="#7C3AED" /> Dispatched Products (Stock is deducted when the Delivery Note is confirmed.)
                   </div>
                   <button
                     type="button"

@@ -33,6 +33,9 @@ export default function SupportInventoryView() {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [inventoryInItem, setInventoryInItem] = useState(null);
+  const [inventoryInForm, setInventoryInForm] = useState({ quantity: 1, reference: '', orderNumber: '', remarks: '' });
+  const [addingInventory, setAddingInventory] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -83,7 +86,7 @@ export default function SupportInventoryView() {
       sku: `SKU-${Math.floor(1000 + Math.random() * 9000)}`,
       category: 'General',
       unit: 'pcs',
-      quantityOnHand: 10,
+      quantityOnHand: 0,
       minStockLevel: 5,
       unitPrice: 0,
       location: 'WH/Stock',
@@ -137,6 +140,33 @@ export default function SupportInventoryView() {
       alert('Error saving product item.');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleOpenInventoryIn = (item) => {
+    setInventoryInItem(item);
+    setInventoryInForm({ quantity: 1, reference: '', orderNumber: '', remarks: '' });
+  };
+
+  const handleInventoryIn = async (e) => {
+    e.preventDefault();
+    if (!inventoryInItem) return;
+    setAddingInventory(true);
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/inventory/${inventoryInItem._id}/in`, {
+        method: 'POST',
+        body: JSON.stringify({ ...inventoryInForm, quantity: Number(inventoryInForm.quantity) })
+      });
+      if (response.ok && data.success) {
+        setInventoryInItem(null);
+        fetchInventory();
+      } else {
+        alert(data.message || 'Failed to add inventory stock.');
+      }
+    } catch {
+      alert('Error adding inventory stock.');
+    } finally {
+      setAddingInventory(false);
     }
   };
 
@@ -350,9 +380,14 @@ export default function SupportInventoryView() {
                       </span>
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <button className="sv-btn-action-icon" onClick={() => handleOpenEdit(item)} title="Edit Stock Item">
-                        <Edit2 size={14} />
-                      </button>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                        <button className="sv-btn-primary" style={{ padding: '4px 8px', fontSize: '0.72rem' }} onClick={() => handleOpenInventoryIn(item)} title="Add stock to this existing product">
+                          <Plus size={13} /> Inventory IN
+                        </button>
+                        <button className="sv-btn-action-icon" onClick={() => handleOpenEdit(item)} title="Edit Stock Item">
+                          <Edit2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -681,6 +716,48 @@ export default function SupportInventoryView() {
                 </button>
                 <button type="submit" className="sv-btn-primary" disabled={saving} style={{ backgroundColor: '#0284C7' }}>
                   <Save size={14} /> {saving ? 'Saving...' : 'Save Product Stock'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {inventoryInItem && (
+        <div className="sv-modal-overlay" onClick={() => setInventoryInItem(null)}>
+          <div className="sv-modal" style={{ maxWidth: '520px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="sv-modal-header" style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '14px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>Inventory IN</h3>
+                <p style={{ margin: '3px 0 0', fontSize: '0.78rem', color: '#64748B' }}>
+                  {inventoryInItem.name} | {inventoryInItem.sku || 'No SKU'} | {inventoryInItem.category || 'General'} | {inventoryInItem.location || 'WH/Stock'}
+                </p>
+              </div>
+              <button onClick={() => setInventoryInItem(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={18} /></button>
+            </div>
+            <form onSubmit={handleInventoryIn} style={{ marginTop: '16px' }}>
+              <div className="sv-grid-2" style={{ marginBottom: '14px' }}>
+                <div className="sv-field">
+                  <label>Quantity *</label>
+                  <input type="number" min="0.01" step="0.01" required className="sv-input" value={inventoryInForm.quantity} onChange={(e) => setInventoryInForm({ ...inventoryInForm, quantity: e.target.value })} />
+                </div>
+                <div className="sv-field">
+                  <label>Reference</label>
+                  <input className="sv-input" placeholder="Bill / receipt reference" value={inventoryInForm.reference} onChange={(e) => setInventoryInForm({ ...inventoryInForm, reference: e.target.value })} />
+                </div>
+                <div className="sv-field">
+                  <label>Order Number</label>
+                  <input className="sv-input" placeholder="SO-0000" value={inventoryInForm.orderNumber} onChange={(e) => setInventoryInForm({ ...inventoryInForm, orderNumber: e.target.value })} />
+                </div>
+                <div className="sv-field">
+                  <label>Remarks</label>
+                  <input className="sv-input" value={inventoryInForm.remarks} onChange={(e) => setInventoryInForm({ ...inventoryInForm, remarks: e.target.value })} />
+                </div>
+              </div>
+              <div className="sv-modal-actions" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
+                <button type="button" className="sv-btn-cancel" onClick={() => setInventoryInItem(null)}>Cancel</button>
+                <button type="submit" className="sv-btn-primary" disabled={addingInventory}>
+                  <Plus size={14} /> {addingInventory ? 'Adding...' : 'Add Inventory'}
                 </button>
               </div>
             </form>
