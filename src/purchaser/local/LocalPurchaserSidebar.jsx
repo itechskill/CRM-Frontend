@@ -39,6 +39,7 @@ export default function LocalPurchaserSidebar({
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'price_requests', label: 'Price Requests', icon: CreditCard },
     { id: 'pending_orders', label: 'Pending Sales Orders', icon: ShoppingBag },
     { id: 'inventory', label: 'Inventory Stock', icon: Package },
     { id: 'supplier_pos', label: 'PO Issued to Supplier', icon: FileText },

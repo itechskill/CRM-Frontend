@@ -25,6 +25,8 @@ export default function EmployeeHeader({ activeTab, onOpenNewTaskModal, onMenuTo
     switch (tab) {
       case 'dashboard':
         return { title: 'Dashboard', subtitle: 'Overview of your work and progress' };
+      case 'price_requests':
+        return { title: 'Price Requests', subtitle: 'Request, provide, and track product pricing' };
       case 'quotations':
       case 'my_quotations':
         return { title: 'Quotations', subtitle: 'Manage and generate client sales quotations' };

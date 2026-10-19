@@ -9,6 +9,11 @@ export default function Header({ activeTab, currentUser, onOpenPrimaryAction, on
 
   const getHeaderInfo = () => {
     switch (activeTab) {
+      case 'price_requests':
+        return {
+          title: 'Price Requests',
+          subtitle: 'Company-wide pricing requests and routing rules.'
+        };
       case 'users':
         return {
           title: 'Users',

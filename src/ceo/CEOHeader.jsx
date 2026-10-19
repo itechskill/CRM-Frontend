@@ -7,6 +7,7 @@ export default function CEOHeader({ activeTab, currentUser, onMenuToggle, search
   const getTitle = () => {
     switch (activeTab) {
       case 'dashboard': return 'Executive Dashboard';
+      case 'price_requests': return 'Price Requests';
       case 'business_overview': return 'Business Overview & Strategy';
       case 'projects_performance': return 'Projects & Enterprise Performance';
       case 'sales_finance': return 'Sales & Financial Insights';

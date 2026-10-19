@@ -90,6 +90,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
 
   // Full Sales Representative navigation (All 13 stages for Ahmed Anjum & Sales Representatives)
   const fullSalesRepNav = [
+    { id: 'price_requests', label: 'Price Requests', icon: DollarSign },
     { id: 'my_leads', label: 'My Leads', icon: Users },
     { id: 'my_deals', label: 'Deals Pipeline', icon: TrendingUp },
     { id: 'my_quotations', label: 'Quotations', icon: FileText },
@@ -107,13 +108,16 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
 
   // Streamlined workflow for Sales Person (starts from Quotation up to Sales Orders)
   const salesPersonNav = [
+    { id: 'price_requests', label: 'Price Requests', icon: DollarSign },
     { id: 'my_quotations', label: 'Quotations', icon: FileText },
     { id: 'customer_pos', label: 'Customer POs', icon: FileCheck },
     { id: 'product_files', label: 'Product Files', icon: FolderKanban },
     { id: 'my_orders', label: 'Sales Orders', icon: Briefcase },
   ];
 
-  const salesNav = isSalesRep ? fullSalesRepNav : salesPersonNav;
+  const canAccessPriceRequests = ['sales_member', 'sales_rep', 'sales_person'].includes(currentUser?.role);
+  const salesNav = (isSalesRep ? fullSalesRepNav : salesPersonNav)
+    .filter((item) => item.id !== 'price_requests' || canAccessPriceRequests);
 
   const bottomNav = [
     { id: 'notifications', label: 'Notifications', icon: Bell, badge: counts.notifications > 0 ? counts.notifications : undefined, badgeColor: '#38BDF8' },
