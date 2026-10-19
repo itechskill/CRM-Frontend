@@ -43,6 +43,7 @@ export default function GlobalPurchaserSidebar({
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'price_requests', label: 'Price Requests', icon: ShoppingBag },
     { id: 'pending_orders', label: 'Pending Sales Orders', icon: ShoppingBag },
     { id: 'supplier_pos', label: 'Supplier POs', icon: FileText }
   ];

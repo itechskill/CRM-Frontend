@@ -57,6 +57,7 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'price_requests', label: 'Price Requests', icon: CreditCard },
     { id: 'leads', label: 'Leads', icon: Target, badge: counts.leads > 0 ? String(counts.leads) : undefined },
     { id: 'orders', label: 'Sales Orders', icon: ShoppingCart },
     { id: 'proforma_invoices', label: 'Proforma Invoices', icon: FileSpreadsheet },

@@ -210,6 +210,7 @@ import GlobalPurchaserSidebar from './purchaser/global/GlobalPurchaserSidebar';
 import GlobalPurchaserDashboard from './purchaser/global/GlobalPurchaserDashboard';
 import GlobalPurchaserPendingOrdersView from './purchaser/global/GlobalPurchaserPendingOrdersView';
 import GlobalPurchaserPOsView from './purchaser/global/GlobalPurchaserPOsView';
+import PriceRequestsView from './price_requests/PriceRequestsView';
 
 import { Users, ShieldCheck, UserX } from 'lucide-react';
 
@@ -520,27 +521,27 @@ export default function App() {
       ],
       sales_member: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'my_quotations', 'customer_pos', 'product_files', 'my_orders'
+        'price_requests', 'my_quotations', 'customer_pos', 'product_files', 'my_orders'
       ],
       sales_person: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'my_quotations', 'customer_pos', 'product_files', 'my_orders'
+        'price_requests', 'my_quotations', 'customer_pos', 'product_files', 'my_orders'
       ],
       sales_rep: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'
+        'price_requests', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'
       ],
       support: ['dashboard', 'leave', 'support_orders', 'inventory', 'delivery_notes', 'profile'],
       logistics: ['dashboard', 'incoming_shipments', 'incoming', 'shipments', 'shipment_tracking', 'tracking', 'shipment_received', 'received', 'grn', 'grn_creation', 'grns', 'logistics_grn', 'goods_received', 'delivery_notes', 'import_inventory', 'imported_inventory', 'logistics_inventory', 'notifications', 'leave', 'attendance_leave', 'profile'],
-      purchaser: ['dashboard', 'pending_orders', 'inventory', 'supplier_pos', 'grn', 'grn_creation', 'grns', 'local_payables', 'leave', 'profile'],
-      sales_manager: ['dashboard', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'],
+      purchaser: ['dashboard', 'price_requests', 'pending_orders', 'inventory', 'supplier_pos', 'grn', 'grn_creation', 'grns', 'local_payables', 'leave', 'profile'],
+      sales_manager: ['dashboard', 'price_requests', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
-      admin: ['dashboard', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      admin: ['dashboard', 'price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
       accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'local_payables', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
       finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'finance_reports', 'reports', 'profile'],
       marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'],
-      ceo: ['dashboard', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      ceo: ['dashboard', 'price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile']
     };
 
@@ -687,7 +688,7 @@ export default function App() {
               onMenuToggle={() => setIsSidebarOpen(true)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings', 'price_requests', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'].includes(activeTab)) && (
                 <EmployeeDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
@@ -709,6 +710,7 @@ export default function App() {
               {activeTab === 'settings' && <EmployeeSettingsView />}
 
               {/* Sales Department Features inside Employee Portal */}
+              {activeTab === 'price_requests' && <PriceRequestsView />}
               {activeTab === 'my_leads' && <EmpSalesLeadsView />}
               {activeTab === 'my_deals' && <EmpSalesDealsView onNavigateInvoices={() => setActiveTab('my_invoices')} />}
               {activeTab === 'my_quotations' && <EmpSalesQuotationsView />}
@@ -756,7 +758,8 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => handleSetActiveTab(tab)} />}
+              {(activeTab === 'dashboard' || !['price_requests', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => handleSetActiveTab(tab)} />}
+              {activeTab === 'price_requests' && <PriceRequestsView />}
               {activeTab === 'leads' && <SalesLeadsView />}
               {activeTab === 'deals' && <SalesDealsView />}
               {activeTab === 'pipeline' && <SalesPipelineView />}
@@ -848,13 +851,14 @@ export default function App() {
             />
 
             <main className="content-area">
-              {(activeTab === 'dashboard' || (!['registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && (
+              {(activeTab === 'dashboard' || (!['price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && (
                 <AdminDashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />
               )}
 
               {activeTab === 'registration_requests' && (
                 <RegistrationRequestsView searchQuery={portalSearch} />
               )}
+              {activeTab === 'price_requests' && <PriceRequestsView />}
               {activeTab === 'create_ceo' && <CreateCEOAccountView />}
               {activeTab === 'audit_logs' && <AuditLogsView searchQuery={portalSearch} />}
 
@@ -1268,12 +1272,13 @@ export default function App() {
             <main className="content-area">
               {currentUser?.purchaserSubDept === 'Global' ? (
                 <>
-                  {(activeTab === 'dashboard' || !['pending_orders', 'supplier_pos', 'leave', 'profile'].includes(activeTab)) && (
+                  {(activeTab === 'dashboard' || !['price_requests', 'pending_orders', 'supplier_pos', 'leave', 'profile'].includes(activeTab)) && (
                     <GlobalPurchaserDashboard
                       currentUser={currentUser}
                       onNavigateTab={(tab) => handleSetActiveTab(tab)}
                     />
                   )}
+                  {activeTab === 'price_requests' && <PriceRequestsView />}
                   {activeTab === 'pending_orders' && (
                     <GlobalPurchaserPendingOrdersView searchQuery={portalSearch} onNavigateTab={(tab) => handleSetActiveTab(tab)} />
                   )}
@@ -1283,12 +1288,13 @@ export default function App() {
                 </>
               ) : (
                 <>
-                  {(activeTab === 'dashboard' || !['pending_orders', 'inventory', 'supplier_pos', 'grn', 'local_payables', 'leave', 'profile'].includes(activeTab)) && (
+                  {(activeTab === 'dashboard' || !['price_requests', 'pending_orders', 'inventory', 'supplier_pos', 'grn', 'local_payables', 'leave', 'profile'].includes(activeTab)) && (
                     <LocalPurchaserDashboard
                       currentUser={currentUser}
                       onNavigateTab={(tab) => handleSetActiveTab(tab)}
                     />
                   )}
+                  {activeTab === 'price_requests' && <PriceRequestsView />}
                   {activeTab === 'pending_orders' && (
                     <LocalPurchaserPendingOrdersView searchQuery={portalSearch} onNavigateTab={(tab) => handleSetActiveTab(tab)} />
                   )}
@@ -1403,7 +1409,8 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || (!['business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
+              {(activeTab === 'dashboard' || (!['price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
+              {activeTab === 'price_requests' && <PriceRequestsView />}
               {activeTab === 'business_overview' && <BusinessOverviewView />}
               {activeTab === 'projects_performance' && <ProjectsPerformanceView />}
               {activeTab === 'sales_finance' && <SalesFinanceView />}

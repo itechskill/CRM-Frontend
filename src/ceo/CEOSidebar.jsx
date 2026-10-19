@@ -54,6 +54,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
 
   const mainNav = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
+    { id: 'price_requests', label: 'Price Requests', icon: Wallet },
     { id: 'business_overview', label: 'Business Overview', icon: TrendingUp },
     { id: 'sales_finance', label: 'Sales & Finance', icon: Calculator },
     { id: 'edit_requests', label: 'Edit Requests', icon: ShieldCheck, badge: pendingCount > 0 ? pendingCount : null },

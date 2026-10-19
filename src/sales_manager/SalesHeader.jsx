@@ -16,6 +16,7 @@ export default function SalesHeader({
   const getTabLabel = () => {
     switch (activeTab) {
       case 'dashboard': return 'Dashboard';
+      case 'price_requests': return 'Price Requests';
       case 'leads': return 'Leads & Prospects';
       case 'contacts': return 'Contacts';
       case 'meetings': return 'Meetings';

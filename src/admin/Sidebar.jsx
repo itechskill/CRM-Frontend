@@ -48,6 +48,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
 
   const mainMenuItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { id: 'price_requests', label: 'Price Requests', icon: Wallet },
     { id: 'registration_requests', label: 'Registration Requests', icon: UserCheck, badge: counts.pendingRegistrations > 0 ? String(counts.pendingRegistrations) : undefined },
     { id: 'create_ceo', label: 'Create CEO Account', icon: Crown },
     { id: 'users', label: 'Users', icon: Users, badge: counts.users > 0 ? String(counts.users) : undefined },

@@ -16,6 +16,7 @@ export default function PurchaserHeader({
   const getTabLabel = () => {
     switch (activeTab) {
       case 'dashboard': return `${subDept} Purchaser Dashboard`;
+      case 'price_requests': return 'Price Requests';
       case 'inventory': return 'Inventory & Stock Level';
       case 'supplier_pos': return 'Supplier Purchase Orders';
       case 'grn': return 'Goods Received Notes (GRN)';
