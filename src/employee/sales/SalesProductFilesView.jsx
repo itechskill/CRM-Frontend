@@ -225,11 +225,10 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
   };
 
   const openCreate = (fileType = 'Blue') => {
-    const defaultNum = `${fileType === 'Blue' ? 'BF' : 'GF'}-${String(productFiles.length + 1).padStart(4, '0')}`;
     setForm({
       ...EMPTY_FORM,
       fileType,
-      fileNumber: defaultNum,
+      fileNumber: '',
       products: [{ ...EMPTY_PRODUCT }]
     });
     setEditFile(null);
@@ -271,7 +270,9 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
         customerPONumber: selected.poNumber || '',
         customerName: selected.customerName || prev.customerName || '',
         quotationId: selected.quotationId?._id || selected.quotationId || prev.quotationId || '',
-        quotationNumber: selected.quotationNumber || prev.quotationNumber || ''
+        quotationNumber: selected.quotationNumber || prev.quotationNumber || '',
+        fileNumber: selected.fileNumber || prev.fileNumber || '',
+        fileType: selected.fileType || prev.fileType
       }));
     } else {
       setForm(prev => ({ ...prev, customerPOId: '', customerPONumber: '' }));
@@ -293,6 +294,8 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
         quotationId: qId,
         quotationNumber: selected.orderReference || selected.quotationNumber || '',
         customerName: selected.clientName || prev.customerName || '',
+        fileNumber: selected.fileNo || prev.fileNumber || '',
+        fileType: selected.fileType || prev.fileType,
         products: qProducts
       }));
     } else {
@@ -705,7 +708,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                 <div className="sv-grid-2">
                   <div className="sv-field">
                     <label>File Type *</label>
-                    <select value={form.fileType} onChange={e => setForm(p => ({ ...p, fileType: e.target.value }))}>
+                    <select value={form.fileType} onChange={e => setForm(p => ({ ...p, fileType: e.target.value }))} disabled={Boolean(form.fileNumber)}>
                       <option value="Blue">Blue File (Imported)</option>
                       <option value="Green">Green File (Local)</option>
                     </select>
@@ -714,8 +717,9 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                     <label>File Number</label>
                     <input 
                       value={form.fileNumber} 
-                      onChange={e => setForm(p => ({ ...p, fileNumber: e.target.value }))} 
-                      placeholder="e.g. 1016 Green" 
+                      readOnly
+                      placeholder="Assigned automatically on save"
+                      style={{ background: '#F1F5F9' }}
                     />
                   </div>
                 </div>

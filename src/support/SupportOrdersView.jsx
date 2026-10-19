@@ -32,27 +32,11 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
   const [checkingStock, setCheckingStock] = useState(false);
   const [stockCheckResult, setStockCheckResult] = useState(null);
 
-  // Goods Received Modal State
-  const [goodsReceivedModalOrder, setGoodsReceivedModalOrder] = useState(null);
-  const [goodsForm, setGoodsForm] = useState({
-    receivedQuantity: 1,
-    orderedQuantity: 1,
-    receivingDate: new Date().toISOString().split('T')[0],
-    remarks: ''
-  });
-  const [submittingGoods, setSubmittingGoods] = useState(false);
-
-  // BL Input Modal State
-  const [blModalOrder, setBlModalOrder] = useState(null);
-  const [blForm, setBlForm] = useState({
-    blNumber: '',
-    blDate: new Date().toISOString().split('T')[0],
-    carrier: '',
-    containerNo: '',
-    portOfLoading: '',
-    portOfDischarge: 'Karachi Port, Pakistan'
-  });
-  const [submittingBL, setSubmittingBL] = useState(false);
+  const [receivingOrder, setReceivingOrder] = useState(null);
+  const [receivingPreview, setReceivingPreview] = useState(null);
+  const [loadingReceivingPreview, setLoadingReceivingPreview] = useState(false);
+  const [submittingReceipt, setSubmittingReceipt] = useState(false);
+  const [receivingForm, setReceivingForm] = useState(null);
   const [toastMsg, setToastMsg] = useState('');
 
   const fetchOrders = async () => {
@@ -92,74 +76,106 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
     }
   };
 
-  const openGoodsReceivedModal = (o) => {
-    setGoodsReceivedModalOrder(o);
-    const totalQty = (o.items && o.items.reduce((s, i) => s + (Number(i.quantity) || 1), 0)) || 1;
-    setGoodsForm({
-      receivedQuantity: totalQty,
-      orderedQuantity: totalQty,
-      receivingDate: new Date().toISOString().split('T')[0],
-      remarks: o.goodsReceivedInOffice?.remarks || 'Goods received in office, verified by Support.'
-    });
-  };
+  const createReceiptId = () => globalThis.crypto?.randomUUID?.() || `REC-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-  const handleConfirmGoodsReceived = async (e) => {
-    e.preventDefault();
-    if (!goodsReceivedModalOrder) return;
-    setSubmittingGoods(true);
+  const openReceiveGoodsModal = async (o) => {
+    setReceivingOrder(o);
+    setReceivingPreview(null);
+    setReceivingForm(null);
+    setLoadingReceivingPreview(true);
     try {
-      const { response, data } = await apiRequest(`/api/sales-employee/orders/${goodsReceivedModalOrder._id}/goods-received`, {
-        method: 'POST',
-        body: JSON.stringify(goodsForm)
-      });
-      if (response.ok && data.success) {
-        setToastMsg('Goods received in office successfully confirmed!');
-        setGoodsReceivedModalOrder(null);
-        fetchOrders();
-        setTimeout(() => setToastMsg(''), 4500);
-      } else {
-        alert(data.message || 'Failed to record goods received.');
+      const { response, data } = await apiRequest(`/api/sales-employee/orders/${o._id}/receiving-preview`);
+      if (!response.ok || !data.success) {
+        alert(data.message || 'Failed to load inventory matches.');
+        setReceivingOrder(null);
+        return;
       }
-    } catch (err) {
-      alert('Error recording goods received.');
+
+      const shipment = o.shipmentDetails || {};
+      const today = new Date().toISOString().split('T')[0];
+      const lines = (data.data.items || []).map((line, index) => {
+        const recommended = line.matches?.find(match => String(match._id) === String(line.recommendedInventoryItemId));
+        return {
+          ...line,
+          receivedQty: line.remainingQty,
+          selectionMode: recommended ? 'existing' : ((line.matches || []).length === 0 ? 'new' : 'select'),
+          inventoryItemId: recommended?._id || '',
+          confirmedSelection: false,
+          newProduct: {
+            name: line.productName,
+            sku: line.sku || `SKU-${Date.now().toString().slice(-6)}-${index + 1}`,
+            category: o.fileType === 'Blue' ? 'Imported Goods' : 'General',
+            unit: 'pcs',
+            location: 'WH/Stock'
+          }
+        };
+      });
+
+      setReceivingPreview(data.data);
+      setReceivingForm({
+        receiptId: createReceiptId(),
+        referenceNumber: o.fileType === 'Blue'
+          ? (o.blNumber || shipment.awbNumber || shipment.trackingNumber || '')
+          : '',
+        referenceDate: shipment.actualArrivalDate
+          ? new Date(shipment.actualArrivalDate).toISOString().split('T')[0]
+          : today,
+        supplierName: o.supplierPO?.supplierName || shipment.supplierName || '-',
+        carrier: o.fileType === 'Blue' ? (shipment.carrier || '') : '',
+        containerNo: o.fileType === 'Blue' ? (shipment.containerNumber || shipment.trackingNumber || '') : '',
+        portOfLoading: o.fileType === 'Blue' ? (shipment.origin || shipment.departureLocation || '') : '',
+        portOfDischarge: o.fileType === 'Blue' ? (shipment.destination || shipment.arrivalLocation || '') : '',
+        remarks: '',
+        items: lines
+      });
+    } catch {
+      alert('Error loading the Receive Goods form.');
+      setReceivingOrder(null);
     } finally {
-      setSubmittingGoods(false);
+      setLoadingReceivingPreview(false);
     }
   };
 
-  const openBLModal = (o) => {
-    setBlModalOrder(o);
-    setBlForm({
-      blNumber: o.blNumber || o.blInput?.blNumber || '',
-      blDate: o.blInput?.blDate ? new Date(o.blInput.blDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-      carrier: o.blInput?.carrier || '',
-      containerNo: o.blInput?.containerNo || '',
-      portOfLoading: o.blInput?.portOfLoading || '',
-      portOfDischarge: o.blInput?.portOfDischarge || 'Karachi Port, Pakistan'
-    });
+  const updateReceivingLine = (index, changes) => {
+    setReceivingForm(current => ({
+      ...current,
+      items: current.items.map((line, lineIndex) => lineIndex === index ? { ...line, ...changes } : line)
+    }));
   };
 
-  const handleSaveBL = async (e) => {
+  const handleReceiveGoods = async (e) => {
     e.preventDefault();
-    if (!blModalOrder) return;
-    setSubmittingBL(true);
+    if (!receivingOrder || !receivingForm) return;
+    setSubmittingReceipt(true);
     try {
-      const { response, data } = await apiRequest(`/api/sales-employee/orders/${blModalOrder._id}/bl-input`, {
+      const payload = {
+        ...receivingForm,
+        items: receivingForm.items.map(line => ({
+          orderItemId: line.orderItemId,
+          receivedQty: Number(line.receivedQty) || 0,
+          inventoryItemId: line.selectionMode === 'existing' ? line.inventoryItemId : undefined,
+          createNew: line.selectionMode === 'new',
+          confirmedSelection: line.confirmedSelection === true,
+          newProduct: line.selectionMode === 'new' ? line.newProduct : undefined
+        }))
+      };
+      const { response, data } = await apiRequest(`/api/sales-employee/orders/${receivingOrder._id}/goods-received`, {
         method: 'POST',
-        body: JSON.stringify(blForm)
+        body: JSON.stringify(payload)
       });
       if (response.ok && data.success) {
-        setToastMsg('BL details and inventory check verified!');
-        setBlModalOrder(null);
+        setToastMsg(data.message || 'Inventory IN recorded.');
+        setReceivingOrder(null);
+        setReceivingForm(null);
         fetchOrders();
         setTimeout(() => setToastMsg(''), 4500);
       } else {
-        alert(data.message || 'Failed to save BL details.');
+        alert(data.message || 'Failed to record Inventory IN.');
       }
-    } catch (err) {
-      alert('Error saving BL details.');
+    } catch {
+      alert('Error recording Inventory IN.');
     } finally {
-      setSubmittingBL(false);
+      setSubmittingReceipt(false);
     }
   };
 
@@ -284,8 +300,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 <th>Product Summary</th>
                 <th>Net Amount</th>
                 <th>Workflow Status</th>
-                <th style={{ textAlign: 'center' }}>Goods Received</th>
-                <th style={{ textAlign: 'center' }}>BL / Stock</th>
+                <th style={{ textAlign: 'center' }}>Receive Goods / Inventory IN</th>
                 <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
@@ -345,7 +360,12 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                     </span>
                   </td>
                   <td style={{ textAlign: 'center' }}>
-                    {o.goodsReceivedInOffice?.received ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    {o.inventoryFulfilledFromExistingStock ? (
+                      <span style={{ padding: '3px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: 700, background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                        <CheckCircle2 size={12} /> Using existing warehouse stock
+                      </span>
+                    ) : o.inventoryReceived || isOrderCompletedInSupport(o) ? (
                       <span style={{
                         padding: '3px 8px',
                         borderRadius: '12px',
@@ -357,12 +377,12 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                         display: 'inline-flex',
                         alignItems: 'center',
                         gap: '3px'
-                      }} title={`Received ${o.goodsReceivedInOffice.receivedQuantity || ''} on ${new Date(o.goodsReceivedInOffice.receivingDate || o.updatedAt).toLocaleDateString()}`}>
-                        <CheckCircle2 size={12} /> Received
+                      }} title={`Inventory received: ${o.goodsReceivedInOffice?.receivedQuantity || ''} of ${o.goodsReceivedInOffice?.orderedQuantity || ''}`}>
+                        <CheckCircle2 size={12} /> {o.inventoryReceived ? 'Inventory Received' : 'Completed (Legacy)'}
                       </span>
                     ) : (
                       <button
-                        onClick={() => openGoodsReceivedModal(o)}
+                        onClick={() => openReceiveGoodsModal(o)}
                         style={{
                           padding: '4px 8px',
                           borderRadius: '6px',
@@ -376,54 +396,17 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                           alignItems: 'center',
                           gap: '3px'
                         }}
-                        title="Confirm Goods Received in Office"
+                        title="Receive goods and add quantities to inventory"
                       >
-                        <PackageCheck size={12} /> Receive
+                        <PackageCheck size={12} /> {(o.inventoryReceipts || []).length ? 'Receive Remaining' : 'Receive Goods'}
                       </button>
                     )}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>
-                    {o.blNumber || o.blInput?.blNumber ? (
-                      <button
-                        onClick={() => openBLModal(o)}
-                        style={{
-                          padding: '3px 8px',
-                          borderRadius: '12px',
-                          fontSize: '0.72rem',
-                          fontWeight: 700,
-                          background: '#F0F9FF',
-                          color: '#0369A1',
-                          border: '1px solid #BAE6FD',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}
-                        title="View / Edit Bill of Lading (BL) Details"
-                      >
-                        <FileText size={11} /> {o.blNumber || o.blInput?.blNumber}
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => openBLModal(o)}
-                        style={{
-                          padding: '4px 8px',
-                          borderRadius: '6px',
-                          fontSize: '0.72rem',
-                          fontWeight: 600,
-                          background: '#F8FAFC',
-                          color: '#475569',
-                          border: '1px solid #CBD5E1',
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '3px'
-                        }}
-                        title="Enter BL details and inventory verification"
-                      >
-                        <FileText size={12} /> Input BL
-                      </button>
+                    {(o.inventoryGrnNumbers || []).length > 0 && (
+                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#2563EB' }}>
+                        GRN: {o.inventoryGrnNumbers.join(', ')}
+                      </span>
                     )}
+                    </div>
                   </td>
                   <td style={{ textAlign: 'center' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
@@ -534,6 +517,12 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 </div>
               )}
 
+              {(viewOrder.inventoryGrnNumbers || []).length > 0 && (
+                <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', color: '#1E3A8A', fontSize: '0.82rem' }}>
+                  <strong>Inventory IN GRN:</strong> {viewOrder.inventoryGrnNumbers.join(', ')}
+                </div>
+              )}
+
               {/* Ordered Products Table */}
               <div style={{ marginBottom: '16px' }}>
                 <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#0F172A', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -602,7 +591,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                     className="sv-btn-action-icon"
                     onClick={() => handleCheckStock(viewOrder)}
                     disabled={checkingStock}
-                    style={{ fontSize: '0.75rem', padding: '4px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', cursor: 'pointer' }}
+                    style={{ width: 'auto', minWidth: '112px', minHeight: '32px', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', padding: '4px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', cursor: 'pointer' }}
                     title="Re-check actual warehouse inventory"
                   >
                     {checkingStock ? 'Verifying...' : '🔄 Re-check Stock'}
@@ -636,7 +625,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                       <span>
                         {stockCheckResult.isFullyInStock
                           ? '✓ All ordered items are Available in stock. Ready to create Delivery Note.'
-                          : '⚠️ Insufficient Stock Detected. Delivery Note creation requires caution.'}
+                          : 'Insufficient stock. Use Receive Goods / Inventory IN before creating the Delivery Note.'}
                       </span>
                     </div>
 
@@ -653,7 +642,10 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                       <tbody>
                         {stockCheckResult.items && stockCheckResult.items.map((it, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #E2E8F0' }}>
-                            <td style={{ padding: '6px 8px', fontWeight: 600 }}>{it.productName}</td>
+                            <td style={{ padding: '6px 8px', fontWeight: 600 }}>
+                              {it.productName}
+                              {it.quantityAssumed && <div style={{ fontSize: '0.68rem', color: '#D97706', marginTop: '2px' }}>Quantity unknown, assumed 1</div>}
+                            </td>
                             <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 700 }}>{it.requiredQty} {it.unit}</td>
                             <td style={{ padding: '6px 8px', textAlign: 'center', color: '#059669', fontWeight: 700 }}>{it.availableQty} {it.unit}</td>
                             <td style={{ padding: '6px 8px', textAlign: 'center', color: it.shortageQty > 0 ? '#DC2626' : '#64748B', fontWeight: 700 }}>
@@ -704,14 +696,16 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 <button className="sv-btn-cancel" onClick={() => setViewOrder(null)}>Close</button>
                 <button
                   className="sv-btn-primary"
-                  disabled={!viewOrder.goodsReceivedInOffice?.received}
-                  title={!viewOrder.goodsReceivedInOffice?.received ? 'Confirm goods received in office before creating the Delivery Note.' : ''}
+                  disabled={!viewOrder.goodsReceivedInOffice?.received || checkingStock || !stockCheckResult?.isFullyInStock}
+                  title={!viewOrder.goodsReceivedInOffice?.received
+                    ? 'Confirm goods received in office before creating the Delivery Note.'
+                    : (!stockCheckResult?.isFullyInStock ? 'Add inventory first using Receive Goods / Inventory IN.' : '')}
                   onClick={() => {
                     const orderToDeliver = viewOrder;
                     setViewOrder(null);
                     if (onNavigateDeliveryNotes) onNavigateDeliveryNotes(orderToDeliver);
                   }}
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', opacity: viewOrder.goodsReceivedInOffice?.received ? 1 : 0.55 }}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', opacity: viewOrder.goodsReceivedInOffice?.received && stockCheckResult?.isFullyInStock ? 1 : 0.55 }}
                 >
                   <Truck size={15} /> Create Delivery Note
                 </button>
@@ -721,212 +715,175 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
         </div>
       )}
 
-      {/* CONFIRM GOODS RECEIVED IN OFFICE MODAL */}
-      {goodsReceivedModalOrder && (
-        <div className="sv-modal-overlay" onClick={() => setGoodsReceivedModalOrder(null)}>
-          <div className="sv-modal" style={{ maxWidth: '560px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="sv-modal-header" style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <PackageCheck size={20} color="#059669" />
+      <ReceiveGoodsModal
+        order={receivingOrder}
+        preview={receivingPreview}
+        form={receivingForm}
+        loading={loadingReceivingPreview}
+        submitting={submittingReceipt}
+        onClose={() => setReceivingOrder(null)}
+        onChange={setReceivingForm}
+        onUpdateLine={updateReceivingLine}
+        onSubmit={handleReceiveGoods}
+      />
+
+    </div>
+  );
+}
+
+function ReceiveGoodsModal({ order, preview, form, loading, submitting, onClose, onChange, onUpdateLine, onSubmit }) {
+  if (!order) return null;
+
+  const labelStyle = { display: 'block', fontSize: '0.76rem', fontWeight: 700, color: '#334155', marginBottom: '4px' };
+
+  return (
+    <div className="sv-modal-overlay" onClick={onClose}>
+      <div className="sv-modal" style={{ maxWidth: '860px', maxHeight: '92vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+        <div className="sv-modal-header" style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '14px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <PackageCheck size={20} color="#059669" />
+            </div>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>Receive Goods (Inventory IN)</h3>
+              <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748B' }}>
+                Order: <strong>{order.orderReference || order.orderNumber}</strong> | {order.fileType === 'Blue' ? 'Blue File (Imported)' : 'Green File (Local)'}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={20} /></button>
+        </div>
+
+        {loading || !form ? (
+          <div className="sv-loading" style={{ padding: '28px' }}>Loading order lines and inventory matches...</div>
+        ) : (
+          <form onSubmit={onSubmit} style={{ marginTop: '16px' }}>
+            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
+              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
+                {order.fileType === 'Blue' ? 'BL / AWB & shipment reference' : 'Supplier bill details'}
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
+                <div>
+                  <label style={labelStyle}>{order.fileType === 'Blue' ? 'BL / AWB Number' : 'Supplier Bill No.'}</label>
+                  <input className="sv-input" value={form.referenceNumber} onChange={(e) => onChange({ ...form, referenceNumber: e.target.value })} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
-                    Confirm Goods Received in Office
-                  </h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748B' }}>
-                    Order: <strong>{goodsReceivedModalOrder.orderReference || goodsReceivedModalOrder.orderNumber}</strong> | {goodsReceivedModalOrder.clientName}
-                  </p>
+                  <label style={labelStyle}>{order.fileType === 'Blue' ? 'Reference Date' : 'Supplier Bill Date'}</label>
+                  <input type="date" className="sv-input" value={form.referenceDate} onChange={(e) => onChange({ ...form, referenceDate: e.target.value })} />
                 </div>
+                <div>
+                  <label style={labelStyle}>Supplier</label>
+                  <input className="sv-input" value={form.supplierName || '-'} readOnly style={{ background: '#F8FAFC' }} />
+                </div>
+                {order.fileType === 'Blue' && (
+                  <>
+                    <div>
+                      <label style={labelStyle}>Carrier</label>
+                      <input className="sv-input" value={form.carrier} onChange={(e) => onChange({ ...form, carrier: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Container / Airway Tracking</label>
+                      <input className="sv-input" value={form.containerNo} onChange={(e) => onChange({ ...form, containerNo: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Port / Origin</label>
+                      <input className="sv-input" value={form.portOfLoading} onChange={(e) => onChange({ ...form, portOfLoading: e.target.value })} />
+                    </div>
+                    <div>
+                      <label style={labelStyle}>Port / Destination</label>
+                      <input className="sv-input" value={form.portOfDischarge} onChange={(e) => onChange({ ...form, portOfDischarge: e.target.value })} />
+                    </div>
+                  </>
+                )}
               </div>
-              <button onClick={() => setGoodsReceivedModalOrder(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
-                <X size={20} />
-              </button>
             </div>
 
-            <form onSubmit={handleConfirmGoodsReceived} style={{ marginTop: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                    Receiving Date *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={goodsForm.receivingDate}
-                    onChange={(e) => setGoodsForm({ ...goodsForm, receivingDate: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                    Received Quantity *
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    required
-                    value={goodsForm.receivedQuantity}
-                    onChange={(e) => setGoodsForm({ ...goodsForm, receivedQuantity: Number(e.target.value) })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700 }}
-                  />
-                </div>
-              </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
+              {form.items.map((line, index) => {
+                const selectedInventory = (preview?.inventoryOptions || []).find(item => String(item._id) === String(line.inventoryItemId));
+                const isAutomaticMatch = (line.matches || []).some(match => String(match._id) === String(line.inventoryItemId));
+                const needsConfirmation = line.selectionMode === 'existing' && selectedInventory && (!isAutomaticMatch || selectedInventory.contextMismatch);
 
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                  Verification / Office Inspection Remarks
-                </label>
-                <textarea
-                  rows="3"
-                  value={goodsForm.remarks}
-                  onChange={(e) => setGoodsForm({ ...goodsForm, remarks: e.target.value })}
-                  placeholder="E.g., Physical stock inspected, packaging intact, items match supplier PO and client specifications."
-                  style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
-                />
-              </div>
+                return (
+                  <div key={line.orderItemId} style={{ border: '1px solid #CBD5E1', borderRadius: '10px', padding: '14px', background: '#FFFFFF' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'minmax(180px, 1fr) 110px 130px', gap: '12px', alignItems: 'end' }}>
+                      <div>
+                        <div style={{ fontWeight: 800, color: '#0F172A' }}>{line.productName}</div>
+                        {line.quantityAssumed && <div style={{ fontSize: '0.72rem', color: '#D97706', marginTop: '2px', fontWeight: 700 }}>Quantity unknown, assumed 1</div>}
+                        <div style={{ fontSize: '0.75rem', color: '#64748B' }}>
+                          Ordered: {line.orderedQty} | Previously received: {line.previouslyReceivedQty} | Remaining: {line.remainingQty}
+                        </div>
+                      </div>
+                      <div>
+                        <label style={labelStyle}>Received qty</label>
+                        <input type="number" min="0" max={line.remainingQty} step="1" className="sv-input" value={line.receivedQty} disabled={line.remainingQty <= 0} onChange={(e) => onUpdateLine(index, { receivedQty: e.target.value })} />
+                      </div>
+                      <div style={{ fontSize: '0.75rem', color: line.remainingQty <= 0 ? '#059669' : '#475569', fontWeight: 700 }}>
+                        {line.remainingQty <= 0 ? 'Fully received' : 'Partial receipts allowed'}
+                      </div>
+                    </div>
 
-              <div style={{ background: '#F8FAFC', padding: '10px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', marginBottom: '16px', fontSize: '0.78rem', color: '#475569' }}>
-                💡 <strong>Next Step:</strong> Confirming goods receipt updates the order in the Support queue and enables creating a Delivery Note for the customer.
-              </div>
+                    {line.remainingQty > 0 && (
+                      <div style={{ marginTop: '12px' }}>
+                        <label style={labelStyle}>Inventory row to increment</label>
+                        <select
+                          className="sv-input"
+                          required={Number(line.receivedQty) > 0}
+                          value={line.selectionMode === 'new' ? '__new' : line.inventoryItemId}
+                          onChange={(e) => onUpdateLine(index, e.target.value === '__new'
+                            ? { selectionMode: 'new', inventoryItemId: '', confirmedSelection: false }
+                            : { selectionMode: 'existing', inventoryItemId: e.target.value, confirmedSelection: false })}
+                        >
+                          <option value="">Select the correct inventory row</option>
+                          {(preview?.inventoryOptions || []).map(item => (
+                            <option key={item._id} value={item._id}>
+                              {item.name} | {item.sku || 'No SKU'} | {item.category || 'General'} | {item.location || 'WH/Stock'}
+                            </option>
+                          ))}
+                          <option value="__new">Create this product once</option>
+                        </select>
 
-              <div className="sv-modal-actions" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
-                <button type="button" className="sv-btn-cancel" onClick={() => setGoodsReceivedModalOrder(null)}>Cancel</button>
-                <button
-                  type="submit"
-                  disabled={submittingGoods}
-                  className="sv-btn-primary"
-                  style={{ background: '#059669', borderColor: '#059669', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <PackageCheck size={15} />
-                  {submittingGoods ? 'Recording...' : 'Confirm Goods Received'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                        {selectedInventory && line.selectionMode === 'existing' && (
+                          <div style={{ marginTop: '8px', padding: '9px 10px', borderRadius: '7px', border: `1px solid ${needsConfirmation ? '#F59E0B' : '#A7F3D0'}`, background: needsConfirmation ? '#FFFBEB' : '#ECFDF5', fontSize: '0.76rem', color: '#334155' }}>
+                            <strong>Selected:</strong> {selectedInventory.name} | SKU: {selectedInventory.sku || 'None'} | Category: {selectedInventory.category || 'General'} | Location: {selectedInventory.location || 'WH/Stock'} | On hand: {selectedInventory.quantityOnHand || 0}
+                            {needsConfirmation && (
+                              <label style={{ display: 'flex', gap: '7px', alignItems: 'flex-start', marginTop: '8px', color: '#92400E', fontWeight: 700 }}>
+                                <input type="checkbox" required checked={line.confirmedSelection} onChange={(e) => onUpdateLine(index, { confirmedSelection: e.target.checked })} />
+                                I confirm this row is correct even though its product, category, or location does not automatically fit this order.
+                              </label>
+                            )}
+                          </div>
+                        )}
 
-      {/* BILL OF LADING (BL) & INVENTORY CHECK MODAL */}
-      {blModalOrder && (
-        <div className="sv-modal-overlay" onClick={() => setBlModalOrder(null)}>
-          <div className="sv-modal" style={{ maxWidth: '620px' }} onClick={(e) => e.stopPropagation()}>
-            <div className="sv-modal-header" style={{ borderBottom: '1px solid #E2E8F0', paddingBottom: '14px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#EFF6FF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <FileText size={20} color="#2563EB" />
-                </div>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>
-                    Bill of Lading (BL) & Inventory Input
-                  </h3>
-                  <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748B' }}>
-                    Order: <strong>{blModalOrder.orderReference || blModalOrder.orderNumber}</strong> | {blModalOrder.fileType === 'Blue' ? '🌐 Blue File (Imported)' : '🇵🇰 Green File (Local)'}
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setBlModalOrder(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}>
-                <X size={20} />
-              </button>
+                        {line.selectionMode === 'new' && (
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '10px', marginTop: '10px', padding: '10px', background: '#F8FAFC', borderRadius: '8px' }}>
+                            <input required className="sv-input" placeholder="Product name" value={line.newProduct.name} onChange={(e) => onUpdateLine(index, { newProduct: { ...line.newProduct, name: e.target.value } })} />
+                            <input className="sv-input" placeholder="SKU" value={line.newProduct.sku} onChange={(e) => onUpdateLine(index, { newProduct: { ...line.newProduct, sku: e.target.value } })} />
+                            <input className="sv-input" placeholder="Category" value={line.newProduct.category} onChange={(e) => onUpdateLine(index, { newProduct: { ...line.newProduct, category: e.target.value } })} />
+                            <input required className="sv-input" placeholder="Warehouse location" value={line.newProduct.location} onChange={(e) => onUpdateLine(index, { newProduct: { ...line.newProduct, location: e.target.value } })} />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
-            <form onSubmit={handleSaveBL} style={{ marginTop: '16px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                    BL / Consignment Number *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="E.g., BL-984210 / AWB-5582"
-                    value={blForm.blNumber}
-                    onChange={(e) => setBlForm({ ...blForm, blNumber: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 600 }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                    BL Date
-                  </label>
-                  <input
-                    type="date"
-                    value={blForm.blDate}
-                    onChange={(e) => setBlForm({ ...blForm, blDate: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
-                  />
-                </div>
-              </div>
+            <div style={{ marginBottom: '14px' }}>
+              <label style={labelStyle}>Receiving remarks</label>
+              <textarea rows="2" className="sv-input" value={form.remarks} onChange={(e) => onChange({ ...form, remarks: e.target.value })} />
+            </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                    Carrier / Shipping Line
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="E.g., Maersk, DHL, Hapag-Lloyd"
-                    value={blForm.carrier}
-                    onChange={(e) => setBlForm({ ...blForm, carrier: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                    Container / Airway Tracking #
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="E.g., MSKU9238410"
-                    value={blForm.containerNo}
-                    onChange={(e) => setBlForm({ ...blForm, containerNo: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                    Port of Loading
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="E.g., Shanghai / Jebel Ali / Frankfurt"
-                    value={blForm.portOfLoading}
-                    onChange={(e) => setBlForm({ ...blForm, portOfLoading: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
-                    Port of Discharge
-                  </label>
-                  <input
-                    type="text"
-                    value={blForm.portOfDischarge}
-                    onChange={(e) => setBlForm({ ...blForm, portOfDischarge: e.target.value })}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
-                  />
-                </div>
-              </div>
-
-              <div className="sv-modal-actions" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
-                <button type="button" className="sv-btn-cancel" onClick={() => setBlModalOrder(null)}>Cancel</button>
-                <button
-                  type="submit"
-                  disabled={submittingBL}
-                  className="sv-btn-primary"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
-                >
-                  <FileText size={15} />
-                  {submittingBL ? 'Saving...' : 'Save BL & Inventory Data'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="sv-modal-actions" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
+              <button type="button" className="sv-btn-cancel" onClick={onClose}>Cancel</button>
+              <button type="submit" disabled={submitting} className="sv-btn-primary" style={{ background: '#059669', borderColor: '#059669', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                <PackageCheck size={15} /> {submitting ? 'Saving Inventory IN...' : 'Save Receipt & Inventory IN'}
+              </button>
+            </div>
+          </form>
+        )}
+      </div>
     </div>
   );
 }

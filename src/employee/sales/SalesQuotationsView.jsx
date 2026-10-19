@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import './SalesViews.css';
 import { CUSTOMER_PO_ATTACHMENT_ACCEPT, readCustomerPOAttachment } from './customerPOAttachment';
+import { getUser } from '../../utils/authStorage';
 
 const STATUS_COLORS = {
   Quotation: '#2563EB',
@@ -53,6 +54,7 @@ const EMPTY_FORM = {
   clientName: '',
   salePerson: '',
   fileNo: '',
+  fileType: '',
   productSummary: '',
   clientEmail: '',
   clientPhone: '',
@@ -72,6 +74,7 @@ const EMPTY_FORM = {
 };
 
 export default function SalesQuotationsView() {
+  const currentUser = getUser();
   const [quotations, setQuotations] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('active');
@@ -336,6 +339,7 @@ export default function SalesQuotationsView() {
     const today = new Date().toISOString().substring(0, 10);
     setForm({
       ...EMPTY_FORM,
+      salePerson: currentUser?.fullName || '',
       creationDate: today,
       discount: 0,
       discountPercentage: 0,
@@ -393,6 +397,7 @@ export default function SalesQuotationsView() {
       clientName: q.clientName || q.customerName || '',
       salePerson: q.salePerson || q.createdBy?.fullName || '',
       fileNo: q.fileNo || '',
+      fileType: q.fileType || '',
       productSummary: q.productSummary || '',
       clientEmail: q.clientEmail || '',
       clientPhone: q.clientPhone || '',
@@ -527,6 +532,10 @@ export default function SalesQuotationsView() {
     e.preventDefault();
     if (!form.clientName.trim()) {
       setError('Customer / Client name is required.');
+      return;
+    }
+    if (!editQ && !['Green', 'Blue'].includes(form.fileType)) {
+      setError('Select Green or Blue so the file number can be assigned.');
       return;
     }
 
@@ -1689,11 +1698,19 @@ export default function SalesQuotationsView() {
                 <div className="sv-grid-2">
                   <div className="sv-field">
                     <label>Sale Person</label>
-                    <input value={form.salePerson} onChange={e => setForm(p => ({ ...p, salePerson: e.target.value }))} placeholder="e.g. Wasim Bhatti LHR" />
+                    <input value={form.salePerson} readOnly placeholder="Logged-in sales person" />
+                  </div>
+                  <div className="sv-field">
+                    <label>File Type *</label>
+                    <select value={form.fileType} onChange={e => setForm(p => ({ ...p, fileType: e.target.value }))} required={!editQ} disabled={Boolean(editQ)}>
+                      <option value="">Select file type</option>
+                      <option value="Green">Green File (Local)</option>
+                      <option value="Blue">Blue File (Imported)</option>
+                    </select>
                   </div>
                   <div className="sv-field">
                     <label>File-No#</label>
-                    <input value={form.fileNo} onChange={e => setForm(p => ({ ...p, fileNo: e.target.value }))} placeholder="e.g. 1016 Green / 1014 Blue" />
+                    <input value={form.fileNo} readOnly placeholder="Assigned automatically on save" style={{ background: '#F1F5F9' }} />
                   </div>
                 </div>
               </div>

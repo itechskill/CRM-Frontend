@@ -68,6 +68,7 @@ export default function LogisticsShipmentsView({
   });
   const [submittingTracking, setSubmittingTracking] = useState(false);
   const [updatingCustoms, setUpdatingCustoms] = useState('');
+  const [updatingShipmentStep, setUpdatingShipmentStep] = useState('');
 
   // Office receipt modal
   const [receiveModalShipment, setReceiveModalShipment] = useState(null);
@@ -249,14 +250,58 @@ export default function LogisticsShipmentsView({
     }
   };
 
+  const handleShipmentStepUpdate = async (shipment, status) => {
+    const updateKey = `${shipment._id}-${status}`;
+    setUpdatingShipmentStep(updateKey);
+    try {
+      const { response, data } = await apiRequest(`/api/logistics/shipments/${shipment._id}/tracking`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status })
+      });
+      if (response.ok && data.success) {
+        setFeedback(data.message);
+        await fetchShipments();
+        setTimeout(() => setFeedback(''), 4500);
+      } else {
+        alert(data.message || `Failed to mark shipment ${status}.`);
+      }
+    } catch (err) {
+      alert(`Error marking shipment ${status}.`);
+    } finally {
+      setUpdatingShipmentStep('');
+    }
+  };
+
   const renderCustomsClearance = (shipment) => {
     const currentState = shipment.customsClearanceStatus || '';
     const completedIndex = getCustomsIndex(shipment);
     const received = completedIndex === 4;
-    const gdLocked = completedIndex >= 0 || received;
+    const pickedUp = ['Picked Up', 'In Transit', 'Arrived', 'Received in Office'].includes(shipment.status);
+    const inTransit = ['In Transit', 'Arrived', 'Received in Office'].includes(shipment.status);
+    const gdLocked = !inTransit || completedIndex >= 0 || received;
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '180px' }}>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: pickedUp ? '#166534' : '#475569', fontSize: '0.74rem', fontWeight: pickedUp ? 700 : 600, cursor: pickedUp || Boolean(updatingShipmentStep) ? 'default' : 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={pickedUp}
+            disabled={pickedUp || Boolean(updatingShipmentStep)}
+            onChange={() => handleShipmentStepUpdate(shipment, 'Picked Up')}
+          />
+          {updatingShipmentStep === `${shipment._id}-Picked Up` ? 'Saving...' : 'Picked Up'}
+        </label>
+
+        <label style={{ display: 'flex', alignItems: 'center', gap: '6px', color: inTransit ? '#166534' : '#475569', fontSize: '0.74rem', fontWeight: inTransit ? 700 : 600, cursor: inTransit || !pickedUp || Boolean(updatingShipmentStep) ? 'default' : 'pointer' }}>
+          <input
+            type="checkbox"
+            checked={inTransit}
+            disabled={inTransit || !pickedUp || Boolean(updatingShipmentStep)}
+            onChange={() => handleShipmentStepUpdate(shipment, 'In Transit')}
+          />
+          {updatingShipmentStep === `${shipment._id}-In Transit` ? 'Saving...' : 'In Transit'}
+        </label>
+
         <div style={{ fontSize: '0.74rem', fontWeight: 700, color: currentState === 'GD Not Filed' ? '#B45309' : (completedIndex >= 0 ? '#166534' : '#475569') }}>
           GD filed:
           <label style={{ marginLeft: '6px', cursor: gdLocked || Boolean(updatingCustoms) ? 'default' : 'pointer' }}>
@@ -317,6 +362,7 @@ export default function LogisticsShipmentsView({
       case 'Shipment Pending': return { bg: '#FFFBEB', color: '#D97706', text: 'Pending' };
       case 'Booked': return { bg: '#F5F3FF', color: '#6D28D9', text: 'Booked' };
       case 'Dispatched': return { bg: '#ECFDF5', color: '#059669', text: 'Dispatched' };
+      case 'Picked Up': return { bg: '#F0FDF4', color: '#15803D', text: 'Picked Up' };
       case 'In Transit': return { bg: '#E0F2FE', color: '#0369A1', text: 'In Transit' };
       case 'Arrived': return { bg: '#FEF3C7', color: '#B45309', text: 'Arrived at Port' };
       case 'Received in Office': return { bg: '#DCFCE7', color: '#15803D', text: 'Received in Office' };
@@ -329,7 +375,7 @@ export default function LogisticsShipmentsView({
   // Filter list by currentMode
   const displayedList = shipments.filter(shp => {
     if (currentMode === 'tracking') {
-      return ['In Transit', 'Dispatched', 'Booked', 'Arrived'].includes(shp.status) && !shp.receivedInOffice;
+      return ['PO Issued', 'Shipment Pending', 'Picked Up', 'In Transit', 'Dispatched', 'Booked', 'Arrived'].includes(shp.status) && !shp.receivedInOffice;
     }
     if (currentMode === 'received') {
       return shp.receivedInOffice || shp.status === 'Received in Office';
@@ -437,6 +483,7 @@ export default function LogisticsShipmentsView({
                 <option value="Shipment Pending">Shipment Pending</option>
                 <option value="Booked">Booked</option>
                 <option value="Dispatched">Dispatched</option>
+                <option value="Picked Up">Picked Up</option>
                 <option value="In Transit">In Transit</option>
                 <option value="Arrived">Arrived at Port</option>
                 <option value="Received in Office">Received in Office</option>
@@ -833,6 +880,7 @@ export default function LogisticsShipmentsView({
                     <option value="Shipment Pending">Shipment Pending</option>
                     <option value="Booked">Booked</option>
                     <option value="Dispatched">Dispatched</option>
+                    <option value="Picked Up">Picked Up</option>
                     <option value="In Transit">In Transit</option>
                     <option value="Arrived">Arrived at Port / Airport</option>
                     <option value="Delayed">Delayed</option>

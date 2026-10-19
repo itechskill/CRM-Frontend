@@ -13,9 +13,12 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 
+const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
 export default function LocalPurchaserInventoryView({ searchQuery, currentUser }) {
   const [inventory, setInventory] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
+  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filterText, setFilterText] = useState('');
   const [processingId, setProcessingId] = useState(null);
@@ -58,10 +61,12 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
   const [showProcurementModal, setShowProcurementModal] = useState(false);
   const [procureOrder, setProcureOrder] = useState(null);
   const [procureForm, setProcureForm] = useState({
+    supplierId: '',
     supplierName: '',
-    poNumber: `LPO-${Date.now().toString().slice(-6)}`,
+    poNumber: '',
     grnNumber: `GRN-${Date.now().toString().slice(-6)}`,
     paymentTerms: 'Net 30',
+    gstRate: 0,
     remarks: ''
   });
   const [submittingProcure, setSubmittingProcure] = useState(false);
@@ -70,12 +75,14 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [invRes, ordRes] = await Promise.all([
+      const [invRes, ordRes, supplierRes] = await Promise.all([
         apiRequest('/api/purchaser/inventory'),
-        apiRequest('/api/purchaser/pending-orders?subDept=Local')
+        apiRequest('/api/purchaser/pending-orders?subDept=Local'),
+        apiRequest('/api/purchaser/suppliers?type=Local')
       ]);
       if (invRes.success) setInventory(invRes.inventory || invRes.data || []);
       if (ordRes.success) setPendingOrders(ordRes.orders || ordRes.data || []);
+      if (supplierRes.success) setSuppliers(supplierRes.suppliers || supplierRes.data?.suppliers || supplierRes.data?.data || []);
     } catch (err) {
       console.error('Error fetching inventory and pending orders:', err);
     } finally {
@@ -108,10 +115,12 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
   const handleOpenProcurement = (order) => {
     setProcureOrder(order);
     setProcureForm({
+      supplierId: '',
       supplierName: '',
-      poNumber: `LPO-${Date.now().toString().slice(-6)}`,
+      poNumber: '',
       grnNumber: `GRN-${Date.now().toString().slice(-6)}`,
       paymentTerms: 'Net 30',
+      gstRate: 0,
       remarks: `Local Procurement for Sales Order ${order.orderReference || order.orderNumber}`
     });
     setShowProcurementModal(true);
@@ -120,26 +129,42 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
   const handleCompleteProcurement = async (e) => {
     e.preventDefault();
     if (!procureOrder) return;
-    if (!procureForm.supplierName.trim()) {
-      alert('Please enter supplier name.');
+    if (!procureForm.supplierId || (procureForm.supplierId === 'NEW' && !procureForm.supplierName.trim())) {
+      alert('Please select or add a Local supplier.');
       return;
     }
 
     setSubmittingProcure(true);
     try {
+      let supplierId = procureForm.supplierId;
+      if (supplierId === 'NEW') {
+        const supplierRes = await apiRequest('/api/purchaser/suppliers', 'POST', {
+          name: procureForm.supplierName.trim(),
+          supplierType: 'Local',
+          country: 'Pakistan'
+        });
+        if (!supplierRes.success) {
+          alert(supplierRes.message || 'Unable to add the Local supplier.');
+          return;
+        }
+        supplierId = supplierRes.data?.data?._id || supplierRes.data?.supplier?._id;
+      }
+      const procurementItems = procureOrder.items && procureOrder.items.length > 0 ? procureOrder.items.map(i => ({
+        productName: i.description || 'Item',
+        quantity: Number(i.quantity) || 1,
+        unitPricePKR: Number(i.unitPrice) || 0,
+        totalPricePKR: roundMoney((Number(i.quantity) || 1) * (Number(i.unitPrice) || 0))
+      })) : [{ productName: procureOrder.productSummary || 'Local Item', quantity: 1, unitPricePKR: Number(procureOrder.netAmount || 0), totalPricePKR: Number(procureOrder.netAmount || 0) }];
+      const subtotal = roundMoney(procurementItems.reduce((sum, item) => sum + Number(item.totalPricePKR || 0), 0));
       const payload = {
-        supplierName: procureForm.supplierName,
-        poNumber: procureForm.poNumber,
+        supplierId,
         grnNumber: procureForm.grnNumber,
         paymentTerms: procureForm.paymentTerms,
         remarks: procureForm.remarks,
-        totalAmountPKR: Number(procureOrder.netAmount || procureOrder.totalAmount || 0),
-        items: procureOrder.items && procureOrder.items.length > 0 ? procureOrder.items.map(i => ({
-          productName: i.description || 'Item',
-          quantity: Number(i.quantity) || 1,
-          unitPricePKR: Number(i.unitPrice) || 0,
-          totalPricePKR: Number(i.total) || 0
-        })) : [{ productName: procureOrder.productSummary || 'Local Item', quantity: 1, unitPricePKR: Number(procureOrder.netAmount || 0), totalPricePKR: Number(procureOrder.netAmount || 0) }]
+        subtotal,
+        gstRate: Number(procureForm.gstRate) || 0,
+        totalAmountPKR: subtotal,
+        items: procurementItems
       };
 
       const res = await apiRequest(`/api/purchaser/orders/${procureOrder._id}/complete-procurement`, 'POST', payload);
@@ -797,25 +822,27 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Local Supplier Name *</label>
-                  <input
-                    type="text"
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Local Supplier *</label>
+                  <select
                     required
-                    placeholder="Supplier / Vendor Company"
-                    value={procureForm.supplierName}
-                    onChange={(e) => setProcureForm({ ...procureForm, supplierName: e.target.value })}
+                    value={procureForm.supplierId}
+                    onChange={(e) => {
+                      const supplierId = e.target.value;
+                      const supplier = suppliers.find(item => item._id === supplierId);
+                      setProcureForm({ ...procureForm, supplierId, supplierName: supplier?.name || '' });
+                    }}
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
-                  />
+                  >
+                    <option value="">-- Choose Supplier --</option>
+                    {suppliers.map(supplier => <option key={supplier._id} value={supplier._id}>{supplier.name}</option>)}
+                    <option value="NEW">+ Add New Supplier</option>
+                  </select>
+                  {procureForm.supplierId === 'NEW' && <input type="text" required placeholder="New supplier name" value={procureForm.supplierName} onChange={(e) => setProcureForm({ ...procureForm, supplierName: e.target.value })} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', marginTop: '8px' }} />}
+                  {procureForm.supplierId && procureForm.supplierId !== 'NEW' && <input type="text" readOnly value={procureForm.supplierName} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', marginTop: '8px', background: '#F8FAFC' }} />}
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Local PO Number *</label>
-                  <input
-                    type="text"
-                    required
-                    value={procureForm.poNumber}
-                    onChange={(e) => setProcureForm({ ...procureForm, poNumber: e.target.value })}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, color: '#059669' }}
-                  />
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Local PO Number</label>
+                  <input type="text" readOnly value={procureForm.poNumber} placeholder="Assigned on issue" style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, color: '#059669', background: '#F8FAFC' }} />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>GRN Receipt Number *</label>
@@ -836,7 +863,32 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
                   />
                 </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>GST (%)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={procureForm.gstRate}
+                    onChange={(e) => setProcureForm({ ...procureForm, gstRate: e.target.value })}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
+                  />
+                </div>
               </div>
+
+              {(() => {
+                const subtotal = roundMoney((procureOrder.items && procureOrder.items.length > 0)
+                  ? procureOrder.items.reduce((sum, item) => sum + ((Number(item.quantity) || 1) * (Number(item.unitPrice) || 0)), 0)
+                  : Number(procureOrder.netAmount || procureOrder.totalAmount || 0));
+                const gstAmount = roundMoney(subtotal * (Number(procureForm.gstRate) || 0) / 100);
+                return (
+                  <div style={{ background: '#F0FDF4', border: '1px solid #BBF7D0', borderRadius: '8px', padding: '10px 14px', marginBottom: '16px', fontSize: '0.85rem', color: '#065F46' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><strong>PKR {subtotal.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST</span><strong>PKR {gstAmount.toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}><span>Total including GST</span><strong>PKR {roundMoney(subtotal + gstAmount).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong></div>
+                  </div>
+                );
+              })()}
 
               <div style={{ marginBottom: '20px' }}>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Remarks / Inspection Notes</label>

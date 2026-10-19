@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { FileText, Plus, Search, Trash2, X, Eye, Edit3, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 
+const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
 export default function LocalPurchaserPOsView({ searchQuery }) {
   const [pos, setPos] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
@@ -20,9 +22,10 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
     supplierId: '',
     supplierName: '',
     supplierContact: '',
-    poNumber: `LPO-${Date.now().toString().slice(-6)}`,
+    poNumber: '',
     expectedDeliveryDate: '',
     items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
+    gstRate: 0,
     paymentTerms: 'Net 30',
     remarks: ''
   });
@@ -32,6 +35,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
     supplierName: '',
     expectedDeliveryDate: '',
     notes: '',
+    gstRate: 0,
     items: []
   });
 
@@ -84,7 +88,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
     if (field === 'quantity' || field === 'unitPricePKR') {
       const q = Number(updated[index].quantity || 0);
       const p = Number(updated[index].unitPricePKR || 0);
-      updated[index].totalPricePKR = q * p;
+      updated[index].totalPricePKR = roundMoney(q * p);
     }
     setFormData(prev => ({ ...prev, items: updated }));
   };
@@ -105,28 +109,43 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
   };
 
   const calculateTotalPKR = () => {
-    return formData.items.reduce((sum, item) => sum + (Number(item.totalPricePKR) || 0), 0);
+    return roundMoney(formData.items.reduce((sum, item) => sum + (Number(item.totalPricePKR) || 0), 0));
   };
+
+  const calculateGST = (subtotal, rate) => roundMoney(subtotal * (Number(rate) || 0) / 100);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!formData.supplierName) {
+    if (!formData.supplierId || (formData.supplierId === 'NEW' && !formData.supplierName.trim())) {
       alert('Please enter or select a supplier.');
       return;
     }
     setSubmitting(true);
     try {
+      let supplierId = formData.supplierId;
+      if (supplierId === 'NEW') {
+        const supplierRes = await apiRequest('/api/purchaser/suppliers', 'POST', {
+          name: formData.supplierName.trim(),
+          supplierType: 'Local',
+          country: 'Pakistan',
+          phone: formData.supplierContact
+        });
+        if (!supplierRes.success) {
+          alert(supplierRes.message || 'Unable to add the Local supplier.');
+          return;
+        }
+        supplierId = supplierRes.data?.data?._id || supplierRes.data?.supplier?._id;
+      }
       const payload = {
-        poNumber: formData.poNumber,
         subType: 'Local',
         poType: 'Local',
-        supplierId: formData.supplierId !== 'NEW' ? formData.supplierId : undefined,
-        supplierName: formData.supplierName,
-        supplierContact: formData.supplierContact,
+        supplierId,
         expectedDeliveryDate: formData.expectedDeliveryDate || undefined,
         items: formData.items,
-        totalAmountPKR: calculateTotalPKR(),
-        totalAmount: calculateTotalPKR(),
+        subtotal: calculateTotalPKR(),
+        gstRate: Number(formData.gstRate) || 0,
+        totalAmountPKR: roundMoney(calculateTotalPKR() + calculateGST(calculateTotalPKR(), formData.gstRate)),
+        totalAmount: roundMoney(calculateTotalPKR() + calculateGST(calculateTotalPKR(), formData.gstRate)),
         paymentTerms: formData.paymentTerms,
         remarks: formData.remarks,
         notes: formData.remarks
@@ -134,15 +153,17 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
 
       const res = await apiRequest('/api/purchaser/pos', 'POST', payload);
       if (res.success) {
-        setToast(`Local Supplier PO #${formData.poNumber} created successfully and added to list!`);
+        const assignedPoNumber = res.data?.data?.poNumber || res.data?.po?.poNumber || 'assigned';
+        setToast(`Local Supplier PO #${assignedPoNumber} created successfully and added to list!`);
         setShowModal(false);
         setFormData({
           supplierId: '',
           supplierName: '',
           supplierContact: '',
-          poNumber: `LPO-${Date.now().toString().slice(-6)}`,
+          poNumber: '',
           expectedDeliveryDate: '',
           items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
+          gstRate: 0,
           paymentTerms: 'Net 30',
           remarks: ''
         });
@@ -173,6 +194,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
       supplierName: po.supplierName || '',
       expectedDeliveryDate: po.expectedDeliveryDate ? new Date(po.expectedDeliveryDate).toISOString().split('T')[0] : '',
       notes: po.notes || po.remarks || '',
+      gstRate: Number(po.gstRate) || 0,
       items: poItems
     });
   };
@@ -183,7 +205,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
     if (field === 'quantity' || field === 'unitPricePKR') {
       const q = Number(updated[index].quantity || 0);
       const p = Number(updated[index].unitPricePKR || 0);
-      updated[index].totalPricePKR = q * p;
+      updated[index].totalPricePKR = roundMoney(q * p);
     }
     setEditFormData(prev => ({ ...prev, items: updated }));
   };
@@ -208,9 +230,10 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
     if (!editPo) return;
     setUpdating(true);
     try {
-      const totalAmount = editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0);
+      const subtotal = roundMoney(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0));
+      const gstAmount = calculateGST(subtotal, editFormData.gstRate);
+      const totalAmount = roundMoney(subtotal + gstAmount);
       const payload = {
-        supplierName: editFormData.supplierName,
         expectedDeliveryDate: editFormData.expectedDeliveryDate || undefined,
         notes: editFormData.notes,
         items: editFormData.items.map(it => ({
@@ -223,6 +246,8 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
         })),
         totalAmount,
         totalAmountPKR: totalAmount,
+        subtotal,
+        gstRate: Number(editFormData.gstRate) || 0,
         remarks: 'Direct PO edit by Local Purchaser'
       };
 
@@ -265,7 +290,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
     }
   };
 
-  const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK')}`;
+  const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
   const searchVal = (filterText || searchQuery || '').toLowerCase();
   const filtered = pos.filter(po =>
@@ -429,7 +454,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                     {(Array.isArray(suppliers) ? suppliers : []).map(s => (
                       <option key={s._id} value={s._id}>{s.name} ({s.phone || 'Local'})</option>
                     ))}
-                    <option value="NEW">+ Enter New Supplier</option>
+                    <option value="NEW">+ Add New Supplier</option>
                   </select>
                 </div>
 
@@ -438,8 +463,9 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                   <input
                     type="text"
                     value={formData.poNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, poNumber: e.target.value }))}
-                    required
+                    readOnly
+                    placeholder="Assigned on issue"
+                    aria-label="PO number assigned on issue"
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 700, color: '#059669' }}
                   />
                 </div>
@@ -450,6 +476,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                     type="text"
                     value={formData.supplierName}
                     onChange={(e) => setFormData(prev => ({ ...prev, supplierName: e.target.value }))}
+                    readOnly={formData.supplierId !== 'NEW'}
                     placeholder="Company or Contact Person Name"
                     required
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
@@ -462,6 +489,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                     type="text"
                     value={formData.supplierContact}
                     onChange={(e) => setFormData(prev => ({ ...prev, supplierContact: e.target.value }))}
+                    readOnly={formData.supplierId !== 'NEW'}
                     placeholder="Phone or Email"
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
                   />
@@ -520,6 +548,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                       type="number"
                       placeholder="Unit Price (PKR)"
                       min="0"
+                      step="0.01"
                       value={item.unitPricePKR}
                       onChange={(e) => handleItemChange(idx, 'unitPricePKR', e.target.value)}
                       required
@@ -537,11 +566,19 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                 ))}
               </div>
 
-              {/* Total & Submit */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
-                  Total PO Amount: <span style={{ color: '#059669' }}>{formatPKR(calculateTotalPKR())}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>GST (%)</label>
+                  <input type="number" min="0" step="0.01" value={formData.gstRate} onChange={(e) => setFormData(prev => ({ ...prev, gstRate: e.target.value }))} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1' }} />
                 </div>
+                <div style={{ background: '#F0FDF4', borderRadius: '8px', padding: '10px 14px', fontSize: '0.86rem' }}>
+                  <div>Subtotal: <strong>{formatPKR(calculateTotalPKR())}</strong></div>
+                  <div>GST: <strong>{formatPKR(calculateGST(calculateTotalPKR(), formData.gstRate))}</strong></div>
+                  <div>Total including GST: <strong>{formatPKR(calculateTotalPKR() + calculateGST(calculateTotalPKR(), formData.gstRate))}</strong></div>
+                </div>
+              </div>
+              {/* Total & Submit */}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button type="button" onClick={() => setShowModal(false)} style={{ backgroundColor: '#F1F5F9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 18px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
                   <button type="submit" disabled={submitting} style={{ backgroundColor: '#059669', color: '#FFF', border: 'none', borderRadius: '8px', padding: '10px 22px', fontWeight: 700, cursor: 'pointer' }}>
@@ -573,9 +610,8 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                   <input
                     type="text"
                     value={editFormData.supplierName}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, supplierName: e.target.value }))}
-                    required
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
+                    readOnly
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', background: '#F8FAFC' }}
                   />
                 </div>
 
@@ -632,6 +668,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                       type="number"
                       placeholder="Unit Price"
                       min="0"
+                      step="0.01"
                       value={item.unitPricePKR}
                       onChange={(e) => handleEditItemChange(idx, 'unitPricePKR', e.target.value)}
                       required
@@ -649,10 +686,18 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                 ))}
               </div>
 
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
-                  Updated Total: <span style={{ color: '#059669' }}>{formatPKR(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0))}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>GST (%)</label>
+                  <input type="number" min="0" step="0.01" value={editFormData.gstRate} onChange={(e) => setEditFormData(prev => ({ ...prev, gstRate: e.target.value }))} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1' }} />
                 </div>
+                <div style={{ background: '#EFF6FF', borderRadius: '8px', padding: '10px 14px', fontSize: '0.86rem' }}>
+                  <div>Subtotal: <strong>{formatPKR(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0))}</strong></div>
+                  <div>GST: <strong>{formatPKR(calculateGST(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0), editFormData.gstRate))}</strong></div>
+                  <div>Total including GST: <strong>{formatPKR(roundMoney(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0) + calculateGST(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0), editFormData.gstRate)))}</strong></div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button type="button" onClick={() => setEditPo(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 18px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
                   <button type="submit" disabled={updating} style={{ backgroundColor: '#1D4ED8', color: '#FFF', border: 'none', borderRadius: '8px', padding: '10px 22px', fontWeight: 700, cursor: 'pointer' }}>
@@ -710,9 +755,10 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
               </table>
             </div>
 
-            <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #A7F3D0', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, color: '#0F172A', marginBottom: '20px' }}>
-              <span>Total PO Value:</span>
-              <span style={{ color: '#059669' }}>{formatPKR(viewPo.totalAmount || viewPo.totalAmountPKR)}</span>
+            <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #A7F3D0', padding: '12px 16px', borderRadius: '8px', color: '#0F172A', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal:</span><strong>{formatPKR(viewPo.subtotal || ((viewPo.gstRate || viewPo.gstAmount) ? 0 : viewPo.totalAmount))}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST ({Number(viewPo.gstRate || 0).toFixed(2)}%):</span><strong>{formatPKR(viewPo.gstAmount || 0)}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, marginTop: '4px' }}><span>Total including GST:</span><span style={{ color: '#059669' }}>{formatPKR(viewPo.total || viewPo.totalAmount || viewPo.totalAmountPKR)}</span></div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>

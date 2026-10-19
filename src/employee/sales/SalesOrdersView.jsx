@@ -116,6 +116,40 @@ export default function SalesOrdersView() {
   const [deleting, setDeleting] = useState(false);
   const [feedback, setFeedback] = useState('');
 
+  const getLinkedCustomerPO = (order) => {
+    const customerPOId = order?.customerPOId && typeof order.customerPOId === 'object'
+      ? order.customerPOId._id
+      : order?.customerPOId;
+
+    if (customerPOId) {
+      return customerPOs.find(po => String(po._id) === String(customerPOId)) ||
+        (typeof order.customerPOId === 'object' ? order.customerPOId : null);
+    }
+
+    const matchingPOs = customerPOs.filter(po => po.poNumber && po.poNumber === order?.customerPONumber);
+    return matchingPOs.length === 1 ? matchingPOs[0] : null;
+  };
+
+  const renderCustomerPO = (order) => {
+    const customerPO = getLinkedCustomerPO(order);
+    const poNumber = customerPO?.poNumber || order?.customerPONumber || 'No Customer PO';
+    const hasAttachment = hasCustomerPOAttachment(customerPO);
+
+    return (
+      <div style={{ minWidth: '130px' }}>
+        <div style={{ fontWeight: 700, color: '#334155' }}>{poNumber}</div>
+        {hasAttachment ? (
+          <div style={{ display: 'flex', gap: '8px', marginTop: '4px', fontSize: '0.75rem' }}>
+            <a href={customerPO.uploadedDocument} target="_blank" rel="noreferrer" style={{ color: '#2563EB', fontWeight: 700 }}>View</a>
+            <a href={customerPO.uploadedDocument} download={customerPO.documentName} style={{ color: '#059669', fontWeight: 700 }}>Download</a>
+          </div>
+        ) : (
+          <div style={{ marginTop: '4px', color: '#94A3B8', fontSize: '0.75rem' }}>No attachment</div>
+        )}
+      </div>
+    );
+  };
+
   // CEO Edit Permission Request States
   const [showEditRequestModal, setShowEditRequestModal] = useState(false);
   const [editRequestTarget, setEditRequestTarget] = useState(null);
@@ -157,7 +191,7 @@ export default function SalesOrdersView() {
   useEffect(() => {
     const fetchCustomerPOs = async () => {
       try {
-        const { response, data } = await apiRequest('/api/sales-employee/customer-pos');
+        const { response, data } = await apiRequest('/api/sales-employee/customer-pos?status=all');
         if (response.ok && data.success) setCustomerPOs(data.data || []);
       } catch (e) {
         console.error('Error fetching customer POs:', e);
@@ -841,6 +875,7 @@ export default function SalesOrdersView() {
                 <th>Customer / Client</th>
                 <th>Sale Person</th>
                 <th>File-No#</th>
+                <th>Customer PO</th>
                 <th>Product Summary</th>
                 <th>Total (PKR)</th>
                 <th>Status</th>
@@ -852,7 +887,7 @@ export default function SalesOrdersView() {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={11} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
+                  <td colSpan={12} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
                     No sales orders match your selected filters.
                   </td>
                 </tr>
@@ -894,6 +929,7 @@ export default function SalesOrdersView() {
                         );
                       })()}
                     </td>
+                    <td>{renderCustomerPO(o)}</td>
                     <td style={{ maxWidth: '240px', fontSize: '0.82rem', color: '#334155' }} title={productSummary}>
                       {productSummary}
                     </td>
@@ -1161,6 +1197,11 @@ export default function SalesOrdersView() {
                 </div>
               </div>
 
+              <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '16px', border: '1px solid #E2E8F0' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '6px' }}>Linked Customer PO</div>
+                {renderCustomerPO(viewOrder)}
+              </div>
+
               {viewOrder.productSummary && (
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '16px', border: '1px solid #E2E8F0' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '4px' }}>Product Summary</div>
@@ -1326,7 +1367,7 @@ export default function SalesOrdersView() {
                   </div>
                   <div className="sv-field">
                     <label>File-No#</label>
-                    <input value={form.fileNo} onChange={e => setForm(p => ({ ...p, fileNo: e.target.value }))} placeholder="e.g. 1016 Green" />
+                    <input value={form.fileNo} readOnly placeholder="Assigned automatically on save" style={{ background: '#F1F5F9' }} />
                   </div>
                   <div className="sv-field">
                     <label>File Color</label>
@@ -1558,7 +1599,10 @@ export default function SalesOrdersView() {
                   <tbody>
                     {stockCheckResult.items.map((item, idx) => (
                       <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1E293B' }}>{item.productName}</td>
+                        <td style={{ padding: '10px 12px', fontWeight: 600, color: '#1E293B' }}>
+                          {item.productName}
+                          {item.quantityAssumed && <div style={{ fontSize: '0.7rem', color: '#D97706', marginTop: '2px' }}>Quantity unknown, assumed 1</div>}
+                        </td>
                         <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700 }}>{item.requiredQty} {item.unit}</td>
                         <td style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: item.availableQty >= item.requiredQty ? '#059669' : '#DC2626' }}>
                           {item.availableQty} {item.unit}

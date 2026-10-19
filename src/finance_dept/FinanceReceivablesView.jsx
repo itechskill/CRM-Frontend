@@ -12,6 +12,10 @@ import {
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 
+const toMoneyCents = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100);
+const fromMoneyCents = (cents) => cents / 100;
+const formatMoney = (value) => Number(value || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
 export default function FinanceReceivablesView({ onNavigatePayment, searchQuery }) {
   const [receivables, setReceivables] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,9 +60,9 @@ export default function FinanceReceivablesView({ onNavigatePayment, searchQuery 
       r.invoiceNumber,
       r.clientName,
       r.salesOrderNumber || '—',
-      `PKR ${(Number(r.amount) || 0).toLocaleString()}`,
-      `PKR ${(Number(r.paidAmount) || 0).toLocaleString()}`,
-      `PKR ${(Number(r.remainingReceivable) || 0).toLocaleString()}`,
+      `PKR ${formatMoney(r.amount)}`,
+      `PKR ${formatMoney(r.paidAmount)}`,
+      `PKR ${formatMoney(r.remainingReceivable)}`,
       r.dueDate ? new Date(r.dueDate).toLocaleDateString('en-GB') : '—',
       r.status
     ]);
@@ -88,10 +92,10 @@ export default function FinanceReceivablesView({ onNavigatePayment, searchQuery 
     );
   });
 
-  const totalInvoiced = filteredReceivables.reduce((sum, r) => sum + (Number(r.amount) || 0), 0);
-  const totalPaid = filteredReceivables.reduce((sum, r) => sum + (Number(r.paidAmount) || 0), 0);
-  const totalOutstanding = filteredReceivables.reduce((sum, r) => sum + (Number(r.remainingReceivable) || 0), 0);
-  const totalOverdue = filteredReceivables.filter(r => r.isOverdue).reduce((sum, r) => sum + (Number(r.remainingReceivable) || 0), 0);
+  const totalInvoiced = fromMoneyCents(filteredReceivables.reduce((sum, r) => sum + toMoneyCents(r.amount), 0));
+  const totalPaid = fromMoneyCents(filteredReceivables.reduce((sum, r) => sum + toMoneyCents(r.paidAmount), 0));
+  const totalOutstanding = fromMoneyCents(filteredReceivables.reduce((sum, r) => sum + toMoneyCents(r.remainingReceivable), 0));
+  const totalOverdue = fromMoneyCents(filteredReceivables.filter(r => r.isOverdue).reduce((sum, r) => sum + toMoneyCents(r.remainingReceivable), 0));
 
   const customerOverdueSummary = React.useMemo(() => {
     const map = {};
@@ -106,7 +110,7 @@ export default function FinanceReceivablesView({ onNavigatePayment, searchQuery 
             invoices: []
           };
         }
-        map[key].totalOverdue += r.remainingReceivable;
+        map[key].totalOverdue = fromMoneyCents(toMoneyCents(map[key].totalOverdue) + toMoneyCents(r.remainingReceivable));
         map[key].invoices.push(r);
       }
     });
@@ -119,22 +123,22 @@ export default function FinanceReceivablesView({ onNavigatePayment, searchQuery 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px', marginBottom: '20px' }}>
         <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Total Invoices Value</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>PKR {totalInvoiced.toLocaleString()}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#0F172A', marginTop: '4px' }}>PKR {formatMoney(totalInvoiced)}</div>
         </div>
 
         <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#059669', textTransform: 'uppercase' }}>Total Valid Payments</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>PKR {totalPaid.toLocaleString()}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#059669', marginTop: '4px' }}>PKR {formatMoney(totalPaid)}</div>
         </div>
 
         <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#D97706', textTransform: 'uppercase' }}>Remaining Receivables</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#D97706', marginTop: '4px' }}>PKR {totalOutstanding.toLocaleString()}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#D97706', marginTop: '4px' }}>PKR {formatMoney(totalOutstanding)}</div>
         </div>
 
         <div style={{ background: '#FFFFFF', padding: '16px', borderRadius: '12px', border: '1px solid #E2E8F0' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#DC2626', textTransform: 'uppercase' }}>Overdue Receivables</div>
-          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#DC2626', marginTop: '4px' }}>PKR {totalOverdue.toLocaleString()}</div>
+          <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#DC2626', marginTop: '4px' }}>PKR {formatMoney(totalOverdue)}</div>
         </div>
       </div>
 
@@ -173,7 +177,7 @@ export default function FinanceReceivablesView({ onNavigatePayment, searchQuery 
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <span style={{ fontSize: '0.8rem', color: '#475569', fontWeight: 600 }}>Total Overdue Debt:</span>
                   <span style={{ fontSize: '1.1rem', fontWeight: 800, color: '#DC2626' }}>
-                    PKR {cust.totalOverdue.toLocaleString()}
+                    PKR {formatMoney(cust.totalOverdue)}
                   </span>
                 </div>
 
@@ -182,7 +186,7 @@ export default function FinanceReceivablesView({ onNavigatePayment, searchQuery 
                   {cust.invoices.map((inv, iIdx) => (
                     <div key={iIdx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: iIdx < cust.invoices.length - 1 ? '1px dashed #E2E8F0' : 'none', paddingBottom: '3px' }}>
                       <span style={{ fontWeight: 700, color: '#1E293B' }}>{inv.invoiceNumber} ({inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-GB') : 'Past Due'})</span>
-                      <span style={{ fontWeight: 800, color: '#DC2626' }}>PKR {inv.remainingReceivable.toLocaleString()}</span>
+                      <span style={{ fontWeight: 800, color: '#DC2626' }}>PKR {formatMoney(inv.remainingReceivable)}</span>
                     </div>
                   ))}
                 </div>
@@ -238,10 +242,10 @@ export default function FinanceReceivablesView({ onNavigatePayment, searchQuery 
                   <td style={{ fontWeight: 700, color: '#0F172A' }}>{r.invoiceNumber}</td>
                   <td style={{ fontWeight: 600 }}>{r.clientName}</td>
                   <td>{r.salesOrderNumber || '—'}</td>
-                  <td style={{ fontWeight: 700 }}>PKR {r.amount.toLocaleString()}</td>
-                  <td style={{ color: '#059669', fontWeight: 700 }}>PKR {r.paidAmount.toLocaleString()}</td>
+                  <td style={{ fontWeight: 700 }}>PKR {formatMoney(r.amount)}</td>
+                  <td style={{ color: '#059669', fontWeight: 700 }}>PKR {formatMoney(r.paidAmount)}</td>
                   <td style={{ fontWeight: 800, color: r.remainingReceivable === 0 ? '#059669' : (r.isOverdue ? '#DC2626' : '#D97706') }}>
-                    PKR {r.remainingReceivable.toLocaleString()}
+                    PKR {formatMoney(r.remainingReceivable)}
                   </td>
                   <td style={{ fontSize: '0.8rem', color: r.isOverdue ? '#DC2626' : '#64748B', fontWeight: r.isOverdue ? 700 : 400 }}>
                     {r.dueDate ? new Date(r.dueDate).toLocaleDateString('en-GB') : '—'}

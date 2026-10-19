@@ -29,6 +29,11 @@ import {
 import '../employee/sales/SalesViews.css';
 import './SupportPortal.css';
 
+const SIGNED_DN_ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp';
+const SIGNED_DN_EXTENSIONS = /\.(pdf|png|jpe?g|webp|gif|bmp)$/i;
+const SIGNED_DN_MIME_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/bmp']);
+const SIGNED_DN_MAX_SIZE = 3 * 1024 * 1024;
+
 const EMPTY_ITEM = {
   product: '',
   description: '',
@@ -72,9 +77,13 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [confirmingId, setConfirmingId] = useState(null);
+  const [confirmDN, setConfirmDN] = useState(null);
+  const [signedDNAttachment, setSignedDNAttachment] = useState({ signedDeliveryNoteDocument: '', signedDeliveryNoteDocumentName: '' });
   const [viewDN, setViewDN] = useState(null);
   const [feedback, setFeedback] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedStockCheck, setSelectedStockCheck] = useState(null);
+  const [deliveryNoteStockChecks, setDeliveryNoteStockChecks] = useState({});
 
   const fetchDeliveryNotes = useCallback(async () => {
     setLoading(true);
@@ -109,6 +118,21 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
   }, [fetchDeliveryNotes, fetchOrders]);
 
   useEffect(() => {
+    const pending = deliveryNotes.filter(dn => !['Done', 'Delivered', 'Confirmed'].includes(dn.status) && dn.salesOrder?._id);
+    if (pending.length === 0) return;
+    let cancelled = false;
+    Promise.all(pending.map(async dn => {
+      const { response, data } = await apiRequest(`/api/sales-employee/orders/${dn.salesOrder._id}/stock-check`);
+      return [dn._id, response.ok && data.success ? data.data : { isFullyInStock: false, message: data.message || 'Stock check failed.' }];
+    })).then(entries => {
+      if (!cancelled) setDeliveryNoteStockChecks(Object.fromEntries(entries));
+    }).catch(() => {
+      if (!cancelled) setDeliveryNoteStockChecks({});
+    });
+    return () => { cancelled = true; };
+  }, [deliveryNotes]);
+
+  useEffect(() => {
     if (initialSelectedOrder) {
       handleSelectOrder(initialSelectedOrder._id, initialSelectedOrder);
       setShowModal(true);
@@ -117,6 +141,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
   }, [initialSelectedOrder]);
 
   const handleOpenAddModal = () => {
+    setSelectedStockCheck(null);
     setForm({
       ...EMPTY_FORM,
       deliveryNumber: `DN-${Math.floor(10000 + Math.random() * 90000)}`,
@@ -125,9 +150,10 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
     setShowModal(true);
   };
 
-  const handleSelectOrder = (soId, fallbackOrder = null) => {
+  const handleSelectOrder = async (soId, fallbackOrder = null) => {
     if (!soId) {
       setForm(prev => ({ ...prev, salesOrderId: '', salesOrderNumber: '' }));
+      setSelectedStockCheck(null);
       return;
     }
     const so = salesOrders.find(o => o._id === soId) || fallbackOrder;
@@ -156,6 +182,16 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
       items: items,
       notes: `Dispatch for ${so.orderReference || so.orderNumber}`
     }));
+
+    setSelectedStockCheck({ loading: true, isFullyInStock: false });
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/orders/${so._id}/stock-check`);
+      setSelectedStockCheck(response.ok && data.success
+        ? data.data
+        : { isFullyInStock: false, message: data.message || 'Stock check failed.' });
+    } catch {
+      setSelectedStockCheck({ isFullyInStock: false, message: 'Stock check failed.' });
+    }
   };
 
   const handleAddItem = () => {
@@ -191,6 +227,10 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
       alert('Select a Sales Order that has reached Support and has goods received in office.');
       return;
     }
+    if (!selectedStockCheck?.isFullyInStock) {
+      alert('Add inventory first using Receive Goods / Inventory IN. Every order line must have sufficient stock.');
+      return;
+    }
     if (saving) return;
     setSaving(true);
     try {
@@ -214,15 +254,47 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
     }
   };
 
-  const handleConfirmDN = async (dn) => {
+  const handleSignedDNFile = (file) => {
+    if (!file || !SIGNED_DN_EXTENSIONS.test(file.name) || (file.type && !SIGNED_DN_MIME_TYPES.has(file.type))) {
+      setSignedDNAttachment({ signedDeliveryNoteDocument: '', signedDeliveryNoteDocumentName: '' });
+      alert('Attach the signed Delivery Note as a PDF or image.');
+      return;
+    }
+    if (file.size > SIGNED_DN_MAX_SIZE) {
+      setSignedDNAttachment({ signedDeliveryNoteDocument: '', signedDeliveryNoteDocumentName: '' });
+      alert('The signed Delivery Note attachment must be 3 MB or smaller.');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = () => setSignedDNAttachment({
+      signedDeliveryNoteDocument: reader.result,
+      signedDeliveryNoteDocumentName: file.name
+    });
+    reader.onerror = () => alert('The signed Delivery Note attachment could not be read.');
+    reader.readAsDataURL(file);
+  };
+
+  const openConfirmDN = (dn) => {
+    if (!deliveryNoteStockChecks[dn._id]?.isFullyInStock) return;
+    setSignedDNAttachment({ signedDeliveryNoteDocument: '', signedDeliveryNoteDocumentName: '' });
+    setConfirmDN(dn);
+  };
+
+  const handleConfirmDN = async () => {
+    const dn = confirmDN;
+    if (!dn || !signedDNAttachment.signedDeliveryNoteDocument) return;
     setConfirmingId(dn._id);
     try {
       const { response, data } = await apiRequest(`/api/sales-employee/delivery-notes/${dn._id}/confirm`, {
         method: 'POST',
-        body: JSON.stringify({ receivedBy: dn.recipientName || 'Customer Received' })
+        body: JSON.stringify({
+          receivedBy: dn.recipientName || 'Customer Received',
+          ...signedDNAttachment
+        })
       });
       if (response.ok && data.success) {
         setFeedback(`Delivery Note ${dn.deliveryNumber || dn.deliveryNoteNumber} confirmed! Inventory updated & Order handed off to Accounts.`);
+        setConfirmDN(null);
         fetchDeliveryNotes();
         setTimeout(() => setFeedback(''), 4000);
       } else {
@@ -233,6 +305,18 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
     } finally {
       setConfirmingId(null);
     }
+  };
+
+  const viewSignedDN = (dn) => {
+    if (dn?.signedDeliveryNoteDocument) window.open(dn.signedDeliveryNoteDocument, '_blank', 'noopener,noreferrer');
+  };
+
+  const downloadSignedDN = (dn) => {
+    if (!dn?.signedDeliveryNoteDocument) return;
+    const link = document.createElement('a');
+    link.href = dn.signedDeliveryNoteDocument;
+    link.download = dn.signedDeliveryNoteDocumentName || 'signed-delivery-note';
+    link.click();
   };
 
   const handleDownloadPDF = (dn) => {
@@ -607,6 +691,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
             <tbody>
               {filteredDNs.map((dn) => {
                 const isConfirmed = dn.status === 'Done' || dn.status === 'Delivered' || dn.status === 'Confirmed';
+                const stockCheck = deliveryNoteStockChecks[dn._id];
                 return (
                   <tr key={dn._id}>
                     <td style={{ fontWeight: 700, color: '#0F172A' }}>
@@ -632,11 +717,17 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                           <button
                             className="sv-btn-primary"
                             style={{ padding: '4px 10px', fontSize: '0.75rem', background: '#059669', gap: '4px' }}
-                            onClick={() => handleConfirmDN(dn)}
-                            disabled={confirmingId === dn._id}
+                            onClick={() => openConfirmDN(dn)}
+                            disabled={confirmingId === dn._id || !stockCheck?.isFullyInStock}
+                            title={!stockCheck
+                              ? 'Checking inventory stock...'
+                              : (!stockCheck.isFullyInStock ? 'Add inventory first using Receive Goods / Inventory IN.' : '')}
                           >
                             <CheckCircle2 size={13} /> {confirmingId === dn._id ? 'Confirming...' : 'Confirm Delivery'}
                           </button>
+                        )}
+                        {!isConfirmed && stockCheck && !stockCheck.isFullyInStock && (
+                          <span style={{ color: '#B91C1C', fontSize: '0.7rem', maxWidth: '150px' }}>Add inventory first</span>
                         )}
                         <button className="sv-btn-action-icon" onClick={() => setViewDN(dn)} title="View Delivery Note Complete Details">
                           <Eye size={14} color="#2563EB" />
@@ -644,6 +735,16 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                         <button className="sv-btn-action-icon" onClick={() => handleDownloadPDF(dn)} title="Download Delivery Note Official PDF">
                           <Download size={14} color="#0284C7" />
                         </button>
+                        {dn.signedDeliveryNoteDocument && (
+                          <>
+                            <button className="sv-btn-action-icon" onClick={() => viewSignedDN(dn)} title="View Signed Delivery Note">
+                              <FileText size={14} color="#059669" />
+                            </button>
+                            <button className="sv-btn-action-icon" onClick={() => downloadSignedDN(dn)} title="Download Signed Delivery Note">
+                              <Download size={14} color="#059669" />
+                            </button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -724,6 +825,25 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                   Only Sales Orders received by Support after goods arrive in the office are available for Delivery Note creation.
                 </div>
               </div>
+
+              {form.salesOrderId && (
+                <div style={{
+                  marginBottom: '14px',
+                  padding: '10px 12px',
+                  borderRadius: '8px',
+                  background: selectedStockCheck?.isFullyInStock ? '#ECFDF5' : '#FEF2F2',
+                  border: `1px solid ${selectedStockCheck?.isFullyInStock ? '#A7F3D0' : '#FECACA'}`,
+                  color: selectedStockCheck?.isFullyInStock ? '#047857' : '#B91C1C',
+                  fontSize: '0.82rem',
+                  fontWeight: 700
+                }}>
+                  {selectedStockCheck?.loading
+                    ? 'Checking inventory stock...'
+                    : (selectedStockCheck?.isFullyInStock
+                      ? 'All remaining order quantities are available.'
+                      : 'Add inventory first using Receive Goods / Inventory IN before creating the Delivery Note.')}
+                </div>
+              )}
 
               {/* Section 1: Customer & Delivery Address */}
               <div className="sv-form-section">
@@ -864,7 +984,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
               <div className="sv-form-section">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                   <div className="sv-form-section-title" style={{ margin: 0 }}>
-                    <Package size={14} color="#7C3AED" /> Dispatched Products (Live Stock Deducted)
+                    <Package size={14} color="#7C3AED" /> Dispatched Products (Stock is deducted when the Delivery Note is confirmed.)
                   </div>
                   <button
                     type="button"
@@ -959,7 +1079,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
 
               <div className="sv-modal-actions">
                 <button type="button" className="sv-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="sv-btn-primary" disabled={saving}>
+                <button type="submit" className="sv-btn-primary" disabled={saving || !selectedStockCheck?.isFullyInStock} title={!selectedStockCheck?.isFullyInStock ? 'Add inventory first using Receive Goods / Inventory IN.' : ''}>
                   <Save size={14} /> {saving ? 'Saving...' : 'Save Delivery Note'}
                 </button>
               </div>
@@ -1109,6 +1229,19 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
               </div>
 
               {/* Notes & Acknowledgement Status */}
+              <div style={{ marginBottom: '16px', padding: '12px 14px', border: '1px solid #D1FAE5', background: '#F0FDF4', borderRadius: '8px' }}>
+                <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#065F46', marginBottom: '6px' }}>Signed Delivery Note</div>
+                {viewDN.signedDeliveryNoteDocument ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.82rem', color: '#334155' }}>{viewDN.signedDeliveryNoteDocumentName}</span>
+                    <button type="button" className="sv-btn-action-icon" onClick={() => viewSignedDN(viewDN)} title="View Signed Delivery Note"><Eye size={14} /></button>
+                    <button type="button" className="sv-btn-action-icon" onClick={() => downloadSignedDN(viewDN)} title="Download Signed Delivery Note"><Download size={14} /></button>
+                  </div>
+                ) : (
+                  <span style={{ fontSize: '0.82rem', color: '#92400E' }}>No signed Delivery Note attached.</span>
+                )}
+              </div>
+
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '16px' }}>
                 <div>
                   <div style={{ fontSize: '0.82rem', fontWeight: 700, color: '#475569', marginBottom: '6px' }}>
@@ -1160,12 +1293,39 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                     onClick={() => {
                       const dnToConfirm = viewDN;
                       setViewDN(null);
-                      handleConfirmDN(dnToConfirm);
+                      openConfirmDN(dnToConfirm);
                     }}
                   >
                     <CheckCircle2 size={14} /> Confirm Delivery
                   </button>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      {confirmDN && (
+        <div className="sv-modal-overlay" onClick={() => !confirmingId && setConfirmDN(null)}>
+          <div className="sv-modal" style={{ maxWidth: '520px', width: '95%' }} onClick={(e) => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <div>
+                <h3 style={{ margin: 0 }}>Confirm Delivery</h3>
+                <p style={{ margin: '4px 0 0', color: '#64748B', fontSize: '0.82rem' }}>{confirmDN.deliveryNumber || confirmDN.deliveryNoteNumber}</p>
+              </div>
+              <button onClick={() => setConfirmDN(null)} disabled={Boolean(confirmingId)}><X size={18} /></button>
+            </div>
+            <div style={{ padding: '20px 24px' }}>
+              <label style={{ display: 'block', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>Signed Delivery Note (PDF or image) *</label>
+              <input type="file" accept={SIGNED_DN_ACCEPT} onChange={(e) => handleSignedDNFile(e.target.files?.[0])} />
+              <div style={{ marginTop: '8px', color: '#64748B', fontSize: '0.8rem' }}>Maximum file size: 3 MB.</div>
+              {signedDNAttachment.signedDeliveryNoteDocumentName && (
+                <div style={{ marginTop: '10px', color: '#047857', fontSize: '0.85rem', fontWeight: 600 }}>{signedDNAttachment.signedDeliveryNoteDocumentName}</div>
+              )}
+              <div className="sv-modal-actions" style={{ marginTop: '20px' }}>
+                <button className="sv-btn-cancel" onClick={() => setConfirmDN(null)} disabled={Boolean(confirmingId)}>Cancel</button>
+                <button className="sv-btn-primary" style={{ background: '#059669' }} onClick={handleConfirmDN} disabled={!signedDNAttachment.signedDeliveryNoteDocument || Boolean(confirmingId)}>
+                  <CheckCircle2 size={14} /> {confirmingId ? 'Confirming...' : 'Confirm Delivery'}
+                </button>
               </div>
             </div>
           </div>

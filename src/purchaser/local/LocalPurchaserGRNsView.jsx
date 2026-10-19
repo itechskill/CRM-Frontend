@@ -221,7 +221,7 @@ export default function LocalPurchaserGRNsView({ searchQuery, onNavigateTab }) {
         setShowPayableModal(false);
         setSelectedGrnForPayable(null);
         if (onNavigateTab) {
-          onNavigateTab('payables');
+          onNavigateTab('local_payables');
         }
         setTimeout(() => setToast(''), 5000);
       } else {
@@ -250,28 +250,9 @@ export default function LocalPurchaserGRNsView({ searchQuery, onNavigateTab }) {
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>Goods Received NO (GRN)</h2>
           <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>
-            Verify &amp; record incoming goods against Supplier POs, then move verified goods to Local Payables
+            Read-only GRNs generated when Support records Inventory IN for Local orders
           </p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: '#2563EB',
-            color: '#FFF',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '10px 18px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(37, 99, 235, 0.25)'
-          }}
-        >
-          <Plus size={18} />
-          <span>Record New GRN</span>
-        </button>
       </div>
 
       {toast && (
@@ -294,13 +275,14 @@ export default function LocalPurchaserGRNsView({ searchQuery, onNavigateTab }) {
 
       {/* Table */}
       <div style={{ backgroundColor: '#FFF', borderRadius: '14px', border: '1px solid #E2E8F0', overflowX: 'auto', boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}>
-        <table style={{ width: '100%', minWidth: '1150px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
+        <table style={{ width: '100%', minWidth: '1250px', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.9rem' }}>
           <thead>
             <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>GRN Number</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Type</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Supplier / Source</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Linked PO #</th>
+              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Supplier Bill</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Received Date</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Status</th>
               <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'center' }}>Actions</th>
@@ -308,7 +290,7 @@ export default function LocalPurchaserGRNsView({ searchQuery, onNavigateTab }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading GRNs...</td></tr>
+              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading GRNs...</td></tr>
             ) : filtered.length > 0 ? (
               filtered.map((grn) => (
                 <tr key={grn._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -322,6 +304,10 @@ export default function LocalPurchaserGRNsView({ searchQuery, onNavigateTab }) {
                   <td style={{ padding: '14px 20px', color: '#475569' }}>
                     {grn.poNumber || grn.supplierPONumber || grn.deliveryNoteNumber || '-'}
                     {grn.salesOrderNumber && <span style={{ display: 'block', fontSize: '0.74rem', color: '#059669' }}>SO: {grn.salesOrderNumber}</span>}
+                  </td>
+                  <td style={{ padding: '14px 20px', color: '#475569' }}>
+                    {grn.supplierBillNumber || '-'}
+                    {grn.supplierBillDate && <span style={{ display: 'block', fontSize: '0.74rem', color: '#64748B' }}>{new Date(grn.supplierBillDate).toLocaleDateString()}</span>}
                   </td>
                   <td style={{ padding: '14px 20px', color: '#64748B' }}>
                     {grn.createdAt ? new Date(grn.createdAt).toLocaleDateString() : (grn.receivedDate ? new Date(grn.receivedDate).toLocaleDateString() : '-')}
@@ -350,19 +336,12 @@ export default function LocalPurchaserGRNsView({ searchQuery, onNavigateTab }) {
                       >
                         <Eye size={13} /> View
                       </button>
-                      <button
-                        onClick={() => handleOpenMoveToPayableModal(grn)}
-                        style={{ background: '#FEF3C7', border: '1px solid #FDE68A', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, color: '#B45309', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        title="Link & Move GRN to Local Payables"
-                      >
-                        <CreditCard size={13} /> Move to Payable
-                      </button>
                     </div>
                   </td>
                 </tr>
               ))
             ) : (
-              <tr><td colSpan={7} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Goods Received Notes found.</td></tr>
+              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Goods Received Notes found.</td></tr>
             )}
           </tbody>
         </table>
@@ -653,6 +632,8 @@ export default function LocalPurchaserGRNsView({ searchQuery, onNavigateTab }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem', marginBottom: '16px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px' }}>
               <div><strong>Linked PO:</strong> {viewGrn.poNumber || viewGrn.supplierPONumber || 'None'}</div>
               <div><strong>Linked Sales Order:</strong> {viewGrn.salesOrderNumber || 'None'}</div>
+              <div><strong>Supplier Bill No.:</strong> {viewGrn.supplierBillNumber || '-'}</div>
+              <div><strong>Supplier Bill Date:</strong> {viewGrn.supplierBillDate ? new Date(viewGrn.supplierBillDate).toLocaleDateString() : '-'}</div>
               <div><strong>Status:</strong> {viewGrn.status || viewGrn.inspectionStatus || 'Completed'}</div>
               <div><strong>Date:</strong> {viewGrn.createdAt ? new Date(viewGrn.createdAt).toLocaleDateString() : '-'}</div>
               {viewGrn.remarks && <div style={{ gridColumn: 'span 2' }}><strong>Remarks:</strong> {viewGrn.remarks}</div>}

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, Plus, Search, Trash2, X, Eye, Edit3, Ship, Plane, Send, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Globe, Plus, Search, Trash2, X, Eye, Edit3, Plane, CheckCircle2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 
 export default function GlobalPurchaserPOsView({ searchQuery }) {
@@ -8,8 +8,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
   const [pendingOrders, setPendingOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [showLogisticsModal, setShowLogisticsModal] = useState(false);
-  const [selectedPoForLogistics, setSelectedPoForLogistics] = useState(null);
   const [viewPo, setViewPo] = useState(null);
   const [editPo, setEditPo] = useState(null);
   const [submitting, setSubmitting] = useState(false);
@@ -26,9 +24,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     supplierName: '',
     supplierCountry: 'China',
     poNumber: `GPO-${Date.now().toString().slice(-6)}`,
-    portOfLoading: '',
-    portOfDischarge: 'Karachi Port',
-    estimatedArrival: '',
     paymentTerms: 'LC at Sight',
     items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
     remarks: ''
@@ -38,25 +33,9 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
   const [editFormData, setEditFormData] = useState({
     supplierName: '',
     supplierCountry: 'China',
-    portOfLoading: '',
-    portOfDischarge: 'Karachi Port',
-    estimatedArrival: '',
     paymentTerms: 'LC at Sight',
     notes: '',
     items: []
-  });
-
-  // Logistics Form State
-  const [logisticsForm, setLogisticsForm] = useState({
-    carrier: '',
-    flightNumber: '',
-    trackingNumber: '',
-    shippingMethod: 'Air Freight',
-    portOfLoading: '',
-    portOfDischarge: 'Karachi Port',
-    etd: '',
-    eta: '',
-    notes: ''
   });
 
   const fetchData = async () => {
@@ -88,9 +67,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       supplierName: '',
       supplierCountry: 'China',
       poNumber: `GPO-${Date.now().toString().slice(-6)}`,
-      portOfLoading: '',
-      portOfDischarge: 'Karachi Port',
-      estimatedArrival: '',
       paymentTerms: 'LC at Sight',
       items: order.items && order.items.length > 0 ? order.items.map(i => ({
         productName: i.description || i.productName || 'Imported Machine',
@@ -165,9 +141,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
         supplierId: formData.supplierId !== 'NEW' ? formData.supplierId : undefined,
         supplierName: formData.supplierName,
         supplierCountry: formData.supplierCountry,
-        portOfLoading: formData.portOfLoading,
-        portOfDischarge: formData.portOfDischarge,
-        estimatedArrival: formData.estimatedArrival,
         paymentTerms: formData.paymentTerms,
         items: formData.items,
         totalAmountPKR: calculateTotalPKR(),
@@ -187,9 +160,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             supplierName: '',
             supplierCountry: 'China',
             poNumber: `GPO-${Date.now().toString().slice(-6)}`,
-            portOfLoading: '',
-            portOfDischarge: 'Karachi Port',
-            estimatedArrival: '',
             paymentTerms: 'LC at Sight',
             items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
             remarks: ''
@@ -209,9 +179,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             supplierName: '',
             supplierCountry: 'China',
             poNumber: `GPO-${Date.now().toString().slice(-6)}`,
-            portOfLoading: '',
-            portOfDischarge: 'Karachi Port',
-            estimatedArrival: '',
             paymentTerms: 'LC at Sight',
             items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
             remarks: ''
@@ -243,9 +210,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     setEditFormData({
       supplierName: po.supplierName || '',
       supplierCountry: po.supplierCountry || 'China',
-      portOfLoading: po.portOfLoading || '',
-      portOfDischarge: po.portOfDischarge || 'Karachi Port',
-      estimatedArrival: po.expectedDeliveryDate ? new Date(po.expectedDeliveryDate).toISOString().split('T')[0] : (po.estimatedArrival ? new Date(po.estimatedArrival).toISOString().split('T')[0] : ''),
       paymentTerms: po.paymentTerms || 'LC at Sight',
       notes: po.notes || po.remarks || '',
       items: poItems
@@ -287,9 +251,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       const payload = {
         supplierName: editFormData.supplierName,
         supplierCountry: editFormData.supplierCountry,
-        portOfLoading: editFormData.portOfLoading,
-        portOfDischarge: editFormData.portOfDischarge,
-        expectedDeliveryDate: editFormData.estimatedArrival || undefined,
         paymentTerms: editFormData.paymentTerms,
         notes: editFormData.notes,
         items: editFormData.items.map(it => ({
@@ -344,75 +305,30 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     }
   };
 
-  const handleOpenLogisticsModal = (po) => {
-    setSubmitting(false);
-    setSelectedPoForLogistics(po);
-    setLogisticsForm({
-      carrier: po.carrier || '',
-      flightNumber: po.flightNumber || '',
-      trackingNumber: po.trackingNumber || '',
-      shippingMethod: po.shippingMethod || 'Air Freight',
-      portOfLoading: po.portOfLoading || '',
-      portOfDischarge: po.portOfDischarge || 'Karachi Port',
-      etd: po.etd ? new Date(po.etd).toISOString().split('T')[0] : '',
-      eta: po.estimatedArrival ? new Date(po.estimatedArrival).toISOString().split('T')[0] : '',
-      notes: po.notes || ''
-    });
-    setShowLogisticsModal(true);
-  };
-
-  const handleSubmitLogistics = async (e) => {
-    e.preventDefault();
-    if (!selectedPoForLogistics) return;
-    setSubmitting(true);
-    try {
-      const orderOrPoId = selectedPoForLogistics.salesOrderId || selectedPoForLogistics._id;
-      const payload = {
-        ...logisticsForm,
-        supplierName: selectedPoForLogistics.supplierName,
-        supplierCountry: selectedPoForLogistics.supplierCountry,
-        supplierPoNumber: selectedPoForLogistics.poNumber,
-        salesOrderId: selectedPoForLogistics.salesOrderId,
-        salesOrderNumber: selectedPoForLogistics.salesOrderNumber
-      };
-      const res = await apiRequest(`/api/purchaser/orders/${orderOrPoId}/send-to-logistics`, 'POST', payload);
-      if (res.success) {
-        setToast(`Supplier PO #${selectedPoForLogistics.poNumber} successfully moved to Logistics Department with flight & tracking info!`);
-        setShowLogisticsModal(false);
-        setSelectedPoForLogistics(null);
-        fetchData();
-        setTimeout(() => setToast(''), 5000);
-      } else {
-        const message = res.message || 'Error moving PO to Logistics.';
-        setSubmitting(false);
-        setTimeout(() => alert(message), 0);
-      }
-    } catch (err) {
-      console.error('Error sending order to logistics:', err);
-      setSubmitting(false);
-      setTimeout(() => alert('Failed to send order to logistics.'), 0);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const checkpoints = ['In Manufacturing', 'Ready to Pick Up', 'Picked Up'];
+  const checkpoints = ['In Manufacturing', 'Ready to Pick Up'];
 
   const getLinkedOrder = (po) => {
     const salesOrderId = po.salesOrderId?._id || po.salesOrderId;
-    return pendingOrders.find(order => String(order._id) === String(salesOrderId));
+    return pendingOrders.find(order => String(order._id) === String(salesOrderId)) ||
+      (po.salesOrderId && typeof po.salesOrderId === 'object' ? po.salesOrderId : null);
   };
 
   const getCheckpointIndex = (po) => {
     const status = getLinkedOrder(po)?.supplierPO?.status || po.status || '';
-    if (['Picked Up', 'In Transit', 'In Logistics', 'Shipped', 'Partially Received', 'Fully Received', 'Completed'].includes(status)) return 2;
+    if (['Ready to Pick Up', 'Picked Up', 'In Transit', 'In Logistics', 'Shipped', 'Partially Received', 'Fully Received', 'Completed'].includes(status)) return 1;
     return checkpoints.indexOf(status);
   };
 
   const hasMovedToLogistics = (po) => {
     const order = getLinkedOrder(po);
     const status = order?.supplierPO?.status || po.status;
-    return order?.currentDepartment === 'Logistics' || order?.workflowStatus === 'In Logistics' || ['In Logistics', 'In Transit', 'Shipped', 'Partially Received', 'Fully Received', 'Completed'].includes(status);
+    return order?.currentDepartment === 'Logistics' || order?.workflowStatus === 'In Logistics' || ['Picked Up', 'In Logistics', 'In Transit', 'Shipped', 'Partially Received', 'Fully Received', 'Completed'].includes(status);
+  };
+
+  const getPurchaserStatus = (po) => {
+    if (hasMovedToLogistics(po)) return 'Ready to Pick Up / Sent to Logistics';
+    const status = getLinkedOrder(po)?.supplierPO?.status || po.status;
+    return ['Issued', 'In Manufacturing', 'Ready to Pick Up'].includes(status) ? status : 'Issued';
   };
 
   const renderCheckpoints = (po) => {
@@ -458,22 +374,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
         return;
       }
 
-      if (checkpoint === 'Picked Up') {
-        const handoffRes = await apiRequest(`/api/purchaser/orders/${order._id}/send-to-logistics`, 'POST', {
-          supplierName: po.supplierName,
-          supplierCountry: po.supplierCountry,
-          supplierPoNumber: po.poNumber,
-          salesOrderId: order._id,
-          salesOrderNumber: po.salesOrderNumber,
-          portOfLoading: po.portOfLoading,
-          portOfDischarge: po.portOfDischarge
-        });
-        if (!handoffRes.success) {
-          alert(`${checkpointRes.message} Logistics handoff did not complete: ${handoffRes.message || 'Please retry.'}`);
-          await fetchData();
-          return;
-        }
-        setToast(`Picked Up completed for PO #${po.poNumber}. The order moved to Logistics.`);
+      if (checkpoint === 'Ready to Pick Up') {
+        setToast(`Ready to Pick Up completed for PO #${po.poNumber}. The order was sent to Logistics.`);
       } else {
         setToast(`${checkpoint} completed for PO #${po.poNumber}. The order remains with Global Purchasing.`);
       }
@@ -545,7 +447,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                 <Globe size={20} color="#2563EB" /> Blue File Sales Orders — Pending International PO ({ordersAwaitingPO.length})
               </h3>
               <p style={{ margin: '2px 0 0 0', fontSize: '0.84rem', color: '#64748B' }}>
-                Customer advance verified &amp; approved by Finance. Issue the International Supplier PO, then complete the three procurement checkpoints.
+                Customer advance verified &amp; approved by Finance. Issue the International Supplier PO, then complete the two procurement checkpoints.
               </p>
             </div>
             <span style={{ padding: '4px 12px', background: '#EFF6FF', color: '#2563EB', borderRadius: '20px', fontSize: '0.78rem', fontWeight: 800 }}>
@@ -617,7 +519,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Supplier Name</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Country</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Linked Order</th>
-              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Loading Port</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Total (PKR)</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Procurement Checkpoints</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Status</th>
@@ -626,7 +527,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading Global POs...</td></tr>
+              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading Global POs...</td></tr>
             ) : filtered.length > 0 ? (
               filtered.map((po) => (
                 <tr key={po._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -634,7 +535,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                   <td style={{ padding: '14px 20px', fontWeight: 600, color: '#0F172A' }}>{po.supplierName}</td>
                   <td style={{ padding: '14px 20px', color: '#64748B' }}>{po.supplierCountry || 'Overseas'}</td>
                   <td style={{ padding: '14px 20px', color: '#475569' }}>{po.salesOrderNumber || (po.salesOrderId ? 'Linked SO' : '—')}</td>
-                  <td style={{ padding: '14px 20px', color: '#64748B' }}>{po.portOfLoading || '-'}</td>
                   <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
                     {formatPKR(po.totalAmount || po.totalAmountPKR || 0)}
                   </td>
@@ -646,13 +546,11 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                       fontSize: '0.78rem',
                       fontWeight: 700,
                       backgroundColor:
-                        po.status === 'In Logistics' || po.status === 'In Transit' ? '#EFF6FF' :
-                        po.status === 'Completed' || po.status === 'Fully Received' ? '#DEF7EC' : '#FEF3C7',
+                        hasMovedToLogistics(po) ? '#EFF6FF' : '#FEF3C7',
                       color:
-                        po.status === 'In Logistics' || po.status === 'In Transit' ? '#1D4ED8' :
-                        po.status === 'Completed' || po.status === 'Fully Received' ? '#03543F' : '#92400E'
+                        hasMovedToLogistics(po) ? '#1D4ED8' : '#92400E'
                     }}>
-                      {po.status || 'Issued'}
+                      {getPurchaserStatus(po)}
                     </span>
                   </td>
                   <td style={{ padding: '14px 20px', textAlign: 'center' }}>
@@ -664,56 +562,39 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                       >
                         <Eye size={13} /> View
                       </button>
-                      <button
-                        onClick={() => handleOpenEditModal(po)}
-                        style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, color: '#1D4ED8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        title="Direct Edit PO (No CEO permission required)"
-                      >
-                        <Edit3 size={13} /> Edit
-                      </button>
-                      <button
-                        onClick={() => handleDeletePO(po)}
-                        disabled={deletingId === po._id}
-                        style={{ background: '#FEF2F2', border: '1px solid #FECACA', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, color: '#DC2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        title="Direct Delete PO"
-                      >
-                        <Trash2 size={13} /> {deletingId === po._id ? '...' : 'Delete'}
-                      </button>
-                      {hasMovedToLogistics(po) ? (
+                      {!hasMovedToLogistics(po) && (
+                        <>
+                          <button
+                            onClick={() => handleOpenEditModal(po)}
+                            style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, color: '#1D4ED8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            title="Direct Edit PO (No CEO permission required)"
+                          >
+                            <Edit3 size={13} /> Edit
+                          </button>
+                          <button
+                            onClick={() => handleDeletePO(po)}
+                            disabled={deletingId === po._id}
+                            style={{ background: '#FEF2F2', border: '1px solid #FECACA', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, color: '#DC2626', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                            title="Direct Delete PO"
+                          >
+                            <Trash2 size={13} /> {deletingId === po._id ? '...' : 'Delete'}
+                          </button>
+                        </>
+                      )}
+                      {hasMovedToLogistics(po) && (
                         <span
                           style={{ background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                           title="This order has already been handed to Logistics"
                         >
                           <Plane size={13} /> Sent to Logistics
                         </span>
-                      ) : (
-                        <button
-                          onClick={() => handleOpenLogisticsModal(po)}
-                          disabled={getCheckpointIndex(po) < 2}
-                          style={{
-                            background: getCheckpointIndex(po) < 2 ? '#F1F5F9' : '#0284C7',
-                            color: getCheckpointIndex(po) < 2 ? '#475569' : '#FFF',
-                            border: getCheckpointIndex(po) < 2 ? '1px solid #CBD5E1' : 'none',
-                            padding: '6px 10px',
-                            borderRadius: '6px',
-                            fontSize: '0.78rem',
-                            fontWeight: 700,
-                            cursor: getCheckpointIndex(po) < 2 ? 'not-allowed' : 'pointer',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '4px'
-                          }}
-                          title={getCheckpointIndex(po) < 2 ? 'Complete Picked Up before Logistics handoff' : 'Send PO details to Logistics Department'}
-                        >
-                          <Plane size={13} /> Move to Logistics
-                        </button>
                       )}
                     </div>
                   </td>
                 </tr>
               ))
             ) : (
-              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Global POs found.</td></tr>
+              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Global POs found.</td></tr>
             )}
           </tbody>
         </table>
@@ -782,27 +663,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Port of Loading (Departure)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Shanghai Port"
-                    value={formData.portOfLoading}
-                    onChange={(e) => setFormData(prev => ({ ...prev, portOfLoading: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Port of Discharge (Destination)</label>
-                  <input
-                    type="text"
-                    value={formData.portOfDischarge}
-                    onChange={(e) => setFormData(prev => ({ ...prev, portOfDischarge: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Payment / LC Terms</label>
                   <input
                     type="text"
@@ -813,15 +673,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Estimated Arrival (ETA)</label>
-                  <input
-                    type="date"
-                    value={formData.estimatedArrival}
-                    onChange={(e) => setFormData(prev => ({ ...prev, estimatedArrival: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
               </div>
 
               {/* Items */}
@@ -925,35 +776,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                   />
                 </div>
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Port of Loading</label>
-                  <input
-                    type="text"
-                    value={editFormData.portOfLoading}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, portOfLoading: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Port of Discharge</label>
-                  <input
-                    type="text"
-                    value={editFormData.portOfDischarge}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, portOfDischarge: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Estimated Arrival (ETA)</label>
-                  <input
-                    type="date"
-                    value={editFormData.estimatedArrival}
-                    onChange={(e) => setEditFormData(prev => ({ ...prev, estimatedArrival: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Payment / LC Terms</label>
@@ -1056,10 +878,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem', marginBottom: '16px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px' }}>
               <div><strong>Status:</strong> {viewPo.status || 'Issued'}</div>
               <div><strong>Linked Sales Order:</strong> {viewPo.salesOrderNumber || 'None'}</div>
-              <div><strong>Loading Port:</strong> {viewPo.portOfLoading || 'N/A'}</div>
-              <div><strong>Discharge Port:</strong> {viewPo.portOfDischarge || 'Karachi Port'}</div>
               <div><strong>Payment Terms:</strong> {viewPo.paymentTerms || 'LC at Sight'}</div>
-              <div><strong>ETA:</strong> {viewPo.expectedDeliveryDate ? new Date(viewPo.expectedDeliveryDate).toLocaleDateString() : (viewPo.estimatedArrival ? new Date(viewPo.estimatedArrival).toLocaleDateString() : 'N/A')}</div>
               {viewPo.notes && <div style={{ gridColumn: 'span 2' }}><strong>Notes:</strong> {viewPo.notes}</div>}
             </div>
 
@@ -1106,157 +925,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
         </div>
       )}
 
-      {/* Move to Logistics Modal */}
-      {showLogisticsModal && selectedPoForLogistics && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F0F9FF' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0369A1', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Plane size={20} color="#0284C7" /> Handover PO to Logistics Department
-                </h3>
-                <span style={{ fontSize: '0.85rem', color: '#64748B' }}>
-                  PO #{selectedPoForLogistics.poNumber} — {selectedPoForLogistics.supplierName} ({selectedPoForLogistics.supplierCountry || 'Overseas'})
-                </span>
-              </div>
-              <button onClick={() => setShowLogisticsModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
-            </div>
-
-            <form onSubmit={handleSubmitLogistics} style={{ padding: '24px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                    Shipping Method <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <select
-                    value={logisticsForm.shippingMethod}
-                    onChange={(e) => setLogisticsForm(prev => ({ ...prev, shippingMethod: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  >
-                    <option value="Air Freight">Air Freight</option>
-                    <option value="Sea Freight">Sea Freight</option>
-                    <option value="Courier (DHL/FedEx)">Courier (DHL/FedEx)</option>
-                    <option value="Land Freight">Land Freight</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                    Carrier / Airline / Shipping Line <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Emirates SkyCargo, DHL, Maersk"
-                    value={logisticsForm.carrier}
-                    onChange={(e) => setLogisticsForm(prev => ({ ...prev, carrier: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                    Flight # / Vessel # <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. EK-601 / Voyage MS-102"
-                    value={logisticsForm.flightNumber}
-                    onChange={(e) => setLogisticsForm(prev => ({ ...prev, flightNumber: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
-                    Tracking # / AWB / B/L Number <span style={{ color: '#EF4444' }}>*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. 176-12345678 or MSCU1234567"
-                    value={logisticsForm.trackingNumber}
-                    onChange={(e) => setLogisticsForm(prev => ({ ...prev, trackingNumber: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Port of Loading (Departure)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Shanghai Pudong (PVG)"
-                    value={logisticsForm.portOfLoading}
-                    onChange={(e) => setLogisticsForm(prev => ({ ...prev, portOfLoading: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Port of Discharge (Destination)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Karachi Airport (KHI) / Karachi Port"
-                    value={logisticsForm.portOfDischarge}
-                    onChange={(e) => setLogisticsForm(prev => ({ ...prev, portOfDischarge: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>ETD (Estimated Departure)</label>
-                  <input
-                    type="date"
-                    value={logisticsForm.etd}
-                    onChange={(e) => setLogisticsForm(prev => ({ ...prev, etd: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>ETA (Estimated Arrival)</label>
-                  <input
-                    type="date"
-                    value={logisticsForm.eta}
-                    onChange={(e) => setLogisticsForm(prev => ({ ...prev, eta: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '20px' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Logistics Handling Notes / Remarks</label>
-                <textarea
-                  rows="3"
-                  placeholder="Additional instructions for clearance, warehouse storage or customs broker..."
-                  value={logisticsForm.notes}
-                  onChange={(e) => setLogisticsForm(prev => ({ ...prev, notes: e.target.value }))}
-                  style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', resize: 'vertical' }}
-                />
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-                <button
-                  type="button"
-                  onClick={() => setShowLogisticsModal(false)}
-                  style={{ backgroundColor: '#F1F5F9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 20px', fontWeight: 600, cursor: 'pointer' }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  style={{ backgroundColor: '#0284C7', color: '#FFF', border: 'none', borderRadius: '8px', padding: '10px 24px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px' }}
-                >
-                  <Send size={16} />
-                  {submitting ? 'Transferring...' : 'Dispatch to Logistics'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
