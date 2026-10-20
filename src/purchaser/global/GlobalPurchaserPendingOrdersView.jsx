@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Globe, Plus, Search, Eye, RefreshCw, CheckCircle2, ShoppingBag, X, ArrowRight } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
+import IssuingCompanySelect from '../../components/IssuingCompanySelect';
+import { DOCUMENT_TYPES, companyName, defaultCompanyCode } from '../../utils/companies';
 
 export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNavigateTab }) {
   const [orders, setOrders] = useState([]);
@@ -12,6 +14,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
   const [toast, setToast] = useState('');
 
   const [formData, setFormData] = useState({
+    issuingCompanyCode: '',
     supplierId: '',
     supplierName: '',
     supplierCountry: 'China',
@@ -65,6 +68,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
         }];
 
     setFormData({
+      issuingCompanyCode: defaultCompanyCode(order, DOCUMENT_TYPES.GLOBAL_PO),
       supplierId: '',
       supplierName: '',
       supplierCountry: 'China',
@@ -132,6 +136,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
     setSubmitting(true);
     try {
       const payload = {
+        issuingCompanyCode: formData.issuingCompanyCode,
         salesOrderId: selectedOrder._id,
         poNumber: formData.poNumber,
         poType: 'Global',
@@ -245,6 +250,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                 <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Sales Order #</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Customer</th>
+                  <th style={{ padding: '12px 16px', fontWeight: 700 }}>Issuing Company</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Product Scope / Items</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Order Amount</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700 }}>Current Status</th>
@@ -263,6 +269,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                       {ord.clientName}
                       {ord.clientPhone && <span style={{ display: 'block', fontSize: '0.75rem', color: '#64748B' }}>{ord.clientPhone}</span>}
                     </td>
+                    <td style={{ padding: '14px 16px', color: '#475569' }}>{companyName(ord)}</td>
                     <td style={{ padding: '14px 16px', color: '#475569', maxWidth: '280px' }}>
                       {ord.items && ord.items.length > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
@@ -336,6 +343,18 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
 
             <form onSubmit={handleSubmitPO}>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px', marginBottom: '18px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Issuing Company *</label>
+                  <IssuingCompanySelect
+                    documentType={DOCUMENT_TYPES.GLOBAL_PO}
+                    value={formData.issuingCompanyCode}
+                    onChange={value => setFormData(prev => ({ ...prev, issuingCompanyCode: value }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                  />
+                  {!formData.issuingCompanyCode && selectedOrder.issuingCompany?.legalName && (
+                    <div style={{ marginTop: '5px', fontSize: '0.75rem', color: '#B45309' }}>{selectedOrder.issuingCompany.legalName} is not allowed for a Global PO; select another company.</div>
+                  )}
+                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                     PO Number *

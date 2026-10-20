@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Globe, Plus, Search, Trash2, X, Eye, Edit3, Plane, CheckCircle2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
+import IssuingCompanySelect from '../../components/IssuingCompanySelect';
+import { DOCUMENT_TYPES, companyName, defaultCompanyCode } from '../../utils/companies';
 
 export default function GlobalPurchaserPOsView({ searchQuery }) {
   const [pos, setPos] = useState([]);
@@ -20,6 +22,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
 
   // Create PO Form State
   const [formData, setFormData] = useState({
+    issuingCompanyCode: '',
     supplierId: '',
     supplierName: '',
     supplierCountry: 'China',
@@ -63,6 +66,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
   const handleOpenLinkedGlobalPO = (order) => {
     setLinkedOrder(order);
     setFormData({
+      issuingCompanyCode: defaultCompanyCode(order, DOCUMENT_TYPES.GLOBAL_PO),
       supplierId: '',
       supplierName: '',
       supplierCountry: 'China',
@@ -135,6 +139,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     setSubmitting(true);
     try {
       const payload = {
+        issuingCompanyCode: formData.issuingCompanyCode,
         poNumber: formData.poNumber,
         subType: 'Global',
         poType: 'Global',
@@ -156,6 +161,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
           setShowModal(false);
           setLinkedOrder(null);
           setFormData({
+            issuingCompanyCode: '',
             supplierId: '',
             supplierName: '',
             supplierCountry: 'China',
@@ -175,6 +181,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
           setToast(`Global PO #${formData.poNumber} created successfully!`);
           setShowModal(false);
           setFormData({
+            issuingCompanyCode: '',
             supplierId: '',
             supplierName: '',
             supplierCountry: 'China',
@@ -411,6 +418,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
         <button
           onClick={() => {
             setLinkedOrder(null);
+            setFormData(prev => ({ ...prev, issuingCompanyCode: '' }));
             setShowModal(true);
           }}
           style={{
@@ -461,6 +469,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                 <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
                   <th style={{ padding: '10px 14px' }}>Order Ref #</th>
                   <th style={{ padding: '10px 14px' }}>Customer</th>
+                  <th style={{ padding: '10px 14px' }}>Issuing Company</th>
                   <th style={{ padding: '10px 14px' }}>Import Scope / Machine</th>
                   <th style={{ padding: '10px 14px' }}>Order Value</th>
                   <th style={{ padding: '10px 14px', textAlign: 'center' }}>Action</th>
@@ -474,6 +483,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                       <span style={{ display: 'block', fontSize: '0.72rem', color: '#2563EB', fontWeight: 700 }}>Blue File</span>
                     </td>
                     <td style={{ padding: '12px 14px', fontWeight: 600 }}>{ord.clientName}</td>
+                    <td style={{ padding: '12px 14px', color: '#475569' }}>{companyName(ord)}</td>
                     <td style={{ padding: '12px 14px', color: '#475569', maxWidth: '240px' }}>
                       {ord.items && ord.items.length > 0
                         ? ord.items.map(i => `${i.description || i.productName || 'Item'} (${i.quantity || 1})`).join(', ')
@@ -517,6 +527,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>PO Number</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Supplier Name</th>
+              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Issuing Company</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Country</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Linked Order</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Total (PKR)</th>
@@ -527,12 +538,13 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading Global POs...</td></tr>
+              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading Global POs...</td></tr>
             ) : filtered.length > 0 ? (
               filtered.map((po) => (
                 <tr key={po._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
                   <td style={{ padding: '14px 20px', fontWeight: 700, color: '#2563EB' }}>{po.poNumber}</td>
                   <td style={{ padding: '14px 20px', fontWeight: 600, color: '#0F172A' }}>{po.supplierName}</td>
+                  <td style={{ padding: '14px 20px', color: '#475569' }}>{companyName(po)}</td>
                   <td style={{ padding: '14px 20px', color: '#64748B' }}>{po.supplierCountry || 'Overseas'}</td>
                   <td style={{ padding: '14px 20px', color: '#475569' }}>{po.salesOrderNumber || (po.salesOrderId ? 'Linked SO' : '—')}</td>
                   <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
@@ -594,7 +606,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                 </tr>
               ))
             ) : (
-              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Global POs found.</td></tr>
+              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Global POs found.</td></tr>
             )}
           </tbody>
         </table>
@@ -613,6 +625,18 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
 
             <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Issuing Company *</label>
+                  <IssuingCompanySelect
+                    documentType={DOCUMENT_TYPES.GLOBAL_PO}
+                    value={formData.issuingCompanyCode}
+                    onChange={value => setFormData(prev => ({ ...prev, issuingCompanyCode: value }))}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
+                  />
+                  {!formData.issuingCompanyCode && linkedOrder?.issuingCompany?.legalName && (
+                    <div style={{ marginTop: '5px', fontSize: '0.75rem', color: '#B45309' }}>{linkedOrder.issuingCompany.legalName} is not allowed for a Global PO; select another company.</div>
+                  )}
+                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Select Overseas Supplier</label>
                   <select
@@ -877,6 +901,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem', marginBottom: '16px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px' }}>
               <div><strong>Status:</strong> {viewPo.status || 'Issued'}</div>
+              <div><strong>Issuing Company:</strong> {companyName(viewPo)}</div>
               <div><strong>Linked Sales Order:</strong> {viewPo.salesOrderNumber || 'None'}</div>
               <div><strong>Payment Terms:</strong> {viewPo.paymentTerms || 'LC at Sight'}</div>
               {viewPo.notes && <div style={{ gridColumn: 'span 2' }}><strong>Notes:</strong> {viewPo.notes}</div>}

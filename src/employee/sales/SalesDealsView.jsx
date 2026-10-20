@@ -27,6 +27,8 @@ import {
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
+import IssuingCompanySelect from '../../components/IssuingCompanySelect';
+import { DOCUMENT_TYPES } from '../../utils/companies';
 
 const STAGE_COLORS = {
   Prospecting: { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
@@ -81,6 +83,9 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const [deleting, setDeleting] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [creatingQuote, setCreatingQuote] = useState(false);
+  const [quoteTarget, setQuoteTarget] = useState(null);
+  const [quoteCompanyCode, setQuoteCompanyCode] = useState('');
+  const [quoteFileType, setQuoteFileType] = useState('');
 
   const fetchDeals = useCallback(async () => {
     setLoading(true);
@@ -162,10 +167,12 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
     }
   };
 
-  const handleCreateQuotation = async (deal) => {
+  const handleCreateQuotation = async (deal, issuingCompanyCode, fileType) => {
     setCreatingQuote(true);
     try {
       const quotePayload = {
+        issuingCompanyCode,
+        fileType,
         clientName: deal.clientName,
         dealId: deal._id,
         productSummary: deal.requirements || deal.title || 'Quotation per Customer Requirement',
@@ -186,6 +193,9 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
         });
         setFeedback(`Quotation "${data.data.orderReference || data.data.quotationNumber || 'created'}" generated from Deal!`);
         setViewDeal(null);
+        setQuoteTarget(null);
+        setQuoteCompanyCode('');
+        setQuoteFileType('');
         fetchDeals();
         setTimeout(() => setFeedback(''), 4000);
       } else {
@@ -576,7 +586,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                             <div className="deals-card-actions" onClick={e => e.stopPropagation()}>
                               <button
                                 className="deals-btn-quote"
-                                onClick={() => handleCreateQuotation(d)}
+                                onClick={() => { setQuoteTarget(d); setQuoteCompanyCode(''); setQuoteFileType(''); }}
                                 disabled={creatingQuote}
                                 title="Generate Quotation from this Deal"
                               >
@@ -658,7 +668,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                         <button
                           className="sv-btn-action-icon"
                           style={{ color: '#2563EB', background: '#EFF6FF' }}
-                          onClick={() => handleCreateQuotation(d)}
+                          onClick={() => { setQuoteTarget(d); setQuoteCompanyCode(''); setQuoteFileType(''); }}
                           disabled={creatingQuote}
                           title="Generate Quotation"
                         >
@@ -744,7 +754,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                 <button
                   className="sv-btn-primary"
                   style={{ background: '#2563EB' }}
-                  onClick={() => handleCreateQuotation(viewDeal)}
+                  onClick={() => { setQuoteTarget(viewDeal); setQuoteCompanyCode(''); setQuoteFileType(''); }}
                   disabled={creatingQuote}
                 >
                   <ArrowRight size={14} /> {creatingQuote ? 'Generating...' : 'Create Quotation'}
@@ -844,6 +854,48 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                 <button type="button" className="sv-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="sv-btn-primary" disabled={saving}>
                   <Save size={15} /> {saving ? 'Saving...' : 'Save Deal'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ISSUING COMPANY FOR DEAL-TO-QUOTATION */}
+      {quoteTarget && (
+        <div className="sv-modal-overlay" onClick={() => setQuoteTarget(null)}>
+          <div className="sv-modal" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+            <div className="sv-modal-header">
+              <h3 style={{ margin: 0 }}>Create Quotation</h3>
+              <button onClick={() => setQuoteTarget(null)}><X size={18} /></button>
+            </div>
+            <form
+              className="sv-form"
+              onSubmit={event => {
+                event.preventDefault();
+                handleCreateQuotation(quoteTarget, quoteCompanyCode, quoteFileType);
+              }}
+            >
+              <div className="sv-field">
+                <label>Issuing Company *</label>
+                <IssuingCompanySelect
+                  documentType={DOCUMENT_TYPES.QUOTATION}
+                  value={quoteCompanyCode}
+                  onChange={setQuoteCompanyCode}
+                />
+              </div>
+              <div className="sv-field">
+                <label>File Type *</label>
+                <select value={quoteFileType} onChange={event => setQuoteFileType(event.target.value)} required>
+                  <option value="">Select file type</option>
+                  <option value="Green">Green File (Local)</option>
+                  <option value="Blue">Blue File (Imported)</option>
+                </select>
+              </div>
+              <div className="sv-modal-actions">
+                <button type="button" className="sv-btn-cancel" onClick={() => setQuoteTarget(null)}>Cancel</button>
+                <button type="submit" className="sv-btn-primary" disabled={creatingQuote}>
+                  <ArrowRight size={14} /> {creatingQuote ? 'Generating...' : 'Create Quotation'}
                 </button>
               </div>
             </form>

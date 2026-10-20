@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { FileText, Plus, Search, Trash2, X, Eye, Edit3, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
+import IssuingCompanySelect from '../../components/IssuingCompanySelect';
+import { DOCUMENT_TYPES, companyName } from '../../utils/companies';
 
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
@@ -19,6 +21,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
 
   // Create PO Form State
   const [formData, setFormData] = useState({
+    issuingCompanyCode: '',
     supplierId: '',
     supplierName: '',
     supplierContact: '',
@@ -137,6 +140,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
         supplierId = supplierRes.data?.data?._id || supplierRes.data?.supplier?._id;
       }
       const payload = {
+        issuingCompanyCode: formData.issuingCompanyCode,
         subType: 'Local',
         poType: 'Local',
         supplierId,
@@ -157,6 +161,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
         setToast(`Local Supplier PO #${assignedPoNumber} created successfully and added to list!`);
         setShowModal(false);
         setFormData({
+          issuingCompanyCode: '',
           supplierId: '',
           supplierName: '',
           supplierContact: '',
@@ -352,6 +357,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
             <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>PO Number</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Supplier</th>
+              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Issuing Company</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Linked Order</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Issued Date</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Items Count</th>
@@ -362,7 +368,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading POs...</td></tr>
+              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading POs...</td></tr>
             ) : filtered.length > 0 ? (
               filtered.map((po) => (
                 <tr key={po._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -371,6 +377,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                     {po.supplierName}
                     {po.supplierContact && <span style={{ display: 'block', fontSize: '0.74rem', color: '#64748B' }}>{po.supplierContact}</span>}
                   </td>
+                  <td style={{ padding: '14px 20px', color: '#475569' }}>{companyName(po)}</td>
                   <td style={{ padding: '14px 20px', color: '#475569' }}>
                     {po.salesOrderNumber || (po.salesOrderId ? 'Linked SO' : '—')}
                   </td>
@@ -426,7 +433,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                 </tr>
               ))
             ) : (
-              <tr><td colSpan={8} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Local POs found.</td></tr>
+              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Local POs found.</td></tr>
             )}
           </tbody>
         </table>
@@ -442,6 +449,15 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
             </div>
 
             <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
+              <div style={{ marginBottom: '14px' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Issuing Company *</label>
+                <IssuingCompanySelect
+                  documentType={DOCUMENT_TYPES.LOCAL_PO}
+                  value={formData.issuingCompanyCode}
+                  onChange={value => setFormData(prev => ({ ...prev, issuingCompanyCode: value }))}
+                  style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1' }}
+                />
+              </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Select Supplier</label>
@@ -726,6 +742,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.85rem', marginBottom: '16px', backgroundColor: '#F8FAFC', padding: '12px', borderRadius: '8px' }}>
               <div><strong>Status:</strong> {viewPo.status || 'Issued'}</div>
+              <div><strong>Issuing Company:</strong> {companyName(viewPo)}</div>
               <div><strong>Linked Sales Order:</strong> {viewPo.salesOrderNumber || 'None'}</div>
               <div><strong>Issued Date:</strong> {viewPo.createdAt ? new Date(viewPo.createdAt).toLocaleDateString() : '-'}</div>
               <div><strong>Expected Delivery:</strong> {viewPo.expectedDeliveryDate ? new Date(viewPo.expectedDeliveryDate).toLocaleDateString() : 'N/A'}</div>

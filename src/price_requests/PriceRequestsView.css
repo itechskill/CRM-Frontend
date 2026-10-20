@@ -42,6 +42,7 @@
 .pr-modal.wide { width: min(820px, 96vw); }
 .pr-modal-title { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; }
 .pr-modal-title > button { border: 0; background: transparent; color: #64748b; cursor: pointer; }
+.pr-request-context { margin: -6px 0 16px; padding: 10px 12px; border: 1px solid #dbeafe; border-radius: 9px; background: #eff6ff; color: #1e3a8a; display: flex; flex-direction: column; gap: 3px; font-size: .82rem; }
 .pr-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 .pr-form-grid.one { grid-template-columns: 1fr; }
 .pr-form-grid label, .pr-rule-form label { display: flex; flex-direction: column; gap: 6px; color: #334155; font-size: .82rem; font-weight: 700; }

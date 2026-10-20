@@ -26,6 +26,7 @@ import {
   Save
 } from 'lucide-react';
 import './SalesManagerDashboard.css';
+import { companyName } from '../utils/companies';
 
 const DELIVERY_COLORS = {
   'Pending': '#F59E0B',
@@ -801,6 +802,7 @@ export default function SalesManagerOrdersView() {
               <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 700 }}>
                 <th style={{ padding: '14px 16px' }}>Order Ref #</th>
                 <th style={{ padding: '14px 16px' }}>Customer / Client</th>
+                <th style={{ padding: '14px 16px' }}>Issuing Company</th>
                 <th style={{ padding: '14px 16px' }}>Sales Member</th>
                 <th style={{ padding: '14px 16px' }}>File / Color</th>
                 <th style={{ padding: '14px 16px' }}>Order Date</th>
@@ -815,7 +817,7 @@ export default function SalesManagerOrdersView() {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={11} style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
+                  <td colSpan={12} style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
                     No sales orders match the selected filters.
                   </td>
                 </tr>
@@ -842,6 +844,7 @@ export default function SalesManagerOrdersView() {
                           </div>
                         )}
                       </td>
+                      <td style={{ padding: '12px 16px', color: '#475569' }}>{companyName(o)}</td>
                       <td style={{ padding: '12px 16px', color: '#475569' }}>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', fontWeight: 600, color: '#1E293B' }}>
                           <span style={{
@@ -1001,6 +1004,7 @@ export default function SalesManagerOrdersView() {
                 <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.85rem' }}>
                   Customer: {viewOrder.clientName || viewOrder.customerName}
                 </p>
+                <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.85rem' }}>Issuing Company: {companyName(viewOrder)}</p>
               </div>
               <button onClick={() => setViewOrder(null)} style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#94A3B8' }}>✕</button>
             </div>

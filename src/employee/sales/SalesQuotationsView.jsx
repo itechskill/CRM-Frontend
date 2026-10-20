@@ -36,6 +36,7 @@ import {
 import './SalesViews.css';
 import { CUSTOMER_PO_ATTACHMENT_ACCEPT, readCustomerPOAttachment } from './customerPOAttachment';
 import { getUser } from '../../utils/authStorage';
+import { DOCUMENT_TYPES, companiesFor, companyName } from '../../utils/companies';
 
 const STATUS_COLORS = {
   Quotation: '#2563EB',
@@ -50,6 +51,7 @@ const STATUS_COLORS = {
 };
 
 const EMPTY_FORM = {
+  issuingCompanyCode: '',
   orderReference: '',
   clientName: '',
   salePerson: '',
@@ -393,6 +395,7 @@ export default function SalesQuotationsView() {
     const calculatedNet = Math.max(0, Math.round((calculatedSubtotal - discountVal + taxVal) * 100) / 100);
 
     setForm({
+      issuingCompanyCode: q.issuingCompany?.code || '',
       orderReference: q.orderReference || q.quotationNumber || '',
       clientName: q.clientName || q.customerName || '',
       salePerson: q.salePerson || q.createdBy?.fullName || '',
@@ -538,6 +541,10 @@ export default function SalesQuotationsView() {
       setError('Select Green or Blue so the file number can be assigned.');
       return;
     }
+    if (!editQ && !form.issuingCompanyCode) {
+      setError('Select an issuing company.');
+      return;
+    }
 
     // Validate items
     const invalidItem = form.items.find(it => !it.description || !it.description.trim());
@@ -582,6 +589,7 @@ export default function SalesQuotationsView() {
         creationDate: form.creationDate || null,
         validUntil: form.validUntil || null
       };
+      if (editQ && !payload.issuingCompanyCode) delete payload.issuingCompanyCode;
       const url = editQ ? `/api/sales-employee/quotations/${editQ._id}` : '/api/sales-employee/quotations';
       const method = editQ ? 'PATCH' : 'POST';
       const { response, data } = await apiRequest(url, { method, body: JSON.stringify(payload) });
@@ -659,6 +667,7 @@ export default function SalesQuotationsView() {
     const customer = q.clientName || q.customerName || 'Client Organization';
     const salePerson = q.salePerson || q.createdBy?.fullName || 'Sales Executive';
     const fileNo = q.fileNo || '—';
+    const issuerName = q.issuingCompany?.legalName || 'FORTLINE CRM';
     const creationDate = q.creationDate ? new Date(q.creationDate).toLocaleDateString('en-GB') : (q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB') : '—');
     const validUntil = q.validUntil ? new Date(q.validUntil).toLocaleDateString('en-GB') : '—';
     
@@ -684,7 +693,7 @@ export default function SalesQuotationsView() {
     doc.setFontSize(20);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text('FORTLINE CRM', 14, 18);
+    doc.text(issuerName, 14, 18, { maxWidth: 100 });
 
     doc.setFontSize(9.5);
     doc.setFont('helvetica', 'normal');
@@ -1232,6 +1241,7 @@ export default function SalesQuotationsView() {
                       <Building size={16} color="#475569" />
                       <span>{q.clientName || q.customerName}</span>
                     </h4>
+                    <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '3px' }}>Issuer: {companyName(q)}</div>
                   </div>
 
                   {/* Meta tags: Sales Person & File # */}
@@ -1381,6 +1391,7 @@ export default function SalesQuotationsView() {
                 <th>Order Ref #</th>
                 <th>Creation Date</th>
                 <th>Customer Name</th>
+                <th>Issuing Company</th>
                 <th>Sale Person</th>
                 <th>File-No#</th>
                 <th>Product Summary & Items</th>
@@ -1406,6 +1417,7 @@ export default function SalesQuotationsView() {
                     <td style={{ fontWeight: 600, color: '#1E293B' }}>
                       {q.clientName || q.customerName}
                     </td>
+                    <td style={{ color: '#475569' }}>{companyName(q)}</td>
                     <td style={{ color: '#475569' }}>
                       {q.salePerson || q.createdBy?.fullName || 'Sales Executive'}
                     </td>
@@ -1528,6 +1540,7 @@ export default function SalesQuotationsView() {
                 <div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>{viewQ.clientName || viewQ.customerName}</div>
                   <div style={{ fontSize: '0.85rem', color: '#64748B' }}>Sale Person: {viewQ.salePerson || viewQ.createdBy?.fullName || 'Sales Rep'}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#64748B' }}>Issuing Company: {companyName(viewQ)}</div>
                 </div>
                 <span className="sv-badge" style={{ background: (STATUS_COLORS[viewQ.status] || '#64748B') + '22', color: STATUS_COLORS[viewQ.status] || '#64748B', border: `1px solid ${(STATUS_COLORS[viewQ.status] || '#64748B')}44`, fontSize: '0.85rem', padding: '4px 12px' }}>
                   {viewQ.status}
@@ -1692,6 +1705,19 @@ export default function SalesQuotationsView() {
                   <div className="sv-field">
                     <label>Customer Name *</label>
                     <input value={form.clientName} onChange={e => setForm(p => ({ ...p, clientName: e.target.value }))} placeholder="Company / Customer name" required />
+                  </div>
+                  <div className="sv-field">
+                    <label>Issuing Company {!editQ && '*'}</label>
+                    <select
+                      value={form.issuingCompanyCode}
+                      onChange={e => setForm(p => ({ ...p, issuingCompanyCode: e.target.value }))}
+                      required={!editQ}
+                    >
+                      <option value="">{editQ ? 'No company (legacy quotation)' : 'Select issuing company'}</option>
+                      {companiesFor(DOCUMENT_TYPES.QUOTATION).map(company => (
+                        <option key={company.code} value={company.code}>{company.legalName}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
 

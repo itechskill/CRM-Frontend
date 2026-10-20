@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
+import { companyName } from '../utils/companies';
 import {
   Plane,
   Search,
@@ -220,6 +221,7 @@ export default function LogisticsIncomingOrdersView({ onNavigateTab }) {
                   <th style={{ padding: '12px 16px', minWidth: '130px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Sales Order</th>
                   <th style={{ padding: '12px 16px', minWidth: '140px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Sales Person</th>
                   <th style={{ padding: '12px 16px', minWidth: '140px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Customer</th>
+                  <th style={{ padding: '12px 16px', minWidth: '160px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Issuing Company</th>
                   <th style={{ padding: '12px 16px', minWidth: '150px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Int'l Supplier</th>
                   <th style={{ padding: '12px 16px', minWidth: '130px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Supplier PO #</th>
                   <th style={{ padding: '12px 16px', minWidth: '120px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Order Amount</th>
@@ -245,6 +247,7 @@ export default function LogisticsIncomingOrdersView({ onNavigateTab }) {
                     <td style={{ padding: '14px 16px', color: '#334155' }}>
                       {ord.clientName || '—'}
                     </td>
+                    <td style={{ padding: '14px 16px', color: '#475569' }}>{companyName(ord)}</td>
                     <td style={{ padding: '14px 16px' }}>
                       <div style={{ fontWeight: 600, color: '#1E293B' }}>
                         {ord.supplierPO?.supplierName || 'International Supplier'}
@@ -310,6 +313,7 @@ export default function LogisticsIncomingOrdersView({ onNavigateTab }) {
                   <p className="logistics-modal-sub">
                     Sales Order: {createModalOrder.orderNumber || createModalOrder.orderReference} &bull; Sales Person: {createModalOrder.salePerson || createModalOrder.salesPerson?.fullName}
                   </p>
+                  <p className="logistics-modal-sub">Issuing Company: {companyName(createModalOrder)}</p>
                 </div>
               </div>
               <button
