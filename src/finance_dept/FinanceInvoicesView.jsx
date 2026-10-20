@@ -31,6 +31,7 @@ import {
   ShoppingCart
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
+import { companyName } from '../utils/companies';
 
 const toMoneyCents = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100);
 const fromMoneyCents = (cents) => cents / 100;
@@ -867,6 +868,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                   <tr>
                     <th>Order # / Ref</th>
                     <th>Customer</th>
+                    <th>Issuing Company</th>
                     <th>Sales Person</th>
                     <th>Incoming Order Value</th>
                     <th>Customer Overdue Balance</th>
@@ -897,6 +899,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                           <div style={{ fontWeight: 700, color: '#0F172A' }}>{o.clientName}</div>
                           {o.clientPhone && <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{o.clientPhone}</div>}
                         </td>
+                        <td style={{ color: '#475569' }}>{companyName(o)}</td>
                         <td style={{ color: '#2563EB', fontWeight: 600 }}>
                           {o.salePerson || o.salesPerson?.fullName || 'Sales Person'}
                         </td>
@@ -1094,6 +1097,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                 <tr>
                   <th>Sales Order #</th>
                   <th>Customer</th>
+                  <th>Issuing Company</th>
                   <th>Sales Person</th>
                   <th>Amount (PKR)</th>
                   <th>File Type</th>
@@ -1118,6 +1122,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                       <div style={{ fontWeight: 600 }}>{o.clientName}</div>
                       {o.clientPhone && <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{o.clientPhone}</div>}
                     </td>
+                    <td style={{ color: '#475569' }}>{companyName(o)}</td>
                     <td style={{ color: '#2563EB', fontWeight: 600 }}>
                       {o.salePerson || o.salesPerson?.fullName || 'Sales Person'}
                     </td>
@@ -1739,6 +1744,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                     <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
                       Order: {approvalModalOrder.orderReference || approvalModalOrder.orderNumber} &bull; Sales Person: {approvalModalOrder.salePerson || approvalModalOrder.salesPerson?.fullName || 'Sales Team'}
                     </span>
+                    <span style={{ display: 'block', fontSize: '0.78rem', color: '#64748B' }}>Issuing Company: {companyName(approvalModalOrder)}</span>
                   </div>
                 </div>
                 <button
@@ -2077,6 +2083,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                   <span style={{ fontSize: '0.78rem', color: '#64748B' }}>
                     Sales Person: {viewOrder.salePerson || viewOrder.salesPerson?.fullName || 'Sales Team'} &bull; Customer: {viewOrder.clientName}
                   </span>
+                  <span style={{ display: 'block', fontSize: '0.78rem', color: '#64748B' }}>Issuing Company: {companyName(viewOrder)}</span>
                 </div>
               </div>
               <button

@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import './SalesViews.css';
 import { hasCustomerPOAttachment } from './customerPOAttachment';
+import { companyName } from '../../utils/companies';
 
 const DELIVERY_COLORS = {
   'Not Delivered': '#64748B',
@@ -873,6 +874,7 @@ export default function SalesOrdersView() {
                 <th>Order Reference</th>
                 <th>Creation Date</th>
                 <th>Customer / Client</th>
+                <th>Issuing Company</th>
                 <th>Sale Person</th>
                 <th>File-No#</th>
                 <th>Customer PO</th>
@@ -887,7 +889,7 @@ export default function SalesOrdersView() {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
+                  <td colSpan={13} style={{ textAlign: 'center', padding: '36px', color: '#94A3B8' }}>
                     No sales orders match your selected filters.
                   </td>
                 </tr>
@@ -911,6 +913,7 @@ export default function SalesOrdersView() {
                     </td>
                     <td style={{ whiteSpace: 'nowrap', color: '#64748B' }}>{dateStr}</td>
                     <td style={{ fontWeight: 600 }}>{o.clientName}</td>
+                    <td style={{ color: '#475569' }}>{companyName(o)}</td>
                     <td style={{ color: '#475569' }}>{o.salePerson || '—'}</td>
                     <td>
                       {(() => {
@@ -1130,6 +1133,7 @@ export default function SalesOrdersView() {
                 <div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>{viewOrder.clientName || viewOrder.customerName}</div>
                   <div style={{ fontSize: '0.85rem', color: '#64748B' }}>Sale Person: {viewOrder.salePerson || viewOrder.createdBy?.fullName || 'Sales Rep'}</div>
+                  <div style={{ fontSize: '0.85rem', color: '#64748B' }}>Issuing Company: {companyName(viewOrder)}</div>
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#059669' }}>

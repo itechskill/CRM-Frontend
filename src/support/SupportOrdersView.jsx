@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import './SupportPortal.css';
+import { companyName } from '../utils/companies';
 
 export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
   const [orders, setOrders] = useState([]);
@@ -295,6 +296,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
               <tr>
                 <th>Order Ref #</th>
                 <th>Client / Customer</th>
+                <th>Issuing Company</th>
                 <th>Sales Person</th>
                 <th style={{ textAlign: 'center' }}>File Type</th>
                 <th>Product Summary</th>
@@ -314,6 +316,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                     <div style={{ fontWeight: 600, color: '#1E293B' }}>{o.clientName}</div>
                     {o.clientPhone && <div style={{ fontSize: '0.75rem', color: '#64748B' }}>{o.clientPhone}</div>}
                   </td>
+                  <td>{companyName(o)}</td>
                   <td style={{ fontWeight: 600, color: '#2563EB' }}>
                     {getSalesPersonName(o)}
                   </td>
@@ -466,6 +469,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                   <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 700 }}>Customer Details</div>
                   <div style={{ fontSize: '0.95rem', fontWeight: 800, color: '#0F172A', marginTop: '2px' }}>{viewOrder.clientName}</div>
+                  <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>Issuing Company: {companyName(viewOrder)}</div>
                   {viewOrder.clientPhone && <div style={{ fontSize: '0.8rem', color: '#64748B', marginTop: '2px' }}>📞 {viewOrder.clientPhone}</div>}
                   {viewOrder.clientEmail && <div style={{ fontSize: '0.8rem', color: '#64748B' }}>✉️ {viewOrder.clientEmail}</div>}
                   {viewOrder.clientAddress && <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '4px' }}>📍 {viewOrder.clientAddress}</div>}

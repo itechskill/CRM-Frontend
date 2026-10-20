@@ -15,6 +15,8 @@ import {
   Layers
 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
+import IssuingCompanySelect from '../../components/IssuingCompanySelect';
+import { DOCUMENT_TYPES, companyName, defaultCompanyCode } from '../../utils/companies';
 
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
@@ -34,6 +36,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [submittingPo, setSubmittingPo] = useState(false);
   const [poForm, setPoForm] = useState({
+    issuingCompanyCode: '',
     supplierId: '',
     supplierName: '',
     poNumber: '',
@@ -117,6 +120,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
     }]);
 
     setPoForm({
+      issuingCompanyCode: defaultCompanyCode(order, DOCUMENT_TYPES.LOCAL_PO),
       supplierId: '',
       supplierName: '',
       poNumber: '',
@@ -197,6 +201,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
         supplierId = supplierRes.data?.data?._id || supplierRes.data?.supplier?._id;
       }
       const payload = {
+        issuingCompanyCode: poForm.issuingCompanyCode,
         supplierId,
         poType: 'Local',
         expectedDeliveryDate: poForm.expectedDeliveryDate || undefined,
@@ -334,6 +339,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
             <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569' }}>
               <th style={{ padding: '12px 18px', fontWeight: 600 }}>Order Ref #</th>
               <th style={{ padding: '12px 18px', fontWeight: 600 }}>Customer</th>
+              <th style={{ padding: '12px 18px', fontWeight: 600 }}>Issuing Company</th>
               <th style={{ padding: '12px 18px', fontWeight: 600 }}>Ordered Items / Scope</th>
               <th style={{ padding: '12px 18px', fontWeight: 600 }}>Order Value</th>
               <th style={{ padding: '12px 18px', fontWeight: 600 }}>Inventory Status</th>
@@ -342,7 +348,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} style={{ padding: '36px', textAlign: 'center', color: '#64748B' }}>Loading pending local orders...</td></tr>
+              <tr><td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: '#64748B' }}>Loading pending local orders...</td></tr>
             ) : filteredOrders.length > 0 ? (
               filteredOrders.map(order => {
                 const isChecking = checkingId === order._id;
@@ -357,6 +363,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                       {order.clientName}
                       <span style={{ display: 'block', fontSize: '0.74rem', color: '#64748B' }}>{order.clientPhone || ''}</span>
                     </td>
+                    <td style={{ padding: '14px 18px', color: '#475569' }}>{companyName(order)}</td>
                     <td style={{ padding: '14px 18px', color: '#475569', maxWidth: '260px' }}>
                       {order.items && order.items.length > 0 ? (
                         order.items.map((it, idx) => (
@@ -463,7 +470,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                 );
               })
             ) : (
-              <tr><td colSpan={6} style={{ padding: '36px', textAlign: 'center', color: '#94A3B8' }}>No pending Green File sales orders found.</td></tr>
+              <tr><td colSpan={7} style={{ padding: '36px', textAlign: 'center', color: '#94A3B8' }}>No pending Green File sales orders found.</td></tr>
             )}
           </tbody>
         </table>
@@ -707,6 +714,18 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
 
             <form onSubmit={handleSubmitPo} style={{ padding: '24px' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Issuing Company *</label>
+                  <IssuingCompanySelect
+                    documentType={DOCUMENT_TYPES.LOCAL_PO}
+                    value={poForm.issuingCompanyCode}
+                    onChange={value => setPoForm(prev => ({ ...prev, issuingCompanyCode: value }))}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
+                  />
+                  {!poForm.issuingCompanyCode && selectedOrder.issuingCompany?.legalName && (
+                    <div style={{ marginTop: '5px', fontSize: '0.75rem', color: '#B45309' }}>{selectedOrder.issuingCompany.legalName} is not allowed for a Local PO; select another company.</div>
+                  )}
+                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                     Select Local Supplier <span style={{ color: '#EF4444' }}>*</span>

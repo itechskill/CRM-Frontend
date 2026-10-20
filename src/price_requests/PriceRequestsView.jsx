@@ -22,12 +22,15 @@ const CATEGORIES = ['Servers', 'Desktops/Laptops/Workstations', 'Networking', 'S
 const BRANDS = ['Cisco', 'VMware', 'Lenovo', 'Microsoft', 'BDCOM', 'Fortinet', 'Dell', 'HP', 'Other'];
 const ROUTABLE_BRANDS = BRANDS.filter((brand) => brand !== 'Other');
 const CURRENCIES = ['PKR', 'USD', 'EUR', 'AED', 'GBP'];
+const LEAD_SOURCES = ['WhatsApp', 'Email', 'Phone call', 'Other'];
 
 const EMPTY_REQUEST = {
   category: 'Other',
   brandChoice: 'Other',
   otherBrand: '',
   isBulk: false,
+  leadSource: '',
+  leadSourceNote: '',
   customerName: '',
   reference: '',
   partNumber: '',
@@ -146,7 +149,7 @@ export default function PriceRequestsView() {
       if (filters.status && item.status !== filters.status) return false;
       if (filters.category && item.category !== filters.category) return false;
       if (!term) return true;
-      return [item.requestNumber, item.requirement, item.brand, item.customerName, item.reference, item.partNumber,
+      return [item.requestNumber, item.requirement, item.brand, item.leadSource, item.leadSourceNote, item.customerName, item.reference, item.partNumber,
         item.requestedBy?.fullName, item.requestedFrom?.fullName, item.quotationId?.quotationNumber, item.quotationId?.orderReference]
         .some((value) => String(value || '').toLowerCase().includes(term));
     });
@@ -400,10 +403,11 @@ export default function PriceRequestsView() {
       <div className="pr-table-wrap">
         {loading ? <div className="pr-empty">Loading price requests…</div> : filteredRequests.length === 0 ? <div className="pr-empty">No price requests match the filters.</div> : (
           <table className="pr-table">
-            <thead><tr><th>Request</th><th>Requirement</th><th>Requested by / from</th><th>Status</th><th>Price / reason</th><th>Quotation</th><th>Actions</th></tr></thead>
+            <thead><tr><th>Lead source</th><th>Request</th><th>Requirement</th><th>Requested by / from</th><th>Status</th><th>Price / reason</th><th>Quotation</th><th>Actions</th></tr></thead>
             <tbody>
               {filteredRequests.map((item) => (
                 <tr key={item._id}>
+                  <td><strong>{item.leadSource || '-'}</strong>{item.leadSource === 'Other' && item.leadSourceNote && <small>{item.leadSourceNote}</small>}</td>
                   <td><strong>{item.requestNumber}</strong><small>{item.brand} · {item.category}{item.isBulk ? ' · Bulk' : ''}</small><small>{item.customerName || item.reference || 'No customer/reference'}</small></td>
                   <td><strong>{item.requirement}</strong><small>Qty {item.quantity}{item.partNumber ? ` · ${item.partNumber}` : ''}</small>{item.status === 'Pending' && <span className="pr-note">{item.pendingNote || 'Awaiting response'} · {item.pendingAgeDays} day(s)</span>}</td>
                   <td><span>{item.requestedBy?.fullName || 'Unknown'}</span><small>from {item.requestedFrom?.fullName || 'Unknown'}</small></td>
@@ -428,6 +432,8 @@ export default function PriceRequestsView() {
           <div className="pr-modal-title"><div><h3>New price request</h3><p>The suggested recipient can always be changed.</p></div><button onClick={() => setShowCreate(false)}><X /></button></div>
           {error && <div className="pr-alert error">{error}</div>}
           <form onSubmit={submitCreate} className="pr-form-grid">
+            <label>Lead source<select required value={requestForm.leadSource} onChange={(e) => setRequestForm((f) => ({ ...f, leadSource: e.target.value, leadSourceNote: e.target.value === 'Other' ? f.leadSourceNote : '' }))}><option value="">Select a lead source</option>{LEAD_SOURCES.map((value) => <option key={value}>{value}</option>)}</select></label>
+            {requestForm.leadSource === 'Other' && <label>Lead source note (optional)<input maxLength="200" value={requestForm.leadSourceNote} onChange={(e) => setRequestForm((f) => ({ ...f, leadSourceNote: e.target.value }))} placeholder="Add a short note" /></label>}
             <label>Category<select value={requestForm.category} onChange={(e) => { setRecipientTouched(false); setRequestForm((f) => ({ ...f, category: e.target.value })); }}>{CATEGORIES.map((value) => <option key={value}>{value}</option>)}</select></label>
             <label>Brand<select value={requestForm.brandChoice} onChange={(e) => { setRecipientTouched(false); setRequestForm((f) => ({ ...f, brandChoice: e.target.value })); }}>{BRANDS.map((value) => <option key={value}>{value}</option>)}</select></label>
             {requestForm.brandChoice === 'Other' && <label>Other brand<input required value={requestForm.otherBrand} onChange={(e) => setRequestForm((f) => ({ ...f, otherBrand: e.target.value }))} /></label>}
@@ -448,6 +454,7 @@ export default function PriceRequestsView() {
         <div className="pr-modal-backdrop"><div className="pr-modal">
           <div className="pr-modal-title"><div><h3>{action.type === 'price' ? 'Provide price' : action.type === 'decline' ? 'Cannot price' : action.type === 'reassign' ? 'Reassign request' : action.type === 'note' ? 'Update pending note' : 'Link quotation'}</h3><p>{action.item.requestNumber} · {action.item.requirement}</p></div><button onClick={() => setAction(null)}><X /></button></div>
           {error && <div className="pr-alert error">{error}</div>}
+          <div className="pr-request-context"><strong>Lead source: {action.item.leadSource || '-'}</strong>{action.item.leadSource === 'Other' && action.item.leadSourceNote && <span>{action.item.leadSourceNote}</span>}</div>
           <form onSubmit={submitAction} className="pr-form-grid one">
             {action.type === 'price' && <>
               <label>Unit price<input required type="number" min="0" step="0.01" value={actionForm.unitPrice} onChange={(e) => setActionForm((f) => ({ ...f, unitPrice: e.target.value }))} /></label>

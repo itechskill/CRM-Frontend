@@ -12,6 +12,8 @@ import {
   Trash2
 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
+import IssuingCompanySelect from '../../components/IssuingCompanySelect';
+import { DOCUMENT_TYPES, companyName, defaultCompanyCode } from '../../utils/companies';
 
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
@@ -61,6 +63,7 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
   const [showProcurementModal, setShowProcurementModal] = useState(false);
   const [procureOrder, setProcureOrder] = useState(null);
   const [procureForm, setProcureForm] = useState({
+    issuingCompanyCode: '',
     supplierId: '',
     supplierName: '',
     poNumber: '',
@@ -115,6 +118,7 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
   const handleOpenProcurement = (order) => {
     setProcureOrder(order);
     setProcureForm({
+      issuingCompanyCode: defaultCompanyCode(order, DOCUMENT_TYPES.LOCAL_PO),
       supplierId: '',
       supplierName: '',
       poNumber: '',
@@ -157,6 +161,7 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
       })) : [{ productName: procureOrder.productSummary || 'Local Item', quantity: 1, unitPricePKR: Number(procureOrder.netAmount || 0), totalPricePKR: Number(procureOrder.netAmount || 0) }];
       const subtotal = roundMoney(procurementItems.reduce((sum, item) => sum + Number(item.totalPricePKR || 0), 0));
       const payload = {
+        issuingCompanyCode: procureForm.issuingCompanyCode,
         supplierId,
         grnNumber: procureForm.grnNumber,
         paymentTerms: procureForm.paymentTerms,
@@ -374,6 +379,7 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
                 <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', textAlign: 'left' }}>
                   <th style={{ padding: '10px 14px' }}>Order Ref #</th>
                   <th style={{ padding: '10px 14px' }}>Customer</th>
+                  <th style={{ padding: '10px 14px' }}>Issuing Company</th>
                   <th style={{ padding: '10px 14px' }}>Product Summary / Scope</th>
                   <th style={{ padding: '10px 14px' }}>Order Value</th>
                   <th style={{ padding: '10px 14px', textAlign: 'center' }}>Handoff Actions</th>
@@ -387,6 +393,7 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
                       <span style={{ display: 'block', fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>Green File</span>
                     </td>
                     <td style={{ padding: '12px 14px', fontWeight: 600 }}>{ord.clientName}</td>
+                    <td style={{ padding: '12px 14px', color: '#475569' }}>{companyName(ord)}</td>
                     <td style={{ padding: '12px 14px', color: '#475569', maxWidth: '240px' }}>
                       {ord.items && ord.items.length > 0
                         ? ord.items.map(i => `${i.description || 'Item'} (${i.quantity || 1})`).join(', ')
@@ -821,6 +828,18 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Issuing Company *</label>
+                  <IssuingCompanySelect
+                    documentType={DOCUMENT_TYPES.LOCAL_PO}
+                    value={procureForm.issuingCompanyCode}
+                    onChange={value => setProcureForm(prev => ({ ...prev, issuingCompanyCode: value }))}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem' }}
+                  />
+                  {!procureForm.issuingCompanyCode && procureOrder.issuingCompany?.legalName && (
+                    <div style={{ marginTop: '5px', fontSize: '0.75rem', color: '#B45309' }}>{procureOrder.issuingCompany.legalName} is not allowed for a Local PO; select another company.</div>
+                  )}
+                </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Local Supplier *</label>
                   <select
