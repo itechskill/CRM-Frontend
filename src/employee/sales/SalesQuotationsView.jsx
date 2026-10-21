@@ -37,6 +37,7 @@ import './SalesViews.css';
 import { CUSTOMER_PO_ATTACHMENT_ACCEPT, readCustomerPOAttachment } from './customerPOAttachment';
 import { getUser } from '../../utils/authStorage';
 import { DOCUMENT_TYPES, companiesFor, companyName } from '../../utils/companies';
+import { drawSalesDocumentHeader, getClientContactLayout, getDocumentIssuerName } from '../../utils/salesDocumentPdfLayout';
 
 const STATUS_COLORS = {
   Quotation: '#2563EB',
@@ -667,7 +668,7 @@ export default function SalesQuotationsView() {
     const customer = q.clientName || q.customerName || 'Client Organization';
     const salePerson = q.salePerson || q.createdBy?.fullName || 'Sales Executive';
     const fileNo = q.fileNo || '—';
-    const issuerName = q.issuingCompany?.legalName || 'FORTLINE CRM';
+    const issuerName = getDocumentIssuerName(q);
     const creationDate = q.creationDate ? new Date(q.creationDate).toLocaleDateString('en-GB') : (q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB') : '—');
     const validUntil = q.validUntil ? new Date(q.validUntil).toLocaleDateString('en-GB') : '—';
     
@@ -683,38 +684,25 @@ export default function SalesQuotationsView() {
       : (taxableBase > 0 && tax > 0 ? Math.round(((tax / taxableBase) * 100) * 10) / 10 : (subtotal > 0 && tax > 0 ? Math.round(((tax / subtotal) * 100) * 10) / 10 : 0));
     const completeAmount = Number(q.netAmount !== undefined ? q.netAmount : (subtotal - discount + tax));
 
-    // Primary Brand Header Banner
-    doc.setFillColor(30, 58, 138); // Deep Navy #1E3A8A
-    doc.rect(0, 0, 210, 36, 'F');
-    doc.setFillColor(37, 99, 235); // Blue Accent
-    doc.rect(0, 36, 210, 2, 'F');
+    drawSalesDocumentHeader(doc, {
+      issuerName,
+      subtitle: 'Commercial Sales & Operations Portal - Commercial Quotation Proposal',
+      documentTitle: 'FORMAL QUOTATION',
+      referenceLabel: 'Quote Ref',
+      reference: orderRef
+    });
 
-    // Brand Title (Left)
-    doc.setFontSize(20);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.text(issuerName, 14, 18, { maxWidth: 100 });
-
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(226, 232, 240);
-    doc.text('Commercial Sales & Operations Portal • Commercial Quotation Proposal', 14, 26);
-
-    // Document Title (Right)
-    doc.setFontSize(15);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
-    doc.text('FORMAL QUOTATION', 196, 18, { align: 'right' });
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(191, 219, 254);
-    doc.text(`Quote Ref: ${orderRef}`, 196, 26, { align: 'right' });
+    const contactLayout = getClientContactLayout(doc, {
+      customer,
+      email: q.clientEmail || '—',
+      phone: q.clientPhone || '—',
+      address: q.clientAddress || 'Direct Commercial Quotation'
+    });
 
     // Customer & Quotation Details Box
     doc.setFillColor(248, 250, 252);
     doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(14, 44, 182, 38, 2.5, 2.5, 'FD');
+    doc.roundedRect(14, 44, 182, contactLayout.boxBottom - 44, 2.5, 2.5, 'FD');
 
     // Left Column: Customer Details
     doc.setTextColor(30, 58, 138);
@@ -725,17 +713,17 @@ export default function SalesQuotationsView() {
     doc.setFontSize(9.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text(customer, 19, 58, { maxWidth: 85 });
+    doc.text(contactLayout.customerLines, 19, contactLayout.customerY);
 
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(71, 85, 105);
-    doc.text(`Email: ${q.clientEmail || '—'}   •   Phone: ${q.clientPhone || '—'}`, 19, 64, { maxWidth: 85 });
-    doc.text(`Address: ${q.clientAddress || 'Direct Commercial Quotation'}`, 19, 70, { maxWidth: 85 });
+    doc.text(contactLayout.contactLines, 19, contactLayout.contactY);
+    doc.text(contactLayout.addressLines, 19, contactLayout.addressY);
 
     // Vertical Divider Line
     doc.setDrawColor(226, 232, 240);
-    doc.line(108, 48, 108, 78);
+    doc.line(108, 48, 108, contactLayout.boxBottom - 4);
 
     // Right Column: Quotation Meta
     doc.setTextColor(30, 58, 138);
@@ -790,7 +778,7 @@ export default function SalesQuotationsView() {
     });
 
     autoTable(doc, {
-      startY: 88,
+      startY: contactLayout.boxBottom + 6,
       margin: { left: 14, right: 14 },
       tableWidth: 182,
       head: [['#', 'Item Description / Scope of Supply', 'Qty', 'Unit Price (PKR)', 'Total Amount (PKR)']],
