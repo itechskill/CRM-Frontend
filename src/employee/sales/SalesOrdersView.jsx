@@ -39,6 +39,7 @@ import {
 import './SalesViews.css';
 import { hasCustomerPOAttachment } from './customerPOAttachment';
 import { companyName } from '../../utils/companies';
+import { drawSalesDocumentHeader, getDocumentIssuerName } from '../../utils/salesDocumentPdfLayout';
 
 const DELIVERY_COLORS = {
   'Not Delivered': '#64748B',
@@ -482,35 +483,16 @@ export default function SalesOrdersView() {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const ref = order.orderReference || order.orderNumber || 'SO-DOC';
     const customer = order.clientName || order.customerName || 'Valued Customer';
+    const issuerName = getDocumentIssuerName(order);
     const dateStr = order.orderDate ? new Date(order.orderDate).toLocaleDateString('en-GB') : (order.createdAt ? new Date(order.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB'));
 
-    // Primary Brand Header Banner
-    doc.setFillColor(30, 58, 138); // Deep Navy #1E3A8A
-    doc.rect(0, 0, 210, 36, 'F');
-    doc.setFillColor(37, 99, 235); // Blue Accent
-    doc.rect(0, 36, 210, 2, 'F');
-
-    // Brand Title (Left)
-    doc.setFontSize(20);
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.text('FORTLINE CRM', 14, 18);
-
-    doc.setFontSize(9.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(226, 232, 240);
-    doc.text('Commercial Sales & Operations Portal • Sales Order Confirmation', 14, 26);
-
-    // Document Title (Right)
-    doc.setFontSize(15);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(255, 255, 255);
-    doc.text('SALES ORDER', 196, 18, { align: 'right' });
-
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(191, 219, 254);
-    doc.text(`Order Ref: ${ref}`, 196, 26, { align: 'right' });
+    drawSalesDocumentHeader(doc, {
+      issuerName,
+      subtitle: 'Commercial Sales & Operations Portal - Sales Order Confirmation',
+      documentTitle: 'SALES ORDER',
+      referenceLabel: 'Order Ref',
+      reference: ref
+    });
 
     // Customer & Order Details Box
     doc.setFillColor(248, 250, 252);
