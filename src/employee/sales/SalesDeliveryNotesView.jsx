@@ -181,11 +181,10 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, onClearIniti
   // ── 3. OPEN CREATE / EDIT MODAL ──
   const handleOpenCreateModal = () => {
     setEditNote(null);
-    const defaultNumber = `DN-${String(notes.length + 1).padStart(5, '0')}`;
     const today = new Date().toISOString().split('T')[0];
     setForm({
       ...EMPTY_FORM,
-      deliveryNumber: defaultNumber,
+      deliveryNumber: '',
       trackingNumber: `TRK-${Math.floor(10000 + Math.random() * 90000)}`,
       status: 'Ready',
       scheduledDate: today,
@@ -310,7 +309,7 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, onClearIniti
         });
         if (response.ok && data.success) {
           const saved = data.data || payload;
-          setFeedback(`Delivery Note ${form.deliveryNumber} created & inventory deducted!`);
+          setFeedback(`Delivery Note ${saved.deliveryNumber || saved.deliveryNoteNumber} created successfully!`);
           setShowModal(false);
           fetchNotes();
           fetchOrdersForDelivery();
@@ -1046,12 +1045,12 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, onClearIniti
                 <div className="sv-form-section-title"><Building size={14} color="#2563EB" /> Customer &amp; Delivery Destination</div>
                 <div className="sv-grid-2">
                   <div className="sv-field">
-                    <label>Delivery Note # *</label>
+                    <label>Delivery Note #</label>
                     <input
                       value={form.deliveryNumber}
-                      onChange={e => setForm(p => ({ ...p, deliveryNumber: e.target.value }))}
-                      placeholder="e.g. DN-00371 or WH/OUT/00371"
-                      required
+                      placeholder={editNote ? '' : 'Assigned on create'}
+                      readOnly
+                      style={{ background: '#F1F5F9' }}
                     />
                   </div>
                   <div className="sv-field">

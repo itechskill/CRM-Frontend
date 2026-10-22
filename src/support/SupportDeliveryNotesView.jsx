@@ -17,7 +17,6 @@ import {
   Boxes,
   FileSpreadsheet,
   Package,
-  Trash2,
   Calendar,
   User,
   MapPin,
@@ -144,7 +143,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
     setSelectedStockCheck(null);
     setForm({
       ...EMPTY_FORM,
-      deliveryNumber: `DN-${Math.floor(10000 + Math.random() * 90000)}`,
+      deliveryNumber: '',
       trackingNumber: `TRK-${Math.floor(10000 + Math.random() * 90000)}`
     });
     setShowModal(true);
@@ -192,29 +191,6 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
     } catch {
       setSelectedStockCheck({ isFullyInStock: false, message: 'Stock check failed.' });
     }
-  };
-
-  const handleAddItem = () => {
-    setForm(prev => ({
-      ...prev,
-      items: [...prev.items, { ...EMPTY_ITEM }]
-    }));
-  };
-
-  const handleRemoveItem = (index) => {
-    if (form.items.length <= 1) return;
-    setForm(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
-    }));
-  };
-
-  const handleUpdateItem = (index, field, value) => {
-    setForm(prev => {
-      const updated = [...prev.items];
-      updated[index] = { ...updated[index], [field]: value };
-      return { ...prev, items: updated };
-    });
   };
 
   const handleSaveDN = async (e) => {
@@ -758,7 +734,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
       {/* CREATE DN MODAL FOLLOWING SALES REP PATTERN */}
       {showModal && (
         <div className="sv-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="sv-modal" style={{ maxWidth: '780px', maxHeight: '92vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
+          <div className="sv-modal support-dn-create-modal" style={{ maxWidth: '1180px', width: '96vw', maxHeight: '92vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="sv-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <div style={{ width: '38px', height: '38px', borderRadius: '10px', background: '#F0F9FF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0284C7' }}>
@@ -845,25 +821,53 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                 </div>
               )}
 
+              <div className="support-dn-create-columns">
+                <div className="sv-form-section support-dn-products-panel">
+                  <div className="sv-form-section-title"><Package size={14} color="#7C3AED" /> Sales Order Product Details</div>
+                  <div style={{ display: 'grid', gap: '8px', marginBottom: '12px', fontSize: '0.82rem' }}>
+                    <div><strong>Sales Order:</strong> {form.salesOrderNumber || 'Select an order above'}</div>
+                    <div><strong>Customer:</strong> {form.clientName || '—'}</div>
+                  </div>
+                  <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: '0.8rem' }}>
+                      <thead style={{ background: '#F8FAFC', color: '#475569' }}>
+                        <tr><th style={{ padding: '8px', textAlign: 'left' }}>Product</th><th style={{ padding: '8px', width: '72px' }}>Qty</th><th style={{ padding: '8px', width: '64px' }}>Unit</th></tr>
+                      </thead>
+                      <tbody>
+                        {form.items.map((item, index) => (
+                          <tr key={`${item.product}-${index}`} style={{ borderTop: '1px solid #E2E8F0' }}>
+                            <td style={{ padding: '9px 8px', wordBreak: 'break-word' }}>{item.product || item.description || '—'}</td>
+                            <td style={{ padding: '9px 8px', textAlign: 'center', fontWeight: 700 }}>{item.quantity}</td>
+                            <td style={{ padding: '9px 8px', textAlign: 'center' }}>{item.unit || 'pcs'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div style={{ marginTop: '10px', fontSize: '0.76rem', color: '#64748B' }}>Products and quantities come from the selected Sales Order and cannot be edited here.</div>
+                </div>
+
+                <div className="support-dn-form-panel">
               {/* Section 1: Customer & Delivery Address */}
               <div className="sv-form-section">
                 <div className="sv-form-section-title"><Building size={14} color="#2563EB" /> Customer &amp; Delivery Destination</div>
                 <div className="sv-grid-2">
                   <div className="sv-field">
-                    <label>Delivery Note # *</label>
+                    <label>Delivery Note #</label>
                     <input
                       value={form.deliveryNumber}
-                      onChange={e => setForm(p => ({ ...p, deliveryNumber: e.target.value }))}
-                      placeholder="e.g. DN-00371 or WH/OUT/00371"
-                      required
+                      placeholder="Assigned on create"
+                      readOnly
+                      style={{ background: '#F1F5F9' }}
                     />
                   </div>
                   <div className="sv-field">
                     <label>Sales Order Number</label>
                     <input
                       value={form.salesOrderNumber}
-                      onChange={e => setForm(p => ({ ...p, salesOrderNumber: e.target.value }))}
-                      placeholder="e.g. S01723"
+                      placeholder="From selected Sales Order"
+                      readOnly
+                      style={{ background: '#F1F5F9' }}
                     />
                   </div>
                 </div>
@@ -980,108 +984,13 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                 </div>
               </div>
 
-              {/* Section 3: Dispatched Items (Auto-Deducts Stock) */}
-              <div className="sv-form-section">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div className="sv-form-section-title" style={{ margin: 0 }}>
-                    <Package size={14} color="#7C3AED" /> Dispatched Products (Stock is deducted when the Delivery Note is confirmed.)
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleAddItem}
-                    style={{
-                      background: '#EFF6FF',
-                      color: '#2563EB',
-                      border: '1px solid #BFDBFE',
-                      borderRadius: '6px',
-                      padding: '4px 10px',
-                      fontSize: '0.78rem',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: '4px'
-                    }}
-                  >
-                    <Plus size={13} /> Add Product
-                  </button>
-                </div>
-
-                <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                    <thead style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#475569', fontWeight: 700 }}>
-                      <tr>
-                        <th style={{ padding: '8px 10px', textAlign: 'left' }}>Product / Description *</th>
-                        <th style={{ padding: '8px 10px', textAlign: 'center', width: '90px' }}>Demand</th>
-                        <th style={{ padding: '8px 10px', textAlign: 'center', width: '90px' }}>Delivering</th>
-                        <th style={{ padding: '8px 10px', textAlign: 'center', width: '70px' }}>Unit</th>
-                        <th style={{ padding: '8px 10px', textAlign: 'center', width: '40px' }}></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {form.items.map((it, idx) => (
-                        <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
-                          <td style={{ padding: '6px 10px' }}>
-                            <input
-                              type="text"
-                              value={it.product}
-                              onChange={e => handleUpdateItem(idx, 'product', e.target.value)}
-                              placeholder="e.g. LAPTOP ThinkBook G8 512GB SSD"
-                              required
-                              style={{ width: '100%', padding: '6px 8px', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '0.82rem' }}
-                            />
-                          </td>
-                          <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                            <input
-                              type="number"
-                              min="1"
-                              value={it.demand}
-                              onChange={e => handleUpdateItem(idx, 'demand', Number(e.target.value))}
-                              style={{ width: '70px', padding: '6px 8px', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '0.82rem', textAlign: 'center' }}
-                            />
-                          </td>
-                          <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                            <input
-                              type="number"
-                              min="1"
-                              value={it.quantity}
-                              onChange={e => handleUpdateItem(idx, 'quantity', Number(e.target.value))}
-                              style={{ width: '70px', padding: '6px 8px', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '0.82rem', textAlign: 'center', fontWeight: 700, color: '#059669' }}
-                            />
-                          </td>
-                          <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                            <input
-                              type="text"
-                              value={it.unit}
-                              onChange={e => handleUpdateItem(idx, 'unit', e.target.value)}
-                              placeholder="pcs"
-                              style={{ width: '55px', padding: '6px 8px', borderRadius: '4px', border: '1px solid #CBD5E1', fontSize: '0.82rem', textAlign: 'center' }}
-                            />
-                          </td>
-                          <td style={{ padding: '6px 10px', textAlign: 'center' }}>
-                            {form.items.length > 1 && (
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveItem(idx)}
-                                style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer', padding: '4px' }}
-                                title="Remove item"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
               <div className="sv-modal-actions">
                 <button type="button" className="sv-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
                 <button type="submit" className="sv-btn-primary" disabled={saving || !selectedStockCheck?.isFullyInStock} title={!selectedStockCheck?.isFullyInStock ? 'Add inventory first using Receive Goods / Inventory IN.' : ''}>
                   <Save size={14} /> {saving ? 'Saving...' : 'Save Delivery Note'}
                 </button>
+              </div>
+                </div>
               </div>
             </form>
           </div>

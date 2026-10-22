@@ -147,6 +147,10 @@ export default function LogisticsShipmentsView({
   const handleUpdateTracking = async (e) => {
     e.preventDefault();
     if (!trackingModalShipment) return;
+    if (trackingModalShipment.receivedInOffice || trackingModalShipment.status === 'Received in Office') {
+      alert('Tracking fields are locked because this shipment has been Received in Office.');
+      return;
+    }
     setSubmittingTracking(true);
     try {
       const { response, data } = await apiRequest(`/api/logistics/shipments/${trackingModalShipment._id}/tracking`, {
@@ -382,6 +386,9 @@ export default function LogisticsShipmentsView({
     }
     return true;
   });
+  const isTrackingLocked = Boolean(
+    trackingModalShipment && (trackingModalShipment.receivedInOffice || trackingModalShipment.status === 'Received in Office')
+  );
 
   return (
     <div className="sv-container">
@@ -749,6 +756,12 @@ export default function LogisticsShipmentsView({
             </div>
 
             <form onSubmit={handleUpdateTracking} className="logistics-modal-body">
+              {isTrackingLocked && (
+                <div style={{ marginBottom: '12px', padding: '10px 12px', borderRadius: '8px', background: '#F1F5F9', color: '#475569', fontSize: '0.84rem', fontWeight: 700 }}>
+                  Tracking is read-only because this shipment has been Received in Office.
+                </div>
+              )}
+              <fieldset disabled={isTrackingLocked} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
               <div className="logistics-form-grid">
                 <div className="logistics-form-group">
                   <label>Flight / Vessel Number</label>
@@ -918,6 +931,7 @@ export default function LogisticsShipmentsView({
                   onChange={(e) => setTrackingForm({ ...trackingForm, trackingNote: e.target.value })}
                 />
               </div>
+              </fieldset>
 
               <div className="logistics-modal-footer">
                 <button
@@ -927,13 +941,11 @@ export default function LogisticsShipmentsView({
                 >
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="sv-btn-primary"
-                  disabled={submittingTracking}
-                >
-                  {submittingTracking ? 'Saving...' : 'Save Tracking Information'}
-                </button>
+                {!isTrackingLocked && (
+                  <button type="submit" className="sv-btn-primary" disabled={submittingTracking}>
+                    {submittingTracking ? 'Saving...' : 'Save Tracking Information'}
+                  </button>
+                )}
               </div>
             </form>
           </div>

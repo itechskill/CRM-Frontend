@@ -26,7 +26,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     supplierId: '',
     supplierName: '',
     supplierCountry: 'China',
-    poNumber: `GPO-${Date.now().toString().slice(-6)}`,
+    vatMode: 'none',
+    vatRate: 0,
     paymentTerms: 'LC at Sight',
     items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
     remarks: ''
@@ -38,6 +39,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     supplierCountry: 'China',
     paymentTerms: 'LC at Sight',
     notes: '',
+    vatMode: 'none',
+    vatRate: 0,
     items: []
   });
 
@@ -70,7 +73,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       supplierId: '',
       supplierName: '',
       supplierCountry: 'China',
-      poNumber: `GPO-${Date.now().toString().slice(-6)}`,
+      vatMode: 'none',
+      vatRate: 0,
       paymentTerms: 'LC at Sight',
       items: order.items && order.items.length > 0 ? order.items.map(i => ({
         productName: i.description || i.productName || 'Imported Machine',
@@ -126,9 +130,13 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     }));
   };
 
-  const calculateTotalPKR = () => {
+  const calculateSubtotalPKR = () => {
     return formData.items.reduce((sum, item) => sum + (Number(item.totalPricePKR) || 0), 0);
   };
+  const calculateVatPKR = () => formData.vatMode === 'vat'
+    ? calculateSubtotalPKR() * (Math.max(0, Number(formData.vatRate) || 0) / 100)
+    : 0;
+  const calculateTotalPKR = () => calculateSubtotalPKR() + calculateVatPKR();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -140,7 +148,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     try {
       const payload = {
         issuingCompanyCode: formData.issuingCompanyCode,
-        poNumber: formData.poNumber,
         subType: 'Global',
         poType: 'Global',
         supplierId: formData.supplierId !== 'NEW' ? formData.supplierId : undefined,
@@ -148,6 +155,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
         supplierCountry: formData.supplierCountry,
         paymentTerms: formData.paymentTerms,
         items: formData.items,
+        subtotal: calculateSubtotalPKR(),
+        vatRate: formData.vatMode === 'vat' ? Math.max(0, Number(formData.vatRate) || 0) : 0,
         totalAmountPKR: calculateTotalPKR(),
         totalAmount: calculateTotalPKR(),
         remarks: formData.remarks,
@@ -157,7 +166,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       if (linkedOrder) {
         const res = await apiRequest(`/api/purchaser/orders/${linkedOrder._id}/global-po`, 'POST', payload);
         if (res.success) {
-          setToast(`Global PO issued for Sales Order ${linkedOrder.orderReference || linkedOrder.orderNumber}. Complete the procurement checkpoints before Logistics handoff.`);
+          setToast(`Global PO #${res.data?.supplierPO?.poNumber || 'assigned'} issued for Sales Order ${linkedOrder.orderReference || linkedOrder.orderNumber}. Complete the procurement checkpoints before Logistics handoff.`);
           setShowModal(false);
           setLinkedOrder(null);
           setFormData({
@@ -165,7 +174,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             supplierId: '',
             supplierName: '',
             supplierCountry: 'China',
-            poNumber: `GPO-${Date.now().toString().slice(-6)}`,
+            vatMode: 'none',
+            vatRate: 0,
             paymentTerms: 'LC at Sight',
             items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
             remarks: ''
@@ -178,14 +188,15 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       } else {
         const res = await apiRequest('/api/purchaser/pos', 'POST', payload);
         if (res.success) {
-          setToast(`Global PO #${formData.poNumber} created successfully!`);
+          setToast(`Global PO #${res.data?.poNumber || res.po?.poNumber || 'assigned'} created successfully!`);
           setShowModal(false);
           setFormData({
             issuingCompanyCode: '',
             supplierId: '',
             supplierName: '',
             supplierCountry: 'China',
-            poNumber: `GPO-${Date.now().toString().slice(-6)}`,
+            vatMode: 'none',
+            vatRate: 0,
             paymentTerms: 'LC at Sight',
             items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
             remarks: ''
@@ -219,6 +230,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       supplierCountry: po.supplierCountry || 'China',
       paymentTerms: po.paymentTerms || 'LC at Sight',
       notes: po.notes || po.remarks || '',
+      vatMode: Number(po.vatRate) > 0 ? 'vat' : 'none',
+      vatRate: Number(po.vatRate) || 0,
       items: poItems
     });
   };
@@ -248,18 +261,23 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       items: prev.items.filter((_, i) => i !== index)
     }));
   };
+  const calculateEditSubtotalPKR = () => editFormData.items.reduce((sum, item) => sum + (Number(item.totalPricePKR) || 0), 0);
+  const calculateEditVatPKR = () => editFormData.vatMode === 'vat'
+    ? calculateEditSubtotalPKR() * (Math.max(0, Number(editFormData.vatRate) || 0) / 100)
+    : 0;
 
   const handleUpdatePO = async (e) => {
     e.preventDefault();
     if (!editPo) return;
     setUpdating(true);
     try {
-      const totalAmount = editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0);
+      const totalAmount = calculateEditSubtotalPKR() + calculateEditVatPKR();
       const payload = {
         supplierName: editFormData.supplierName,
         supplierCountry: editFormData.supplierCountry,
         paymentTerms: editFormData.paymentTerms,
         notes: editFormData.notes,
+        vatRate: editFormData.vatMode === 'vat' ? Math.max(0, Number(editFormData.vatRate) || 0) : 0,
         items: editFormData.items.map(it => ({
           productName: it.productName,
           quantity: Number(it.quantity) || 1,
@@ -418,7 +436,11 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
         <button
           onClick={() => {
             setLinkedOrder(null);
-            setFormData(prev => ({ ...prev, issuingCompanyCode: '' }));
+            setFormData({
+              issuingCompanyCode: '', supplierId: '', supplierName: '', supplierCountry: 'China',
+              vatMode: 'none', vatRate: 0, paymentTerms: 'LC at Sight',
+              items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }], remarks: ''
+            });
             setShowModal(true);
           }}
           style={{
@@ -656,10 +678,10 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Supplier PO Number</label>
                   <input
                     type="text"
-                    value={formData.poNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, poNumber: e.target.value }))}
-                    required
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 700, color: '#2563EB' }}
+                    value=""
+                    placeholder="Assigned on issue"
+                    readOnly
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F1F5F9', fontSize: '0.9rem', fontWeight: 700, color: '#2563EB' }}
                   />
                 </div>
 
@@ -696,6 +718,24 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
                   />
                 </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>VAT</label>
+                  <select value={formData.vatMode}
+                    onChange={(e) => setFormData(prev => ({ ...prev, vatMode: e.target.value, vatRate: e.target.value === 'vat' ? prev.vatRate : 0 }))}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}>
+                    <option value="none">No VAT</option>
+                    <option value="vat">VAT</option>
+                  </select>
+                </div>
+                {formData.vatMode === 'vat' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>VAT Percentage *</label>
+                    <input type="number" min="0" max="100" step="0.01" required value={formData.vatRate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, vatRate: e.target.value }))}
+                      style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }} />
+                  </div>
+                )}
 
               </div>
 
@@ -751,6 +791,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
               {/* Total & Submit */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748B' }}>Subtotal {formatPKR(calculateSubtotalPKR())} · VAT {formatPKR(calculateVatPKR())}</div>
                   Total PO Amount: <span style={{ color: '#2563EB' }}>{formatPKR(calculateTotalPKR())}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -810,6 +851,24 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
                   />
                 </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>VAT</label>
+                  <select value={editFormData.vatMode}
+                    onChange={(e) => setEditFormData(prev => ({ ...prev, vatMode: e.target.value, vatRate: e.target.value === 'vat' ? prev.vatRate : 0 }))}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}>
+                    <option value="none">No VAT</option>
+                    <option value="vat">VAT</option>
+                  </select>
+                </div>
+                {editFormData.vatMode === 'vat' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>VAT Percentage *</label>
+                    <input type="number" min="0" max="100" step="0.01" required value={editFormData.vatRate}
+                      onChange={(e) => setEditFormData(prev => ({ ...prev, vatRate: e.target.value }))}
+                      style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }} />
+                  </div>
+                )}
 
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Notes / Remarks</label>
@@ -873,7 +932,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
-                  Updated Total: <span style={{ color: '#2563EB' }}>{formatPKR(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0))}</span>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748B' }}>Subtotal {formatPKR(calculateEditSubtotalPKR())} · VAT {formatPKR(calculateEditVatPKR())}</div>
+                  Updated Total: <span style={{ color: '#2563EB' }}>{formatPKR(calculateEditSubtotalPKR() + calculateEditVatPKR())}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button type="button" onClick={() => setEditPo(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 18px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
@@ -928,9 +988,10 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
               </tbody>
             </table>
 
-            <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', fontWeight: 800, color: '#0F172A', marginBottom: '20px' }}>
-              <span>Total Global PO Value:</span>
-              <span style={{ color: '#2563EB' }}>{formatPKR(viewPo.totalAmount || viewPo.totalAmountPKR)}</span>
+            <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '12px 16px', borderRadius: '8px', color: '#0F172A', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '4px' }}><span>Subtotal</span><span>{formatPKR(viewPo.subtotal)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '6px' }}><span>VAT ({Number(viewPo.vatRate || 0)}%)</span><span>{formatPKR(viewPo.vatAmount)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}><span>Total Global PO Value:</span><span style={{ color: '#2563EB' }}>{formatPKR(viewPo.totalAmount || viewPo.totalAmountPKR)}</span></div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
