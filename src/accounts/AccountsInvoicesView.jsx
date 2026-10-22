@@ -244,7 +244,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     // Check if there is a delivery note for this sales order
     const matchingDN = deliveryNotes.find(d => {
       const dSoId = d.salesOrder?._id || d.salesOrder;
-      return dSoId === soId || (d.salesOrderNumber && d.salesOrderNumber === (so.orderReference || so.orderNumber));
+      return dSoId && String(dSoId) === String(soId);
     });
 
     if (matchingDN) {

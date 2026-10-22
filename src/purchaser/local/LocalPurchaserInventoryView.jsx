@@ -59,7 +59,7 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
     description: ''
   });
 
-  // Local PO + GRN Modal State for Shortage
+  // Local PO Modal State for Shortage
   const [showProcurementModal, setShowProcurementModal] = useState(false);
   const [procureOrder, setProcureOrder] = useState(null);
   const [procureForm, setProcureForm] = useState({
@@ -67,7 +67,6 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
     supplierId: '',
     supplierName: '',
     poNumber: '',
-    grnNumber: `GRN-${Date.now().toString().slice(-6)}`,
     paymentTerms: 'Net 30',
     gstRate: 0,
     remarks: ''
@@ -122,7 +121,6 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
       supplierId: '',
       supplierName: '',
       poNumber: '',
-      grnNumber: `GRN-${Date.now().toString().slice(-6)}`,
       paymentTerms: 'Net 30',
       gstRate: 0,
       remarks: `Local Procurement for Sales Order ${order.orderReference || order.orderNumber}`
@@ -163,7 +161,6 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
       const payload = {
         issuingCompanyCode: procureForm.issuingCompanyCode,
         supplierId,
-        grnNumber: procureForm.grnNumber,
         paymentTerms: procureForm.paymentTerms,
         remarks: procureForm.remarks,
         subtotal,
@@ -174,7 +171,7 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
 
       const res = await apiRequest(`/api/purchaser/orders/${procureOrder._id}/complete-procurement`, 'POST', payload);
       if (res.success) {
-        setToast(`Local PO & GRN generated for ${procureOrder.orderReference || procureOrder.orderNumber}. Order forwarded to Support!`);
+        setToast(`Local PO issued for ${procureOrder.orderReference || procureOrder.orderNumber}. Order sent to Support awaiting goods receipt.`);
         setShowProcurementModal(false);
         setProcureOrder(null);
         fetchData();
@@ -415,9 +412,9 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
                         <button
                           onClick={() => handleOpenProcurement(ord)}
                           style={{ background: '#D97706', color: '#FFF', border: 'none', padding: '6px 14px', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer' }}
-                          title="If stock shortage, issue Local PO & GRN"
+                          title="If stock is short, issue a Local PO"
                         >
-                          + Procure via Local PO &amp; GRN
+                          + Procure via Local PO
                         </button>
                       </div>
                     </td>
@@ -811,13 +808,13 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
         </div>
       )}
 
-      {/* LOCAL PROCUREMENT & GRN MODAL FOR SHORTAGE */}
+      {/* LOCAL PROCUREMENT MODAL FOR SHORTAGE */}
       {showProcurementModal && procureOrder && (
         <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '650px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0F172A' }}>
-                Complete Local Procurement &amp; Send to Support
+                Procure via Local PO
               </h3>
               <button onClick={() => setShowProcurementModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={20} /></button>
             </div>
@@ -862,16 +859,6 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Local PO Number</label>
                   <input type="text" readOnly value={procureForm.poNumber} placeholder="Assigned on issue" style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, color: '#059669', background: '#F8FAFC' }} />
-                </div>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>GRN Receipt Number *</label>
-                  <input
-                    type="text"
-                    required
-                    value={procureForm.grnNumber}
-                    onChange={(e) => setProcureForm({ ...procureForm, grnNumber: e.target.value })}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, color: '#2563EB' }}
-                  />
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>Payment Terms</label>

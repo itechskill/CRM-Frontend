@@ -419,7 +419,9 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                       {!isOrderCompletedInSupport(o) ? (
                         <button
                           className="sv-btn-primary"
-                          style={{ padding: '4px 10px', fontSize: '0.75rem', gap: '4px' }}
+                          disabled={!o.goodsReceivedInOffice?.received}
+                          title={!o.goodsReceivedInOffice?.received ? 'Receive all goods before creating the Delivery Note.' : 'Create Delivery Note'}
+                          style={{ padding: '4px 10px', fontSize: '0.75rem', gap: '4px', opacity: o.goodsReceivedInOffice?.received ? 1 : 0.55 }}
                           onClick={() => {
                             if (onNavigateDeliveryNotes) onNavigateDeliveryNotes(o);
                           }}
