@@ -26,6 +26,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
 import { hasCustomerPOAttachment } from './customerPOAttachment';
+import { fileNumberCore, fileTypeLabel, fileTypeTheme, formatFileClassification } from '../../utils/fileClassification';
 
 const STATUS_COLORS = {
   Active: '#10B981',
@@ -38,7 +39,7 @@ const EMPTY_PRODUCT = { name: '', quantity: 1, unit: 'pcs', description: '' };
 
 const EMPTY_FORM = {
   fileNumber: '',
-  fileType: 'Blue',
+  fileType: '',
   customerName: '',
   quotationId: '',
   quotationNumber: '',
@@ -138,16 +139,16 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
     doc.setFontSize(14);
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.text('FORTLINE CRM - PRODUCT FILES LEDGER REPORT (BLUE & GREEN)', 14, 15);
+    doc.text('FORTLINE CRM - PRODUCT FILES LEDGER REPORT', 14, 15);
 
     doc.setFontSize(9);
     doc.setTextColor(100, 116, 139);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Generated: ${new Date().toLocaleString()} | Total Files: ${records.length} | Blue: ${blueFilesCount} | Green: ${greenFilesCount}`, 14, 31);
+    doc.text(`Generated: ${new Date().toLocaleString()} | Total: ${records.length} | Blue: ${records.filter(file => file.fileType === 'Blue').length} | Green: ${records.filter(file => file.fileType === 'Green').length} | Unassigned: ${records.filter(file => !file.fileType).length}`, 14, 31);
 
     const tableData = records.map(pf => [
-      pf.fileNumber || '—',
-      `${pf.fileType} File`,
+      fileNumberCore(pf.fileNumber) || '—',
+      fileTypeLabel(pf.fileType),
       pf.customerName || '—',
       pf.customerPONumber || '—',
       pf.quotationNumber || '—',
@@ -185,8 +186,8 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
 
     const headers = ['File Number', 'File Type', 'Customer Name', 'Customer PO #', 'Quotation Ref', 'Sales Order #', 'Items Count', 'Status', 'Notes'];
     const rows = records.map(pf => [
-      `"${pf.fileNumber || ''}"`,
-      `"${pf.fileType || ''}"`,
+      `"${fileNumberCore(pf.fileNumber)}"`,
+      `"${fileTypeLabel(pf.fileType)}"`,
       `"${(pf.customerName || '').replace(/"/g, '""')}"`,
       `"${pf.customerPONumber || ''}"`,
       `"${pf.quotationNumber || ''}"`,
@@ -221,10 +222,10 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
     link.click();
   };
 
-  const openCreate = (fileType = 'Blue') => {
+  const openCreate = () => {
     setForm({
       ...EMPTY_FORM,
-      fileType,
+      fileType: '',
       fileNumber: '',
       products: [{ ...EMPTY_PRODUCT }]
     });
@@ -236,7 +237,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
   const openEdit = (pf) => {
     setForm({
       fileNumber: pf.fileNumber || '',
-      fileType: pf.fileType || 'Blue',
+      fileType: pf.fileType || '',
       customerName: pf.customerName || '',
       quotationId: pf.quotationId?._id || pf.quotationId || '',
       quotationNumber: pf.quotationNumber || '',
@@ -391,7 +392,8 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       productFile: pf,
       clientName: pf.customerName,
       fileNo: pf.fileNumber || '',
-      fileType: pf.fileType || 'Blue',
+      fileType: pf.fileType || '',
+      suggestedFileType: '',
       customerPONumber: pf.customerPONumber || linkedPO?.poNumber || '',
       customerPOId: pf.customerPOId?._id || pf.customerPOId || linkedPO?._id || null,
       quotationId: pf.quotationId?._id || pf.quotationId || linkedQuote?._id || null,
@@ -414,7 +416,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       const payload = {
         clientName: soPreFillModal.clientName,
         fileNo: soPreFillModal.fileNo,
-        fileType: soPreFillModal.fileType,
+        suggestedFileType: soPreFillModal.suggestedFileType || '',
         customerPONumber: soPreFillModal.customerPONumber,
         customerPOId: soPreFillModal.customerPOId || null,
         quotationId: soPreFillModal.quotationId || null,
@@ -484,7 +486,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       {/* Top Header */}
       <div className="sv-header">
         <div>
-          <h2 className="sv-title"><FolderPlus size={22} color="#2563EB" /> Product Files (Blue & Green)</h2>
+          <h2 className="sv-title"><FolderPlus size={22} color="#2563EB" /> Product Files</h2>
           <p className="sv-subtitle">Job folders created per Customer PO to route through sales order, stock check, delivery, and billing</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
@@ -494,11 +496,8 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
           <button className="sv-btn-secondary" onClick={downloadCompleteProductFilesExcel} title="Download Complete Product Files (Excel)">
             <FileSpreadsheet size={15} color="#059669" /> Export Excel
           </button>
-          <button className="sv-btn-primary" style={{ background: '#2563EB' }} onClick={() => openCreate('Blue')}>
-            <Plus size={16} /> New Blue File
-          </button>
-          <button className="sv-btn-primary" style={{ background: '#059669' }} onClick={() => openCreate('Green')}>
-            <Plus size={16} /> New Green File
+          <button className="sv-btn-primary" onClick={openCreate}>
+            <Plus size={16} /> New Product File
           </button>
         </div>
       </div>
@@ -536,9 +535,9 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
           <input placeholder="Search File #, Customer, PO #, Order #..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
         </div>
         <div className="sv-status-tabs">
-          {['all', 'Blue', 'Green'].map(t => (
+          {['all', '', 'Blue', 'Green'].map(t => (
             <button key={t} className={`sv-tab ${typeFilter === t ? 'active' : ''}`} onClick={() => setTypeFilter(t)}>
-              {t === 'all' ? 'All Files' : `${t} Files`}
+              {t === 'all' ? 'All Files' : t ? `${t} Files` : 'Unassigned'}
             </button>
           ))}
         </div>
@@ -563,13 +562,13 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
             </thead>
             <tbody>
               {filteredFiles.length === 0 ? (
-                <tr><td colSpan={9} className="sv-empty">No Product Files found. Click "New Blue File" or "New Green File" to get started!</td></tr>
+                <tr><td colSpan={9} className="sv-empty">No Product Files found. Click "New Product File" to get started!</td></tr>
               ) : filteredFiles.map(pf => {
-                const isBlue = pf.fileType === 'Blue';
+                const theme = fileTypeTheme(pf.fileType);
                 return (
                   <tr key={pf._id}>
                     <td className="sv-name" style={{ fontWeight: 700, color: '#1E293B', whiteSpace: 'nowrap' }}>
-                      {pf.fileNumber || '—'}
+                      {fileNumberCore(pf.fileNumber) || '—'}
                     </td>
                     <td>
                       <span style={{
@@ -580,12 +579,12 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                         borderRadius: '20px',
                         fontSize: '0.78rem',
                         fontWeight: 700,
-                        background: isBlue ? '#EFF6FF' : '#ECFDF5',
-                        color: isBlue ? '#1D4ED8' : '#047857',
-                        border: `1px solid ${isBlue ? '#BFDBFE' : '#A7F3D0'}`
+                        background: theme.background,
+                        color: theme.color,
+                        border: `1px solid ${theme.border}`
                       }}>
-                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: isBlue ? '#2563EB' : '#10B981' }} />
-                        {pf.fileType} File
+                        <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: theme.dot }} />
+                        {fileTypeLabel(pf.fileType)}
                       </span>
                     </td>
                     <td style={{ fontWeight: 600, color: '#0F172A' }}>{pf.customerName}</td>
@@ -651,7 +650,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                     {filteredFiles.reduce((s, pf) => s + (pf.products?.length || 0), 0)} Items
                   </td>
                   <td colSpan={3} style={{ color: '#64748B', padding: '12px', fontSize: '0.85rem' }}>
-                    {filteredFiles.length} Product Files ({filteredFiles.filter(f => f.fileType === 'Blue').length} Blue, {filteredFiles.filter(f => f.fileType === 'Green').length} Green)
+                    {filteredFiles.length} Product Files ({filteredFiles.filter(f => f.fileType === 'Blue').length} Blue, {filteredFiles.filter(f => f.fileType === 'Green').length} Green, {filteredFiles.filter(f => !f.fileType).length} Unassigned)
                   </td>
                 </tr>
               </tfoot>
@@ -670,18 +669,18 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                   width: '38px',
                   height: '38px',
                   borderRadius: '10px',
-                  background: form.fileType === 'Blue' ? '#EFF6FF' : '#ECFDF5',
-                  border: `1px solid ${form.fileType === 'Blue' ? '#BFDBFE' : '#A7F3D0'}`,
+                  background: fileTypeTheme(form.fileType).background,
+                  border: `1px solid ${fileTypeTheme(form.fileType).border}`,
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: form.fileType === 'Blue' ? '#2563EB' : '#059669'
+                  color: fileTypeTheme(form.fileType).color
                 }}>
                   <FolderPlus size={20} />
                 </div>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>
-                    {editFile ? `Edit ${form.fileType} File (${form.fileNumber})` : `New ${form.fileType} Product File`}
+                    {editFile ? `Edit Product File (${form.fileNumber})` : 'New Product File'}
                   </h3>
                   <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.8rem' }}>
                     Configure job file specifications, customer PO / Quotation linkages, and product scope
@@ -702,11 +701,8 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                 
                 <div className="sv-grid-2">
                   <div className="sv-field">
-                    <label>File Type *</label>
-                    <select value={form.fileType} onChange={e => setForm(p => ({ ...p, fileType: e.target.value }))} disabled={Boolean(form.fileNumber)}>
-                      <option value="Blue">Blue File (Imported)</option>
-                      <option value="Green">Green File (Local)</option>
-                    </select>
+                    <label>File Type</label>
+                    <input value={fileTypeLabel(form.fileType)} readOnly style={{ background: '#F1F5F9' }} />
                   </div>
                   <div className="sv-field">
                     <label>File Number</label>
@@ -879,7 +875,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
 
             <form onSubmit={handleConfirmCreateSO} className="sv-form">
               <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748B' }}>
-                All fields have been automatically extracted and linked from <strong>{soPreFillModal.fileNo || soPreFillModal.fileType + ' File'}</strong>.
+                All fields have been automatically extracted and linked from <strong>{formatFileClassification(soPreFillModal.fileNo, soPreFillModal.fileType)}</strong>.
               </p>
 
               <div className="sv-grid-2">
@@ -896,12 +892,21 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
               <div className="sv-grid-2">
                 <div className="sv-field">
                   <label>File-No# (Linked)</label>
-                  <input value={`${soPreFillModal.fileNo} (${soPreFillModal.fileType})`} readOnly style={{ background: '#F1F5F9' }} />
+                  <input value={formatFileClassification(soPreFillModal.fileNo, soPreFillModal.fileType)} readOnly style={{ background: '#F1F5F9' }} />
                 </div>
                 <div className="sv-field">
                   <label>Total Order Amount (PKR) *</label>
                   <input type="number" placeholder="Enter Total Amount in PKR" value={soPreFillModal.totalAmount} onChange={e => setSoPreFillModal(p => ({ ...p, totalAmount: e.target.value }))} required />
                 </div>
+              </div>
+
+              <div className="sv-field">
+                <label>Suggested file type (optional)</label>
+                <select value={soPreFillModal.suggestedFileType || ''} onChange={e => setSoPreFillModal(p => ({ ...p, suggestedFileType: e.target.value }))}>
+                  <option value="">No suggestion</option>
+                  <option value="Green">Green</option>
+                  <option value="Blue">Blue</option>
+                </select>
               </div>
 
               <div className="sv-field">
@@ -926,8 +931,8 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
           <div className="sv-modal" style={{ maxWidth: '640px' }} onClick={e => e.stopPropagation()}>
             <div className="sv-modal-header">
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <FolderPlus size={18} color={viewFile.fileType === 'Blue' ? '#2563EB' : '#059669'} />
-                <h3 style={{ margin: 0 }}>{viewFile.fileType} File: {viewFile.fileNumber}</h3>
+                <FolderPlus size={18} color={fileTypeTheme(viewFile.fileType).color} />
+                <h3 style={{ margin: 0 }}>{formatFileClassification(viewFile.fileNumber, viewFile.fileType)}</h3>
               </div>
               <button onClick={() => setViewFile(null)}><X size={18} /></button>
             </div>
@@ -1035,7 +1040,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
             </div>
             <div className="sv-form">
               <p style={{ fontSize: '0.9rem', color: '#334155', margin: '0 0 16px' }}>
-                Are you sure you want to permanently delete {deleteTarget.fileType} File <strong>{deleteTarget.fileNumber}</strong>?
+                Are you sure you want to permanently delete Product File <strong>{formatFileClassification(deleteTarget.fileNumber, deleteTarget.fileType)}</strong>?
               </p>
               <div className="sv-modal-actions">
                 <button className="sv-btn-cancel" onClick={() => setDeleteTarget(null)}>Cancel</button>

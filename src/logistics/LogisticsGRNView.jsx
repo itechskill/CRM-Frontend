@@ -270,7 +270,7 @@ export default function LogisticsGRNView({ searchQuery, onNavigateTab }) {
                     <td style={{ padding: '14px 20px', color: '#0F172A' }}>{order.clientName || 'N/A'}</td>
                     <td style={{ padding: '14px 20px' }}>
                       <span style={{ padding: '4px 8px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 700, backgroundColor: '#EFF6FF', color: '#1D4ED8' }}>
-                        {order.fileType || 'Blue'}
+                        {order.fileType || 'Unassigned'}
                       </span>
                     </td>
                     <td style={{ padding: '14px 20px', color: '#64748B' }}>{order.workflowStatus || order.status}</td>

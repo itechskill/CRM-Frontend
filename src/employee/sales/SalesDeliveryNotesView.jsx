@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiRequest } from '../../utils/api';
+import { formatFileClassification } from '../../utils/fileClassification';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import {
@@ -1025,7 +1026,7 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, onClearIniti
                   >
                     <option value="">-- Select Sales Order to Auto-Fill Delivery Note --</option>
                     {availableOrders.map(ord => {
-                      const fileInfo = ord.fileNo ? ` [File: ${ord.fileNo}${ord.fileType ? ` (${ord.fileType})` : ''}]` : '';
+                      const fileInfo = ord.fileNo ? ` [File: ${formatFileClassification(ord.fileNo, ord.fileType)}]` : '';
                       return (
                         <option key={ord._id} value={ord._id}>
                           {ord.orderReference || ord.orderNumber} — {ord.clientName || ord.customerName}{fileInfo} (Rs. {Number(ord.netAmount || ord.totalAmount || 0).toLocaleString()})

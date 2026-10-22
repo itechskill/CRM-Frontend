@@ -46,7 +46,7 @@ export default function LogisticsIncomingOrdersView({ onNavigateTab }) {
     try {
       const { response, data } = await apiRequest('/api/logistics/incoming-orders');
       if (response.ok && data.success) {
-        setIncomingOrders(data.data || []);
+        setIncomingOrders((data.data || []).filter(order => order.fileType === 'Blue'));
       }
     } catch (err) {
       console.error('[Fetch Incoming Orders Error]:', err);

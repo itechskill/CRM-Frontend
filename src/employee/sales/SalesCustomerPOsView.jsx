@@ -46,7 +46,6 @@ export default function SalesCustomerPOsView() {
 
   // Convert to Product File modal state
   const [convertModalPO, setConvertModalPO] = useState(null);
-  const [convertFileType, setConvertFileType] = useState('Blue');
   const [convertFileNumber, setConvertFileNumber] = useState('');
   const [convertNotes, setConvertNotes] = useState('');
   const [convertingToFile, setConvertingToFile] = useState(false);
@@ -288,7 +287,6 @@ export default function SalesCustomerPOsView() {
       return;
     }
     setConvertModalPO(po);
-    setConvertFileType(po.fileType || 'Blue');
     setConvertFileNumber(po.fileNumber || '');
     setConvertNotes(po.notes || '');
     setError('');
@@ -304,13 +302,12 @@ export default function SalesCustomerPOsView() {
       const { response, data } = await apiRequest(`/api/sales-employee/customer-pos/${convertModalPO._id}/convert-to-file`, {
         method: 'POST',
         body: JSON.stringify({
-          fileType: convertFileType,
           fileNumber: convertFileNumber,
           notes: convertNotes
         })
       });
       if (response.ok && data.success) {
-        setFeedback(data.message || `Customer PO successfully converted to ${convertFileType} Product File!`);
+        setFeedback(data.message || 'Customer PO successfully converted to a Product File!');
         setCustomerPOs(prev => prev.map(p => p._id === convertModalPO._id ? {
           ...p,
           status: 'Processed',
@@ -677,13 +674,6 @@ export default function SalesCustomerPOsView() {
               </div>
 
               <div className="sv-grid-2">
-                <div className="sv-field">
-                  <label>File Type *</label>
-                  <select value={convertFileType} onChange={e => setConvertFileType(e.target.value)} disabled={Boolean(convertModalPO.fileNumber)}>
-                    <option value="Blue">Blue File (Imported)</option>
-                    <option value="Green">Green File (Local)</option>
-                  </select>
-                </div>
                 <div className="sv-field">
                   <label>File Number</label>
                   <input

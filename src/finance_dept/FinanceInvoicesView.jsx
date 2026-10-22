@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import { companyName } from '../utils/companies';
+import { fileTypeLabel, fileTypeTheme } from '../utils/fileClassification';
 
 const toMoneyCents = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100);
 const fromMoneyCents = (cents) => cents / 100;
@@ -58,7 +59,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
   const [processingOrderId, setProcessingOrderId] = useState(null);
   const [approvalModalOrder, setApprovalModalOrder] = useState(null);
   const [approvalForm, setApprovalForm] = useState({
-    fileType: 'Green',
+    fileType: '',
     supplierName: '',
     supplierCountry: 'Pakistan',
     supplierPoNumber: '',
@@ -340,15 +341,21 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
 
   const handleOpenApprovalModal = (order) => {
     setApprovalModalOrder(order);
-    const isBlue = order.fileType === 'Blue';
+    const suggestedType = ['Green', 'Blue'].includes(order.suggestedFileType)
+      ? order.suggestedFileType
+      : (['Green', 'Blue'].includes(order.fileType) ? order.fileType : '');
     setApprovalForm({
-      fileType: isBlue ? 'Blue' : 'Green'
+      fileType: suggestedType
     });
   };
 
   const handleSubmitApproval = async (e) => {
     e.preventDefault();
     if (!approvalModalOrder) return;
+    if (!['Green', 'Blue'].includes(approvalForm.fileType)) {
+      setFeedback('Choose Green or Blue before approving the Sales Order.');
+      return;
+    }
     setSubmittingApproval(true);
     try {
       const { response, data } = await apiRequest(`/api/sales-employee/orders/${approvalModalOrder._id}/finance-review`, {
@@ -905,11 +912,9 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                         </td>
                         <td style={{ fontWeight: 800, color: '#059669', fontSize: '0.95rem' }}>
                           PKR {formatMoney(orderAmt)}
-                          {o.fileType && (
-                            <span style={{ display: 'block', fontSize: '0.72rem', color: o.fileType === 'Blue' ? '#1D4ED8' : '#047857', fontWeight: 700 }}>
-                              {o.fileType} File
-                            </span>
-                          )}
+                          <span style={{ display: 'block', fontSize: '0.72rem', color: fileTypeTheme(o.fileType).color, fontWeight: 700 }}>
+                            {fileTypeLabel(o.fileType)}
+                          </span>
                         </td>
                         <td>
                           {hasOverdue ? (
@@ -1134,9 +1139,13 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                         <span className="sv-badge" style={{ background: '#EFF6FF', color: '#1D4ED8', border: '1px solid #BFDBFE', fontWeight: 700 }}>
                           Blue File (Imported)
                         </span>
-                      ) : (
+                      ) : o.fileType === 'Green' ? (
                         <span className="sv-badge" style={{ background: '#ECFDF5', color: '#047857', border: '1px solid #A7F3D0', fontWeight: 700 }}>
                           Green File (Local)
+                        </span>
+                      ) : (
+                        <span className="sv-badge" style={{ background: '#F1F5F9', color: '#475569', border: '1px solid #CBD5E1', fontWeight: 700 }}>
+                          Unassigned
                         </span>
                       )}
                     </td>
@@ -1824,8 +1833,11 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                 {/* Business Flowchart Branching Decision: File Type */}
                 <div style={{ marginBottom: '18px' }}>
                   <label style={{ display: 'block', fontSize: '0.86rem', fontWeight: 700, color: '#0F172A', marginBottom: '8px' }}>
-                    Select File Type for Procurement Routing:
+                    Select File Type for Procurement Routing (required):
                   </label>
+                  <div style={{ fontSize: '0.78rem', color: '#64748B', marginBottom: '8px' }}>
+                    Sales suggestion: <strong>{approvalModalOrder.suggestedFileType || 'None'}</strong>. Finance makes the final choice.
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                     <div
                       onClick={() => setApprovalForm({
@@ -1888,9 +1900,9 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                   <button
                     type="submit"
                     className="sv-btn-primary"
-                    disabled={submittingApproval}
+                    disabled={submittingApproval || !['Green', 'Blue'].includes(approvalForm.fileType)}
                     style={{
-                      backgroundColor: approvalForm.fileType === 'Blue' ? '#2563EB' : '#059669',
+                      backgroundColor: approvalForm.fileType === 'Blue' ? '#2563EB' : approvalForm.fileType === 'Green' ? '#059669' : '#94A3B8',
                       padding: '10px 20px',
                       fontWeight: 700,
                       fontSize: '0.88rem',
@@ -1901,7 +1913,9 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                       ? 'Processing...'
                       : approvalForm.fileType === 'Blue'
                       ? 'Move to Global Purchaser'
-                      : 'Move to Local Purchaser'}
+                      : approvalForm.fileType === 'Green'
+                      ? 'Move to Local Purchaser'
+                      : 'Choose a file type'}
                   </button>
                 </div>
               </form>
@@ -2073,7 +2087,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
           <div className="sv-modal-card" style={{ maxWidth: '780px', width: '95%', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="sv-modal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', borderBottom: '1px solid #E2E8F0', background: '#F8FAFC', borderRadius: '12px 12px 0 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: viewOrder.fileType === 'Blue' ? '#EFF6FF' : '#ECFDF5', display: 'flex', alignItems: 'center', justifyContent: 'center', color: viewOrder.fileType === 'Blue' ? '#2563EB' : '#059669' }}>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: fileTypeTheme(viewOrder.fileType).background, display: 'flex', alignItems: 'center', justifyContent: 'center', color: fileTypeTheme(viewOrder.fileType).color }}>
                   <ShoppingCart size={20} />
                 </div>
                 <div>
@@ -2101,8 +2115,8 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '16px' }}>
                 <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '8px', padding: '10px 14px' }}>
                   <div style={{ fontSize: '0.75rem', color: '#64748B', fontWeight: 600 }}>File Type</div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: viewOrder.fileType === 'Blue' ? '#1D4ED8' : '#047857' }}>
-                    {viewOrder.fileType ? `${viewOrder.fileType} File` : 'Unassigned'}
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: fileTypeTheme(viewOrder.fileType).color }}>
+                    {fileTypeLabel(viewOrder.fileType)}
                   </div>
                 </div>
 

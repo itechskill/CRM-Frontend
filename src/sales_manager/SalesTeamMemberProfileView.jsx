@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
+import { fileTypeLabel, fileTypeTheme } from '../utils/fileClassification';
 import {
   ArrowLeft,
   Mail,
@@ -559,10 +560,10 @@ export default function SalesTeamMemberProfileView({ memberId, onBack, initialBr
                           borderRadius: '12px',
                           fontSize: '0.75rem',
                           fontWeight: 700,
-                          background: pf.fileType === 'Blue' ? '#DBEAFE' : '#DCFCE7',
-                          color: pf.fileType === 'Blue' ? '#1D4ED8' : '#15803D'
+                          background: fileTypeTheme(pf.fileType).background,
+                          color: fileTypeTheme(pf.fileType).color
                         }}>
-                          {pf.fileType} File
+                          {fileTypeLabel(pf.fileType)}
                         </span>
                       </td>
                       <td>{pf.customerName}</td>

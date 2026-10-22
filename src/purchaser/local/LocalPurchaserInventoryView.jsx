@@ -83,7 +83,7 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
         apiRequest('/api/purchaser/suppliers?type=Local')
       ]);
       if (invRes.success) setInventory(invRes.inventory || invRes.data || []);
-      if (ordRes.success) setPendingOrders(ordRes.orders || ordRes.data || []);
+      if (ordRes.success) setPendingOrders((ordRes.orders || ordRes.data || []).filter(order => order.fileType === 'Green'));
       if (supplierRes.success) setSuppliers(supplierRes.suppliers || supplierRes.data?.suppliers || supplierRes.data?.data || []);
     } catch (err) {
       console.error('Error fetching inventory and pending orders:', err);
