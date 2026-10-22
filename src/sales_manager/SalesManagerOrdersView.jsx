@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import './SalesManagerDashboard.css';
 import { companyName } from '../utils/companies';
+import { fileTypeTheme, formatFileClassification } from '../utils/fileClassification';
 
 const DELIVERY_COLORS = {
   'Pending': '#F59E0B',
@@ -409,7 +410,7 @@ export default function SalesManagerOrdersView() {
     doc.text('Product File # / Type:', 114, 70);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
-    doc.text(`${order.fileNo || '—'} (${order.fileType || 'Standard'})`, 155, 70);
+    doc.text(formatFileClassification(order.fileNo, order.fileType), 155, 70);
 
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(71, 85, 105);
@@ -637,7 +638,7 @@ export default function SalesManagerOrdersView() {
       const client = (o.clientName || o.customerName || '').replace(/,/g, ' ');
       const rep = (o.createdBy?.fullName || o.salesPerson?.fullName || o.salePerson || 'Sales Team').replace(/,/g, ' ');
       const date = o.orderDate ? new Date(o.orderDate).toISOString().slice(0, 10) : '';
-      const file = `${o.fileNo || ''} ${o.fileType || ''}`.trim();
+      const file = formatFileClassification(o.fileNo, o.fileType);
       const summary = (o.productSummary || '').replace(/,/g, ' ');
       const total = Number(o.netAmount) || Number(o.totalAmount) || 0;
       const paid = Number(getOrderPaid(o)) || 0;
@@ -869,17 +870,11 @@ export default function SalesManagerOrdersView() {
                           const fileNo = o.fileNo || o.fileNumber || '';
                           const fileType = o.fileType || '';
                           if (!fileNo && !fileType) return <span style={{ color: '#94A3B8' }}>—</span>;
-                          const combined = `${fileNo} ${fileType}`.toLowerCase();
-                          const isGreen = combined.includes('green');
-                          const color = isGreen ? '#059669' : '#2563EB';
-                          const bg = isGreen ? '#ECFDF5' : '#EFF6FF';
-                          const border = isGreen ? '#A7F3D0' : '#BFDBFE';
-                          const dotColor = isGreen ? '#10B981' : '#3B82F6';
-                          const colorName = isGreen ? 'Green File' : 'Blue File';
+                          const theme = fileTypeTheme(fileType);
                           return (
-                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, background: bg, color: color, border: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
-                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: dotColor }} />
-                              <span>{fileNo ? `${fileNo} (${colorName})` : colorName}</span>
+                            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, background: theme.background, color: theme.color, border: `1px solid ${theme.border}`, whiteSpace: 'nowrap' }}>
+                              <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.dot }} />
+                              <span>{formatFileClassification(fileNo, fileType)}</span>
                             </div>
                           );
                         })()}
@@ -1069,17 +1064,11 @@ export default function SalesManagerOrdersView() {
                     const fileNo = viewOrder.fileNo || viewOrder.fileNumber || '';
                     const fileType = viewOrder.fileType || '';
                     if (!fileNo && !fileType) return <span style={{ color: '#94A3B8', fontSize: '0.85rem' }}>—</span>;
-                    const combined = `${fileNo} ${fileType}`.toLowerCase();
-                    const isGreen = combined.includes('green');
-                    const color = isGreen ? '#059669' : '#2563EB';
-                    const bg = isGreen ? '#ECFDF5' : '#EFF6FF';
-                    const border = isGreen ? '#A7F3D0' : '#BFDBFE';
-                    const dotColor = isGreen ? '#10B981' : '#3B82F6';
-                    const colorName = isGreen ? 'Green File' : 'Blue File';
+                    const theme = fileTypeTheme(fileType);
                     return (
-                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, background: bg, color: color, border: `1px solid ${border}`, whiteSpace: 'nowrap' }}>
-                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: dotColor }} />
-                        <span>{fileNo ? `${fileNo} (${colorName})` : colorName}</span>
+                      <div style={{ display: 'inline-flex', alignItems: 'center', gap: '5px', padding: '3px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 700, background: theme.background, color: theme.color, border: `1px solid ${theme.border}`, whiteSpace: 'nowrap' }}>
+                        <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: theme.dot }} />
+                        <span>{formatFileClassification(fileNo, fileType)}</span>
                       </div>
                     );
                   })()}

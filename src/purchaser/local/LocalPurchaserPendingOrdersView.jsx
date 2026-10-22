@@ -54,7 +54,10 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
         apiRequest('/api/purchaser/pending-orders?subDept=Local'),
         apiRequest('/api/purchaser/suppliers?type=Local')
       ]);
-      if (ordRes.success) setOrders(Array.isArray(ordRes.orders) ? ordRes.orders : (Array.isArray(ordRes.data) ? ordRes.data : []));
+      if (ordRes.success) {
+        const rows = Array.isArray(ordRes.orders) ? ordRes.orders : (Array.isArray(ordRes.data) ? ordRes.data : []);
+        setOrders(rows.filter(order => order.fileType === 'Green'));
+      }
       if (suppRes.success) setSuppliers(Array.isArray(suppRes.suppliers) ? suppRes.suppliers : (Array.isArray(suppRes.data) ? suppRes.data : []));
     } catch (err) {
       console.error('Error fetching pending local orders:', err);

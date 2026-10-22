@@ -1,5 +1,6 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { fileTypeLabel } from './fileClassification';
 
 /**
  * Generates a Single Combined PDF for the Accounts 4-Document Package
@@ -141,7 +142,7 @@ export function generateCombinedDocumentPackagePDF(packageData) {
   doc.text(`Delivery Note #: ${deliveryNote?.deliveryNoteNumber || 'DN-PENDING'}`, 130, y + 5);
   doc.text(`Sales Order #: ${order.orderNumber || order.orderReference}`, 130, y + 10);
   doc.text(`Dispatched Date: ${deliveryNote?.createdAt ? new Date(deliveryNote.createdAt).toLocaleDateString() : new Date().toLocaleDateString()}`, 130, y + 15);
-  doc.text(`File Type: ${order.fileType || 'Green'}`, 130, y + 20);
+  doc.text(`File Type: ${fileTypeLabel(order.fileType)}`, 130, y + 20);
 
   y += 28;
 
@@ -220,7 +221,7 @@ export function generateCombinedDocumentPackagePDF(packageData) {
   doc.text(`Sales Order Reference: ${order.orderNumber || order.orderReference}`, 18, y + 21);
   doc.text(`Client Name: ${order.clientName}`, 18, y + 28);
   doc.text(`Issue Date: ${undertaking?.issuedDate ? new Date(undertaking.issuedDate).toLocaleDateString() : new Date().toLocaleDateString()}`, 110, y + 14);
-  doc.text(`File Classification: ${order.fileType || 'Green'} File`, 110, y + 21);
+  doc.text(`File Classification: ${fileTypeLabel(order.fileType)}`, 110, y + 21);
 
   y += 50;
 
@@ -292,7 +293,7 @@ export function generateCombinedDocumentPackagePDF(packageData) {
     idx + 1,
     item.description || item.productName || 'Declared Item',
     item.quantity || 1,
-    order.fileType || 'Green',
+    fileTypeLabel(order.fileType),
     formatPKR(item.total || (item.quantity * item.unitPrice) || 0)
   ]);
 

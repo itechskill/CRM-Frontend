@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
+import { fileTypeLabel, formatFileClassification } from '../utils/fileClassification';
 import {
   ShoppingCart,
   Search,
@@ -104,7 +105,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
           newProduct: {
             name: line.productName,
             sku: line.sku || `SKU-${Date.now().toString().slice(-6)}-${index + 1}`,
-            category: o.fileType === 'Blue' ? 'Imported Goods' : 'General',
+            category: o.fileType === 'Blue' ? 'Imported Goods' : o.fileType === 'Green' ? 'General' : '',
             unit: 'pcs',
             location: 'WH/Stock'
           }
@@ -325,7 +326,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                       }}>
                         🌐 Blue (Imported)
                       </span>
-                    ) : (
+                    ) : o.fileType === 'Green' ? (
                       <span style={{
                         display: 'inline-flex',
                         alignItems: 'center',
@@ -340,7 +341,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                       }}>
                         🇵🇰 Green (Local)
                       </span>
-                    )}
+                    ) : <span style={{ color: '#64748B', fontWeight: 700 }}>Unassigned</span>}
                   </td>
                   <td style={{ maxWidth: '180px', fontSize: '0.82rem' }}>{o.productSummary || '—'}</td>
                   <td style={{ fontWeight: 800, color: '#059669' }}>
@@ -475,7 +476,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                     <strong>Customer PO #:</strong> {viewOrder.customerPONumber || '—'}
                   </div>
                   <div style={{ fontSize: '0.8rem', color: '#475569' }}>
-                    <strong>Product File #:</strong> {viewOrder.fileNo || '—'} {viewOrder.fileType ? `(${viewOrder.fileType})` : ''}
+                    <strong>Product File #:</strong> {formatFileClassification(viewOrder.fileNo, viewOrder.fileType)}
                   </div>
                 </div>
 
@@ -742,7 +743,7 @@ function ReceiveGoodsModal({ order, preview, form, loading, submitting, onClose,
             <div>
               <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#0F172A' }}>Receive Goods (Inventory IN)</h3>
               <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748B' }}>
-                Order: <strong>{order.orderReference || order.orderNumber}</strong> | {order.fileType === 'Blue' ? 'Blue File (Imported)' : 'Green File (Local)'}
+                Order: <strong>{order.orderReference || order.orderNumber}</strong> | {fileTypeLabel(order.fileType, { detailed: true })}
               </p>
             </div>
           </div>

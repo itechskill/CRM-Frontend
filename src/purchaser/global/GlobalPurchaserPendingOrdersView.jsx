@@ -32,7 +32,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
         apiRequest('/api/purchaser/pending-orders?subDept=Global'),
         apiRequest('/api/purchaser/suppliers?type=Global')
       ]);
-      if (ordRes.success) setOrders(ordRes.orders || ordRes.data || []);
+      if (ordRes.success) setOrders((ordRes.orders || ordRes.data || []).filter(order => order.fileType === 'Blue'));
       if (suppRes.success) setSuppliers(suppRes.suppliers || suppRes.data || []);
     } catch (err) {
       console.error('Error fetching global pending orders:', err);

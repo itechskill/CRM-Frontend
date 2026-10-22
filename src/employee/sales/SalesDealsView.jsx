@@ -85,7 +85,6 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const [creatingQuote, setCreatingQuote] = useState(false);
   const [quoteTarget, setQuoteTarget] = useState(null);
   const [quoteCompanyCode, setQuoteCompanyCode] = useState('');
-  const [quoteFileType, setQuoteFileType] = useState('');
 
   const fetchDeals = useCallback(async () => {
     setLoading(true);
@@ -167,12 +166,11 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
     }
   };
 
-  const handleCreateQuotation = async (deal, issuingCompanyCode, fileType) => {
+  const handleCreateQuotation = async (deal, issuingCompanyCode) => {
     setCreatingQuote(true);
     try {
       const quotePayload = {
         issuingCompanyCode,
-        fileType,
         clientName: deal.clientName,
         dealId: deal._id,
         productSummary: deal.requirements || deal.title || 'Quotation per Customer Requirement',
@@ -195,7 +193,6 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
         setViewDeal(null);
         setQuoteTarget(null);
         setQuoteCompanyCode('');
-        setQuoteFileType('');
         fetchDeals();
         setTimeout(() => setFeedback(''), 4000);
       } else {
@@ -586,7 +583,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                             <div className="deals-card-actions" onClick={e => e.stopPropagation()}>
                               <button
                                 className="deals-btn-quote"
-                                onClick={() => { setQuoteTarget(d); setQuoteCompanyCode(''); setQuoteFileType(''); }}
+                                onClick={() => { setQuoteTarget(d); setQuoteCompanyCode(''); }}
                                 disabled={creatingQuote}
                                 title="Generate Quotation from this Deal"
                               >
@@ -668,7 +665,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                         <button
                           className="sv-btn-action-icon"
                           style={{ color: '#2563EB', background: '#EFF6FF' }}
-                          onClick={() => { setQuoteTarget(d); setQuoteCompanyCode(''); setQuoteFileType(''); }}
+                          onClick={() => { setQuoteTarget(d); setQuoteCompanyCode(''); }}
                           disabled={creatingQuote}
                           title="Generate Quotation"
                         >
@@ -754,7 +751,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                 <button
                   className="sv-btn-primary"
                   style={{ background: '#2563EB' }}
-                  onClick={() => { setQuoteTarget(viewDeal); setQuoteCompanyCode(''); setQuoteFileType(''); }}
+                  onClick={() => { setQuoteTarget(viewDeal); setQuoteCompanyCode(''); }}
                   disabled={creatingQuote}
                 >
                   <ArrowRight size={14} /> {creatingQuote ? 'Generating...' : 'Create Quotation'}
@@ -873,7 +870,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
               className="sv-form"
               onSubmit={event => {
                 event.preventDefault();
-                handleCreateQuotation(quoteTarget, quoteCompanyCode, quoteFileType);
+                handleCreateQuotation(quoteTarget, quoteCompanyCode);
               }}
             >
               <div className="sv-field">
@@ -883,14 +880,6 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                   value={quoteCompanyCode}
                   onChange={setQuoteCompanyCode}
                 />
-              </div>
-              <div className="sv-field">
-                <label>File Type *</label>
-                <select value={quoteFileType} onChange={event => setQuoteFileType(event.target.value)} required>
-                  <option value="">Select file type</option>
-                  <option value="Green">Green File (Local)</option>
-                  <option value="Blue">Blue File (Imported)</option>
-                </select>
               </div>
               <div className="sv-modal-actions">
                 <button type="button" className="sv-btn-cancel" onClick={() => setQuoteTarget(null)}>Cancel</button>

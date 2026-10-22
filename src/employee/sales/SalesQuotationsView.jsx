@@ -38,6 +38,7 @@ import { CUSTOMER_PO_ATTACHMENT_ACCEPT, readCustomerPOAttachment } from './custo
 import { getUser } from '../../utils/authStorage';
 import { DOCUMENT_TYPES, companiesFor, companyName } from '../../utils/companies';
 import { drawSalesDocumentHeader, getClientContactLayout, getDocumentIssuerName } from '../../utils/salesDocumentPdfLayout';
+import { fileNumberCore } from '../../utils/fileClassification';
 
 const STATUS_COLORS = {
   Quotation: '#2563EB',
@@ -57,7 +58,6 @@ const EMPTY_FORM = {
   clientName: '',
   salePerson: '',
   fileNo: '',
-  fileType: '',
   productSummary: '',
   clientEmail: '',
   clientPhone: '',
@@ -401,7 +401,6 @@ export default function SalesQuotationsView() {
       clientName: q.clientName || q.customerName || '',
       salePerson: q.salePerson || q.createdBy?.fullName || '',
       fileNo: q.fileNo || '',
-      fileType: q.fileType || '',
       productSummary: q.productSummary || '',
       clientEmail: q.clientEmail || '',
       clientPhone: q.clientPhone || '',
@@ -538,10 +537,6 @@ export default function SalesQuotationsView() {
       setError('Customer / Client name is required.');
       return;
     }
-    if (!editQ && !['Green', 'Blue'].includes(form.fileType)) {
-      setError('Select Green or Blue so the file number can be assigned.');
-      return;
-    }
     if (!editQ && !form.issuingCompanyCode) {
       setError('Select an issuing company.');
       return;
@@ -667,7 +662,7 @@ export default function SalesQuotationsView() {
     const orderRef = q.orderReference || q.quotationNumber || 'QUO-001';
     const customer = q.clientName || q.customerName || 'Client Organization';
     const salePerson = q.salePerson || q.createdBy?.fullName || 'Sales Executive';
-    const fileNo = q.fileNo || '—';
+    const fileNo = fileNumberCore(q.fileNo) || '—';
     const issuerName = getDocumentIssuerName(q);
     const creationDate = q.creationDate ? new Date(q.creationDate).toLocaleDateString('en-GB') : (q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB') : '—');
     const validUntil = q.validUntil ? new Date(q.validUntil).toLocaleDateString('en-GB') : '—';
@@ -1241,7 +1236,7 @@ export default function SalesQuotationsView() {
                     {q.fileNo && (
                       <span className="quote-card-tag">
                         <Tag size={12} color="#64748B" />
-                        File: {q.fileNo}
+                        File: {fileNumberCore(q.fileNo)}
                       </span>
                     )}
                     <span className="quote-card-tag">
@@ -1410,7 +1405,7 @@ export default function SalesQuotationsView() {
                       {q.salePerson || q.createdBy?.fullName || 'Sales Executive'}
                     </td>
                     <td style={{ color: '#475569', fontWeight: 600 }}>
-                      {q.fileNo || '—'}
+                      {fileNumberCore(q.fileNo) || '—'}
                     </td>
                     <td style={{ maxWidth: '280px', color: '#334155' }}>
                       <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={q.productSummary}>
@@ -1544,7 +1539,7 @@ export default function SalesQuotationsView() {
                 </div>
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>File-No#</div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#334155', marginTop: '2px' }}>{viewQ.fileNo || '—'}</div>
+                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#334155', marginTop: '2px' }}>{fileNumberCore(viewQ.fileNo) || '—'}</div>
                 </div>
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>Creation Date</div>
@@ -1715,16 +1710,8 @@ export default function SalesQuotationsView() {
                     <input value={form.salePerson} readOnly placeholder="Logged-in sales person" />
                   </div>
                   <div className="sv-field">
-                    <label>File Type *</label>
-                    <select value={form.fileType} onChange={e => setForm(p => ({ ...p, fileType: e.target.value }))} required={!editQ} disabled={Boolean(editQ)}>
-                      <option value="">Select file type</option>
-                      <option value="Green">Green File (Local)</option>
-                      <option value="Blue">Blue File (Imported)</option>
-                    </select>
-                  </div>
-                  <div className="sv-field">
                     <label>File-No#</label>
-                    <input value={form.fileNo} readOnly placeholder="Assigned automatically on save" style={{ background: '#F1F5F9' }} />
+                    <input value={fileNumberCore(form.fileNo)} readOnly placeholder="Numeric file number assigned automatically on save" style={{ background: '#F1F5F9' }} />
                   </div>
                 </div>
               </div>

@@ -54,7 +54,10 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       ]);
       if (posRes.success) setPos(Array.isArray(posRes.pos) ? posRes.pos : (Array.isArray(posRes.data) ? posRes.data : []));
       if (suppRes.success) setSuppliers(Array.isArray(suppRes.suppliers) ? suppRes.suppliers : (Array.isArray(suppRes.data) ? suppRes.data : []));
-      if (ordRes.success) setPendingOrders(Array.isArray(ordRes.orders) ? ordRes.orders : (Array.isArray(ordRes.data) ? ordRes.data : []));
+      if (ordRes.success) {
+        const rows = Array.isArray(ordRes.orders) ? ordRes.orders : (Array.isArray(ordRes.data) ? ordRes.data : []);
+        setPendingOrders(rows.filter(order => order.fileType === 'Blue'));
+      }
     } catch (err) {
       console.error('Error fetching Global POs and pending orders:', err);
     } finally {
