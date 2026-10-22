@@ -55,7 +55,6 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
   const [productFiles, setProductFiles] = useState([]);
   const [customerPOs, setCustomerPOs] = useState([]);
   const [quotations, setQuotations] = useState([]);
-  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -91,14 +90,12 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
 
   const fetchDependencies = useCallback(async () => {
     try {
-      const [poRes, qRes, ordRes] = await Promise.all([
+      const [poRes, qRes] = await Promise.all([
         apiRequest('/api/sales-employee/customer-pos?status=all'),
-        apiRequest('/api/sales-employee/quotations?status=all'),
-        apiRequest('/api/sales-employee/orders')
+        apiRequest('/api/sales-employee/quotations?status=all')
       ]);
       if (poRes.response.ok && poRes.data.success) setCustomerPOs(poRes.data.data || []);
       if (qRes.response.ok && qRes.data.success) setQuotations(qRes.data.data || []);
-      if (ordRes.response.ok && ordRes.data.success) setOrders(ordRes.data.data || []);
     } catch (e) {
       console.error('Error fetching dependencies:', e);
     }
@@ -392,7 +389,6 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
 
     setSoPreFillModal({
       productFile: pf,
-      orderReference: `SO-${String(orders.length + 1).padStart(4, '0')}`,
       clientName: pf.customerName,
       fileNo: pf.fileNumber || '',
       fileType: pf.fileType || 'Blue',
@@ -416,7 +412,6 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       const net = Number(soPreFillModal.totalAmount) || 0;
       const subtotal = Number(soPreFillModal.subtotal) || net;
       const payload = {
-        orderReference: soPreFillModal.orderReference,
         clientName: soPreFillModal.clientName,
         fileNo: soPreFillModal.fileNo,
         fileType: soPreFillModal.fileType,
@@ -890,7 +885,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
               <div className="sv-grid-2">
                 <div className="sv-field">
                   <label>Order Reference #</label>
-                  <input value={soPreFillModal.orderReference} onChange={e => setSoPreFillModal(p => ({ ...p, orderReference: e.target.value }))} required />
+                  <input value="" placeholder="Assigned automatically on save" readOnly style={{ background: '#F1F5F9' }} />
                 </div>
                 <div className="sv-field">
                   <label>Customer Name</label>

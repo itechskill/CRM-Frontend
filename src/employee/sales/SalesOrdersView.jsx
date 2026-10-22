@@ -390,8 +390,7 @@ export default function SalesOrdersView() {
 
   const openCreate = () => {
     const today = new Date().toISOString().substring(0, 10);
-    const defaultRef = `SO-${String(orders.length + 1).padStart(4, '0')}`;
-    setForm({ ...EMPTY_FORM, orderReference: defaultRef, creationDate: today });
+    setForm({ ...EMPTY_FORM, orderReference: '', creationDate: today });
     setEditO(null);
     setError('');
     setShowModal(true);
@@ -459,6 +458,7 @@ export default function SalesOrdersView() {
         creationDate: form.creationDate || null,
         deliveryDate: form.deliveryDate || null
       };
+      if (!editO) delete payload.orderReference;
       const url = editO ? `/api/sales-employee/orders/${editO._id}` : '/api/sales-employee/orders';
       const method = editO ? 'PATCH' : 'POST';
       const { response, data } = await apiRequest(url, { method, body: JSON.stringify(payload) });
@@ -1337,8 +1337,15 @@ export default function SalesOrdersView() {
                 <div className="sv-form-section-title"><Building size={14} color="#2563EB" /> Customer & Order Info</div>
                 <div className="sv-grid-2">
                   <div className="sv-field">
-                    <label>Order Reference # *</label>
-                    <input value={form.orderReference} onChange={e => setForm(p => ({ ...p, orderReference: e.target.value }))} placeholder="e.g. S01723" required />
+                    <label>Order Reference #</label>
+                    <input
+                      value={form.orderReference}
+                      onChange={e => setForm(p => ({ ...p, orderReference: e.target.value }))}
+                      placeholder={editO ? 'Sales Order reference' : 'Assigned automatically on save'}
+                      readOnly={!editO}
+                      required={Boolean(editO)}
+                      style={!editO ? { background: '#F1F5F9' } : undefined}
+                    />
                   </div>
                   <div className="sv-field">
                     <label>Customer Name *</label>
