@@ -223,3 +223,21 @@
 .spin {
   animation: spin 1s linear infinite;
 }
+/* Release 4: laptop-friendly two-panel Delivery Note composer. */
+.support-dn-create-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.support-dn-products-panel,
+.support-dn-form-panel {
+  min-width: 0;
+}
+
+@media (max-width: 900px) {
+  .support-dn-create-columns {
+    grid-template-columns: 1fr;
+  }
+}

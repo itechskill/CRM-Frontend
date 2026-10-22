@@ -93,7 +93,6 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
       }
 
       const shipment = o.shipmentDetails || {};
-      const today = new Date().toISOString().split('T')[0];
       const lines = (data.data.items || []).map((line, index) => {
         const recommended = line.matches?.find(match => String(match._id) === String(line.recommendedInventoryItemId));
         return {
@@ -115,17 +114,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
       setReceivingPreview(data.data);
       setReceivingForm({
         receiptId: createReceiptId(),
-        referenceNumber: o.fileType === 'Blue'
-          ? (o.blNumber || shipment.awbNumber || shipment.trackingNumber || '')
-          : '',
-        referenceDate: shipment.actualArrivalDate
-          ? new Date(shipment.actualArrivalDate).toISOString().split('T')[0]
-          : today,
         supplierName: o.supplierPO?.supplierName || shipment.supplierName || '-',
-        carrier: o.fileType === 'Blue' ? (shipment.carrier || '') : '',
-        containerNo: o.fileType === 'Blue' ? (shipment.containerNumber || shipment.trackingNumber || '') : '',
-        portOfLoading: o.fileType === 'Blue' ? (shipment.origin || shipment.departureLocation || '') : '',
-        portOfDischarge: o.fileType === 'Blue' ? (shipment.destination || shipment.arrivalLocation || '') : '',
         remarks: '',
         items: lines
       });
@@ -764,46 +753,6 @@ function ReceiveGoodsModal({ order, preview, form, loading, submitting, onClose,
           <div className="sv-loading" style={{ padding: '28px' }}>Loading order lines and inventory matches...</div>
         ) : (
           <form onSubmit={onSubmit} style={{ marginTop: '16px' }}>
-            <div style={{ background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: '10px', padding: '14px', marginBottom: '16px' }}>
-              <div style={{ fontSize: '0.82rem', fontWeight: 800, color: '#0F172A', marginBottom: '10px' }}>
-                {order.fileType === 'Blue' ? 'BL / AWB & shipment reference' : 'Supplier bill details'}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '12px' }}>
-                <div>
-                  <label style={labelStyle}>{order.fileType === 'Blue' ? 'BL / AWB Number' : 'Supplier Bill No.'}</label>
-                  <input className="sv-input" value={form.referenceNumber} onChange={(e) => onChange({ ...form, referenceNumber: e.target.value })} />
-                </div>
-                <div>
-                  <label style={labelStyle}>{order.fileType === 'Blue' ? 'Reference Date' : 'Supplier Bill Date'}</label>
-                  <input type="date" className="sv-input" value={form.referenceDate} onChange={(e) => onChange({ ...form, referenceDate: e.target.value })} />
-                </div>
-                <div>
-                  <label style={labelStyle}>Supplier</label>
-                  <input className="sv-input" value={form.supplierName || '-'} readOnly style={{ background: '#F8FAFC' }} />
-                </div>
-                {order.fileType === 'Blue' && (
-                  <>
-                    <div>
-                      <label style={labelStyle}>Carrier</label>
-                      <input className="sv-input" value={form.carrier} onChange={(e) => onChange({ ...form, carrier: e.target.value })} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Container / Airway Tracking</label>
-                      <input className="sv-input" value={form.containerNo} onChange={(e) => onChange({ ...form, containerNo: e.target.value })} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Port / Origin</label>
-                      <input className="sv-input" value={form.portOfLoading} onChange={(e) => onChange({ ...form, portOfLoading: e.target.value })} />
-                    </div>
-                    <div>
-                      <label style={labelStyle}>Port / Destination</label>
-                      <input className="sv-input" value={form.portOfDischarge} onChange={(e) => onChange({ ...form, portOfDischarge: e.target.value })} />
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
               {form.items.map((line, index) => {
                 const selectedInventory = (preview?.inventoryOptions || []).find(item => String(item._id) === String(line.inventoryItemId));

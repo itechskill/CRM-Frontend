@@ -18,7 +18,8 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
     supplierId: '',
     supplierName: '',
     supplierCountry: 'China',
-    poNumber: '',
+    vatMode: 'none',
+    vatRate: 0,
     paymentTerms: 'LC at Sight',
     items: [],
     remarks: ''
@@ -72,7 +73,8 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
       supplierId: '',
       supplierName: '',
       supplierCountry: 'China',
-      poNumber: `GPO-${Date.now().toString().slice(-6)}`,
+      vatMode: 'none',
+      vatRate: 0,
       paymentTerms: 'LC at Sight',
       items: orderItems,
       remarks: `International PO for Sales Order ${order.orderNumber || order.orderReference}`
@@ -122,9 +124,13 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
     }));
   };
 
-  const calculateTotal = () => {
+  const calculateSubtotal = () => {
     return formData.items.reduce((sum, it) => sum + (Number(it.totalPricePKR) || 0), 0);
   };
+  const calculateVat = () => formData.vatMode === 'vat'
+    ? calculateSubtotal() * (Math.max(0, Number(formData.vatRate) || 0) / 100)
+    : 0;
+  const calculateTotal = () => calculateSubtotal() + calculateVat();
 
   const handleSubmitPO = async (e) => {
     e.preventDefault();
@@ -138,7 +144,6 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
       const payload = {
         issuingCompanyCode: formData.issuingCompanyCode,
         salesOrderId: selectedOrder._id,
-        poNumber: formData.poNumber,
         poType: 'Global',
         subType: 'Global',
         supplierId: formData.supplierId && formData.supplierId !== 'NEW' ? formData.supplierId : undefined,
@@ -146,13 +151,16 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
         supplierCountry: formData.supplierCountry || 'China',
         paymentTerms: formData.paymentTerms,
         items: formData.items,
+        subtotal: calculateSubtotal(),
+        vatRate: formData.vatMode === 'vat' ? Math.max(0, Number(formData.vatRate) || 0) : 0,
         totalAmountPKR: calculateTotal(),
         notes: formData.remarks
       };
 
       const res = await apiRequest('/api/purchaser/pos', 'POST', payload);
       if (res.success) {
-        setToast(`Supplier PO #${formData.poNumber} issued successfully for Sales Order ${selectedOrder.orderNumber || selectedOrder.orderReference}!`);
+        const assignedPoNumber = res.data?.poNumber || res.po?.poNumber || 'assigned';
+        setToast(`Supplier PO #${assignedPoNumber} issued successfully for Sales Order ${selectedOrder.orderNumber || selectedOrder.orderReference}!`);
         setSelectedOrder(null);
         fetchData();
         setTimeout(() => setToast(''), 5000);
@@ -357,14 +365,14 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                 </div>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                    PO Number *
+                    PO Number
                   </label>
                   <input
                     type="text"
-                    required
-                    value={formData.poNumber}
-                    onChange={(e) => setFormData({ ...formData, poNumber: e.target.value })}
-                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', fontWeight: 700, color: '#2563EB', boxSizing: 'border-box' }}
+                    value=""
+                    placeholder="Assigned on issue"
+                    readOnly
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F1F5F9', fontSize: '0.88rem', fontWeight: 700, color: '#2563EB', boxSizing: 'border-box' }}
                   />
                 </div>
 
@@ -398,6 +406,25 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
                   />
                 </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>VAT</label>
+                  <select
+                    value={formData.vatMode}
+                    onChange={(e) => setFormData(prev => ({ ...prev, vatMode: e.target.value, vatRate: e.target.value === 'vat' ? prev.vatRate : 0 }))}
+                    style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }}
+                  >
+                    <option value="none">No VAT</option>
+                    <option value="vat">VAT</option>
+                  </select>
+                </div>
+                {formData.vatMode === 'vat' && (
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>VAT Percentage *</label>
+                    <input type="number" min="0" max="100" step="0.01" required value={formData.vatRate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, vatRate: e.target.value }))}
+                      style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.88rem', boxSizing: 'border-box' }} />
+                  </div>
+                )}
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
@@ -493,8 +520,11 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                   </table>
                 </div>
 
-                <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '0.95rem', fontWeight: 800, color: '#0F172A' }}>
-                  Total PO Amount: <span style={{ color: '#2563EB' }}>PKR {calculateTotal().toLocaleString()}</span>
+                <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '0.9rem', color: '#475569' }}>
+                  Subtotal: PKR {calculateSubtotal().toLocaleString()} &nbsp;|&nbsp; VAT: PKR {calculateVat().toLocaleString()}
+                  <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', marginTop: '3px' }}>
+                    Total PO Amount: <span style={{ color: '#2563EB' }}>PKR {calculateTotal().toLocaleString()}</span>
+                  </div>
                 </div>
               </div>
 

@@ -64,7 +64,7 @@ export default function LogisticsIncomingOrdersView({ onNavigateTab }) {
     setCreateForm({
       supplierName: order.supplierPO?.supplierName || '',
       supplierCountry: order.supplierPO?.supplierCountry || 'China',
-      supplierPoNumber: order.supplierPO?.poNumber || '',
+      supplierPoNumber: order.supplierPO?.poNumber || order.supplierPoNumber || '',
       carrier: '',
       flightNumber: '',
       trackingNumber: '',
@@ -350,7 +350,9 @@ export default function LogisticsIncomingOrdersView({ onNavigateTab }) {
                   <input
                     type="text"
                     value={createForm.supplierPoNumber}
-                    onChange={(e) => setCreateForm({ ...createForm, supplierPoNumber: e.target.value })}
+                    placeholder="Issued Global PO number"
+                    readOnly
+                    style={{ background: '#F1F5F9' }}
                   />
                 </div>
 
