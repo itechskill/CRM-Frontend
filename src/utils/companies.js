@@ -5,15 +5,27 @@ export const DOCUMENT_TYPES = Object.freeze({
 });
 
 export const COMPANY_OPTIONS = Object.freeze([
-  { code: 'FORTLINE_ENTERPRISES', legalName: 'Fortline Enterprises', allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO] },
-  { code: 'FORTLINE_PRIVATE_LIMITED', legalName: 'Fortline Private Limited', allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO] },
-  { code: 'HIGH_CLOUD_TRADING_LLC', legalName: 'High Cloud Trading LLC', allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.GLOBAL_PO] },
-  { code: 'WWTS', legalName: 'Worldwide Techsolutions (WWTS)', allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO] }
+  { code: 'FORTLINE_ENTERPRISES', legalName: 'Fortline Enterprises', letterhead: null, allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO] },
+  {
+    code: 'FORTLINE_PRIVATE_LIMITED',
+    legalName: 'Fortline Private Limited',
+    letterhead: {
+      header: '/letterheads/fortline-private-limited-header.png',
+      footer: '/letterheads/fortline-private-limited-footer.png'
+    },
+    allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO]
+  },
+  { code: 'HIGH_CLOUD_TRADING_LLC', legalName: 'High Cloud Trading LLC', letterhead: null, allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.GLOBAL_PO] },
+  { code: 'WWTS', legalName: 'Worldwide Techsolutions (WWTS)', letterhead: null, allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO] }
 ]);
 
 export const companiesFor = (documentType) => COMPANY_OPTIONS.filter(company => company.allowedDocumentTypes.includes(documentType));
 
 export const companyName = (record) => record?.issuingCompany?.legalName || '-';
+
+export const companyByCode = code => COMPANY_OPTIONS.find(company => company.code === code) || null;
+
+export const letterheadFor = record => companyByCode(record?.issuingCompany?.code)?.letterhead || null;
 
 export const defaultCompanyCode = (record, documentType) => {
   const code = record?.issuingCompany?.code || '';
