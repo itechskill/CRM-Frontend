@@ -32,6 +32,7 @@ const SIGNED_DN_ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp';
 const SIGNED_DN_EXTENSIONS = /\.(pdf|png|jpe?g|webp|gif|bmp)$/i;
 const SIGNED_DN_MIME_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg', 'image/webp', 'image/gif', 'image/bmp']);
 const SIGNED_DN_MAX_SIZE = 3 * 1024 * 1024;
+const FINAL_DN_STATUSES = new Set(['Done', 'Delivered', 'Confirmed', 'Fully Delivered', 'Cancelled', 'Returned']);
 
 const EMPTY_ITEM = {
   product: '',
@@ -120,18 +121,27 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
   }, [fetchDeliveryNotes, fetchOrders]);
 
   useEffect(() => {
-    const pending = deliveryNotes.filter(dn => !['Done', 'Delivered', 'Confirmed'].includes(dn.status) && dn.salesOrder?._id);
+    const pending = deliveryNotes.filter(dn => !FINAL_DN_STATUSES.has(dn.status));
     if (pending.length === 0) return;
     let cancelled = false;
-    Promise.all(pending.map(async dn => {
-      const { response, data } = await apiRequest(`/api/sales-employee/orders/${dn.salesOrder._id}/stock-check`);
-      return [dn._id, response.ok && data.success ? data.data : { isFullyInStock: false, message: data.message || 'Stock check failed.' }];
-    })).then(entries => {
-      if (!cancelled) setDeliveryNoteStockChecks(Object.fromEntries(entries));
-    }).catch(() => {
-      if (!cancelled) setDeliveryNoteStockChecks({});
-    });
-    return () => { cancelled = true; };
+    const refreshStockChecks = () => Promise.all(pending.map(async dn => {
+        try {
+          const { response, data } = await apiRequest(`/api/sales-employee/delivery-notes/${dn._id}/stock-check`);
+          return [dn._id, response.ok && data.success
+            ? { ...data.data, checkError: false }
+            : { isFullyInStock: false, checkError: true, message: data.message || `Stock check failed (${response.status}).` }];
+        } catch {
+          return [dn._id, { isFullyInStock: false, checkError: true, message: 'Could not reach the server to check stock.' }];
+        }
+      })).then(entries => {
+        if (!cancelled) setDeliveryNoteStockChecks(Object.fromEntries(entries));
+      });
+    refreshStockChecks();
+    const refreshTimer = window.setInterval(refreshStockChecks, 15000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(refreshTimer);
+    };
   }, [deliveryNotes]);
 
   useEffect(() => {
@@ -210,8 +220,8 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
       alert('Select a Sales Order that has reached Support and has goods received in office.');
       return;
     }
-    if (!selectedStockCheck?.isFullyInStock) {
-      alert('Add inventory first using Receive Goods / Inventory IN. Every order line must have sufficient stock.');
+    if (selectedStockCheck?.loading) {
+      alert('Wait for the inventory check to finish.');
       return;
     }
     if (saving) return;
@@ -258,7 +268,11 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
   };
 
   const openConfirmDN = (dn) => {
-    if (!deliveryNoteStockChecks[dn._id]?.isFullyInStock) return;
+    const stockCheck = deliveryNoteStockChecks[dn._id];
+    if (!stockCheck?.isFullyInStock) {
+      alert(stockCheck?.message || 'Inventory is still being checked.');
+      return;
+    }
     setSignedDNAttachment({ signedDeliveryNoteDocument: '', signedDeliveryNoteDocumentName: '' });
     setConfirmDN(dn);
   };
@@ -682,7 +696,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
             </thead>
             <tbody>
               {filteredDNs.map((dn) => {
-                const isConfirmed = dn.status === 'Done' || dn.status === 'Delivered' || dn.status === 'Confirmed';
+                const isConfirmed = FINAL_DN_STATUSES.has(dn.status);
                 const stockCheck = deliveryNoteStockChecks[dn._id];
                 return (
                   <tr key={dn._id}>
@@ -711,15 +725,15 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                             style={{ padding: '4px 10px', fontSize: '0.75rem', background: '#059669', gap: '4px' }}
                             onClick={() => openConfirmDN(dn)}
                             disabled={confirmingId === dn._id || !stockCheck?.isFullyInStock}
-                            title={!stockCheck
-                              ? 'Checking inventory stock...'
-                              : (!stockCheck.isFullyInStock ? 'Add inventory first using Receive Goods / Inventory IN.' : '')}
+                            title={!stockCheck ? 'Checking inventory stock...' : (!stockCheck.isFullyInStock ? stockCheck.message : '')}
                           >
                             <CheckCircle2 size={13} /> {confirmingId === dn._id ? 'Confirming...' : 'Confirm Delivery'}
                           </button>
                         )}
                         {!isConfirmed && stockCheck && !stockCheck.isFullyInStock && (
-                          <span style={{ color: '#B91C1C', fontSize: '0.7rem', maxWidth: '150px' }}>Add inventory first</span>
+                          <span style={{ color: stockCheck.checkError ? '#B45309' : '#B91C1C', fontSize: '0.7rem', maxWidth: '220px' }}>
+                            {stockCheck.checkError ? `Stock check error: ${stockCheck.message}` : stockCheck.message}
+                          </span>
                         )}
                         <button className="sv-btn-action-icon" onClick={() => setViewDN(dn)} title="View Delivery Note Complete Details">
                           <Eye size={14} color="#2563EB" />
@@ -833,7 +847,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                     ? 'Checking inventory stock...'
                     : (selectedStockCheck?.isFullyInStock
                       ? 'All remaining order quantities are available.'
-                      : 'Add inventory first using Receive Goods / Inventory IN before creating the Delivery Note.')}
+                      : 'The full remaining order is not in stock. You may create a partial Delivery Note; the server will reserve and validate only the submitted quantities.')}
                 </div>
               )}
 
@@ -1009,7 +1023,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
 
               <div className="sv-modal-actions">
                 <button type="button" className="sv-btn-cancel" onClick={() => setShowModal(false)}>Cancel</button>
-                <button type="submit" className="sv-btn-primary" disabled={saving || !selectedStockCheck?.isFullyInStock} title={!selectedStockCheck?.isFullyInStock ? 'Add inventory first using Receive Goods / Inventory IN.' : ''}>
+                <button type="submit" className="sv-btn-primary" disabled={saving || selectedStockCheck?.loading} title="Submitted Delivery Note quantities are checked and reserved by the server.">
                   <Save size={14} /> {saving ? 'Saving...' : 'Save Delivery Note'}
                 </button>
               </div>
@@ -1218,7 +1232,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                 <button className="sv-btn-primary" onClick={() => handleDownloadPDF(viewDN)} style={{ background: '#0284C7', gap: '6px' }}>
                   <Download size={14} /> Download Official PDF
                 </button>
-                {!['Done', 'Delivered', 'Confirmed'].includes(viewDN.status) && (
+                {!FINAL_DN_STATUSES.has(viewDN.status) && (
                   <button
                     className="sv-btn-primary"
                     style={{ background: '#059669', gap: '6px' }}
@@ -1227,6 +1241,8 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                       setViewDN(null);
                       openConfirmDN(dnToConfirm);
                     }}
+                    disabled={!deliveryNoteStockChecks[viewDN._id]?.isFullyInStock}
+                    title={deliveryNoteStockChecks[viewDN._id]?.message || 'Checking inventory stock...'}
                   >
                     <CheckCircle2 size={14} /> Confirm Delivery
                   </button>
