@@ -34,6 +34,7 @@ import './SalesSidebar.css';
 export default function SalesSidebar({ activeTab, setActiveTab, currentRole, userRole, currentUser, onSwitchRole, onSignOut, onLogout, isMobileOpen, onClose }) {
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [counts, setCounts] = useState({ leads: 0, meetings: 0, proposals: 0, notifications: 0 });
+  const [targetPerformanceVisible, setTargetPerformanceVisible] = useState(false);
   const handleLogout = onLogout || onSignOut;
 
   useEffect(() => {
@@ -48,6 +49,9 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
       }
     };
     fetchCounts();
+    apiRequest('/api/target-performance/visibility').then(result => {
+      if (result.success) setTargetPerformanceVisible(Boolean(result.data?.data?.showToSalespeople));
+    });
   }, []);
 
   const handleSetActiveTab = (tab) => {
@@ -68,7 +72,8 @@ export default function SalesSidebar({ activeTab, setActiveTab, currentRole, use
     { id: 'contacts', label: 'Contacts', icon: Users },
     { id: 'meetings', label: 'Meetings', icon: Calendar, badge: counts.meetings > 0 ? String(counts.meetings) : undefined },
     { id: 'clients', label: 'Clients', icon: Users },
-    { id: 'team', label: 'Sales Team', icon: UserCheck }
+    { id: 'team', label: 'Sales Team', icon: UserCheck },
+    ...(targetPerformanceVisible ? [{ id: 'target_performance', label: 'Target Performance', icon: Target }] : [])
   ];
 
   const systemNav = [

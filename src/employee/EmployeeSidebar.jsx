@@ -38,6 +38,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
   const [showRoleMenu, setShowRoleMenu] = useState(false);
   const [collapsed, setCollapsed] = useState(false);
   const [counts, setCounts] = useState({ projects: 0, tasks: 0, notifications: 0, leads: 0 });
+  const [targetPerformanceVisible, setTargetPerformanceVisible] = useState(false);
 
   useEffect(() => {
     const fetchCounts = async () => {
@@ -51,6 +52,9 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
       }
     };
     fetchCounts();
+    apiRequest('/api/target-performance/visibility').then(result => {
+      if (result.success) setTargetPerformanceVisible(Boolean(result.data?.data?.showToSalespeople));
+    });
   }, []);
 
   const handleSetActiveTab = (tab) => {
@@ -103,6 +107,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
     { id: 'my_payments', label: 'Customer Payments', icon: DollarSign },
     { id: 'followups', label: 'Client Follow-ups', icon: Phone },
     { id: 'sales_targets', label: 'Sales Targets', icon: Target },
+    ...(targetPerformanceVisible ? [{ id: 'target_performance', label: 'Target Performance', icon: Target }] : []),
     { id: 'sales_activities', label: 'Sales Activities', icon: ClipboardList },
   ];
 
@@ -113,6 +118,7 @@ export default function EmployeeSidebar({ activeTab, setActiveTab, currentRole, 
     { id: 'customer_pos', label: 'Customer POs', icon: FileCheck },
     { id: 'product_files', label: 'Product Files', icon: FolderKanban },
     { id: 'my_orders', label: 'Sales Orders', icon: Briefcase },
+    ...(targetPerformanceVisible ? [{ id: 'target_performance', label: 'Target Performance', icon: Target }] : []),
   ];
 
   const canAccessPriceRequests = ['sales_member', 'sales_rep', 'sales_person'].includes(currentUser?.role);
