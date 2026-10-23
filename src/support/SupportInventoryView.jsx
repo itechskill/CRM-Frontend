@@ -804,7 +804,7 @@ export default function SupportInventoryView() {
             </div>
             <div style={{ marginTop: '16px', overflowX: 'auto' }}>
               <table className="sv-table" style={{ minWidth: '680px' }}>
-                <thead><tr><th>Date</th><th>Type</th><th>Quantity</th><th>GRN</th><th>Sales Order</th><th>Reference</th></tr></thead>
+                <thead><tr><th>Date</th><th>Type</th><th>Quantity</th><th>GRN</th><th>Sales Order</th><th>Reference</th><th>Performed By</th><th>Remarks</th></tr></thead>
                 <tbody>
                   {[...(movementItem.stockMovements || [])].reverse().map((movement, index) => (
                     <tr key={movement._id || `${movement.timestamp}-${index}`}>
@@ -814,10 +814,12 @@ export default function SupportInventoryView() {
                       <td style={{ fontWeight: 700, color: '#2563EB' }}>{movement.grnNumber || '-'}</td>
                       <td>{movement.orderNumber || '-'}</td>
                       <td>{movement.reference || '-'}</td>
+                      <td>{movement.performedByName || '-'}</td>
+                      <td>{movement.remarks || '-'}</td>
                     </tr>
                   ))}
                   {(movementItem.stockMovements || []).length === 0 && (
-                    <tr><td colSpan={6} style={{ textAlign: 'center', color: '#94A3B8' }}>No stock movements recorded.</td></tr>
+                    <tr><td colSpan={8} style={{ textAlign: 'center', color: '#94A3B8' }}>No stock movements recorded.</td></tr>
                   )}
                 </tbody>
               </table>
