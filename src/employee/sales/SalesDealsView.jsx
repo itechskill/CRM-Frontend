@@ -29,6 +29,9 @@ import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
 import IssuingCompanySelect from '../../components/IssuingCompanySelect';
 import { DOCUMENT_TYPES } from '../../utils/companies';
+import { getUser } from '../../utils/authStorage';
+import { initialsFromName, sanitizeQuotationCode } from '../../utils/quotationNumber';
+import { DEFAULT_TERMS } from '../../utils/quotationPdf';
 
 const STAGE_COLORS = {
   Prospecting: { bg: '#EFF6FF', color: '#1D4ED8', border: '#BFDBFE' },
@@ -67,6 +70,7 @@ const EMPTY_DEAL = {
 };
 
 export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotations }) {
+  const currentUser = getUser();
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stageFilter, setStageFilter] = useState('all');
@@ -85,6 +89,35 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const [creatingQuote, setCreatingQuote] = useState(false);
   const [quoteTarget, setQuoteTarget] = useState(null);
   const [quoteCompanyCode, setQuoteCompanyCode] = useState('');
+  const [quoteDetails, setQuoteDetails] = useState({
+    quotationCode: initialsFromName(currentUser?.fullName),
+    sku: '',
+    description: '',
+    taxPercentage: 18,
+    currency: DEFAULT_TERMS.currency,
+    reference: '',
+    availability: DEFAULT_TERMS.availability,
+    paymentTerms: DEFAULT_TERMS.paymentTerms,
+    priceValidity: DEFAULT_TERMS.priceValidity,
+    commercialNote: DEFAULT_TERMS.commercialNote
+  });
+
+  const openQuotationFromDeal = deal => {
+    setQuoteTarget(deal);
+    setQuoteCompanyCode('');
+    setQuoteDetails({
+      quotationCode: initialsFromName(currentUser?.fullName),
+      sku: '',
+      description: deal.requirements || deal.title || 'Quotation per Customer Requirement',
+      taxPercentage: 18,
+      currency: DEFAULT_TERMS.currency,
+      reference: '',
+      availability: DEFAULT_TERMS.availability,
+      paymentTerms: DEFAULT_TERMS.paymentTerms,
+      priceValidity: DEFAULT_TERMS.priceValidity,
+      commercialNote: DEFAULT_TERMS.commercialNote
+    });
+  };
 
   const fetchDeals = useCallback(async () => {
     setLoading(true);
@@ -171,11 +204,23 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
     try {
       const quotePayload = {
         issuingCompanyCode,
+        quotationCode: sanitizeQuotationCode(quoteDetails.quotationCode),
         clientName: deal.clientName,
         dealId: deal._id,
-        productSummary: deal.requirements || deal.title || 'Quotation per Customer Requirement',
-        totalAmount: deal.value ? Number(deal.value) : 0,
-        netAmount: deal.value ? Number(deal.value) : 0,
+        productSummary: quoteDetails.description,
+        items: [{
+          sku: quoteDetails.sku,
+          description: quoteDetails.description,
+          quantity: 1,
+          unitPrice: deal.value ? Number(deal.value) : 0
+        }],
+        taxPercentage: Number(quoteDetails.taxPercentage) || 0,
+        currency: quoteDetails.currency,
+        reference: quoteDetails.reference,
+        availability: quoteDetails.availability,
+        paymentTerms: quoteDetails.paymentTerms,
+        priceValidity: quoteDetails.priceValidity,
+        commercialNote: quoteDetails.commercialNote,
         status: 'Draft',
         notes: `Created from Deal: ${deal.title}. ${deal.notes || ''}`
       };
@@ -665,7 +710,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                         <button
                           className="sv-btn-action-icon"
                           style={{ color: '#2563EB', background: '#EFF6FF' }}
-                          onClick={() => { setQuoteTarget(d); setQuoteCompanyCode(''); }}
+                          onClick={() => openQuotationFromDeal(d)}
                           disabled={creatingQuote}
                           title="Generate Quotation"
                         >
@@ -751,7 +796,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                 <button
                   className="sv-btn-primary"
                   style={{ background: '#2563EB' }}
-                  onClick={() => { setQuoteTarget(viewDeal); setQuoteCompanyCode(''); }}
+                  onClick={() => openQuotationFromDeal(viewDeal)}
                   disabled={creatingQuote}
                 >
                   <ArrowRight size={14} /> {creatingQuote ? 'Generating...' : 'Create Quotation'}
@@ -861,7 +906,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
       {/* ISSUING COMPANY FOR DEAL-TO-QUOTATION */}
       {quoteTarget && (
         <div className="sv-modal-overlay" onClick={() => setQuoteTarget(null)}>
-          <div className="sv-modal" style={{ maxWidth: '480px' }} onClick={e => e.stopPropagation()}>
+          <div className="sv-modal" style={{ maxWidth: '720px' }} onClick={e => e.stopPropagation()}>
             <div className="sv-modal-header">
               <h3 style={{ margin: 0 }}>Create Quotation</h3>
               <button onClick={() => setQuoteTarget(null)}><X size={18} /></button>
@@ -881,6 +926,36 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                   onChange={setQuoteCompanyCode}
                 />
               </div>
+              <div className="sv-grid-2">
+                <div className="sv-field">
+                  <label>Quotation Code *</label>
+                  <input value={quoteDetails.quotationCode} onChange={e => setQuoteDetails(p => ({ ...p, quotationCode: sanitizeQuotationCode(e.target.value) }))} maxLength={12} required />
+                  <small style={{ color: '#64748B' }}>QO-####-{sanitizeQuotationCode(quoteDetails.quotationCode) || 'CODE'}; number assigned on save</small>
+                </div>
+                <div className="sv-field">
+                  <label>GST (%)</label>
+                  <input type="number" min="0" max="100" step="any" value={quoteDetails.taxPercentage} onChange={e => setQuoteDetails(p => ({ ...p, taxPercentage: e.target.value }))} />
+                </div>
+                <div className="sv-field">
+                  <label>SKU</label>
+                  <input value={quoteDetails.sku} onChange={e => setQuoteDetails(p => ({ ...p, sku: e.target.value }))} />
+                </div>
+                <div className="sv-field">
+                  <label>Currency</label>
+                  <input value={quoteDetails.currency} onChange={e => setQuoteDetails(p => ({ ...p, currency: e.target.value }))} />
+                </div>
+              </div>
+              <div className="sv-field">
+                <label>Description / Specifications *</label>
+                <textarea rows={4} value={quoteDetails.description} onChange={e => setQuoteDetails(p => ({ ...p, description: e.target.value }))} required />
+              </div>
+              <div className="sv-grid-2">
+                <div className="sv-field"><label>Reference</label><input value={quoteDetails.reference} onChange={e => setQuoteDetails(p => ({ ...p, reference: e.target.value }))} /></div>
+                <div className="sv-field"><label>Availability</label><input value={quoteDetails.availability} onChange={e => setQuoteDetails(p => ({ ...p, availability: e.target.value }))} /></div>
+                <div className="sv-field"><label>Payment Terms</label><input value={quoteDetails.paymentTerms} onChange={e => setQuoteDetails(p => ({ ...p, paymentTerms: e.target.value }))} /></div>
+                <div className="sv-field"><label>Price Validity</label><input value={quoteDetails.priceValidity} onChange={e => setQuoteDetails(p => ({ ...p, priceValidity: e.target.value }))} /></div>
+              </div>
+              <div className="sv-field"><label>Commercial Note</label><textarea rows={3} value={quoteDetails.commercialNote} onChange={e => setQuoteDetails(p => ({ ...p, commercialNote: e.target.value }))} /></div>
               <div className="sv-modal-actions">
                 <button type="button" className="sv-btn-cancel" onClick={() => setQuoteTarget(null)}>Cancel</button>
                 <button type="submit" className="sv-btn-primary" disabled={creatingQuote}>

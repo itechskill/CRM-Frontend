@@ -39,6 +39,8 @@ import { getUser } from '../../utils/authStorage';
 import { DOCUMENT_TYPES, companiesFor, companyName } from '../../utils/companies';
 import { drawSalesDocumentHeader, getClientContactLayout, getDocumentIssuerName } from '../../utils/salesDocumentPdfLayout';
 import { fileNumberCore } from '../../utils/fileClassification';
+import { downloadQuotationPdf, DEFAULT_TERMS } from '../../utils/quotationPdf';
+import { initialsFromName, sanitizeQuotationCode } from '../../utils/quotationNumber';
 
 const STATUS_COLORS = {
   Quotation: '#2563EB',
@@ -54,22 +56,30 @@ const STATUS_COLORS = {
 
 const EMPTY_FORM = {
   issuingCompanyCode: '',
+  quotationCode: '',
   orderReference: '',
   clientName: '',
+  clientAddress: '',
   salePerson: '',
   fileNo: '',
   productSummary: '',
   clientEmail: '',
   clientPhone: '',
   items: [
-    { description: '', quantity: 1, unitPrice: 0, total: 0 }
+    { inventoryItem: null, inventorySearch: '', sku: '', description: '', quantity: 1, unitPrice: 0, total: 0 }
   ],
   totalAmount: 0,
   discount: 0,
   discountPercentage: 0,
   tax: 0,
-  taxPercentage: 0,
+  taxPercentage: 18,
   netAmount: 0,
+  currency: DEFAULT_TERMS.currency,
+  reference: '',
+  availability: DEFAULT_TERMS.availability,
+  paymentTerms: DEFAULT_TERMS.paymentTerms,
+  priceValidity: DEFAULT_TERMS.priceValidity,
+  commercialNote: DEFAULT_TERMS.commercialNote,
   status: 'Quotation',
   creationDate: '',
   validUntil: '',
@@ -100,6 +110,7 @@ export default function SalesQuotationsView() {
   const [forwardTargetId, setForwardTargetId] = useState('');
   const [forwardNote, setForwardNote] = useState('');
   const [forwarding, setForwarding] = useState(false);
+  const [inventoryOptions, setInventoryOptions] = useState([]);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
@@ -121,6 +132,15 @@ export default function SalesQuotationsView() {
   useEffect(() => {
     fetchQ();
   }, [fetchQ]);
+
+  useEffect(() => {
+    if (!showModal) return;
+    let cancelled = false;
+    apiRequest('/api/sales-employee/inventory').then(({ response, data }) => {
+      if (!cancelled && response.ok && data.success) setInventoryOptions(data.data || []);
+    });
+    return () => { cancelled = true; };
+  }, [showModal]);
 
   const openForward = async (quote) => {
     setError('');
@@ -381,15 +401,16 @@ export default function SalesQuotationsView() {
     const today = new Date().toISOString().substring(0, 10);
     setForm({
       ...EMPTY_FORM,
+      quotationCode: initialsFromName(currentUser?.fullName),
       salePerson: currentUser?.fullName || '',
       creationDate: today,
       discount: 0,
       discountPercentage: 0,
       tax: 0,
-      taxPercentage: 0,
+      taxPercentage: 18,
       totalAmount: 0,
       netAmount: 0,
-      items: [{ description: '', quantity: 1, unitPrice: 0, total: 0 }]
+      items: [{ inventoryItem: null, inventorySearch: '', sku: '', description: '', quantity: 1, unitPrice: 0, total: 0 }]
     });
     setEditQ(null);
     setError('');
@@ -404,6 +425,9 @@ export default function SalesQuotationsView() {
         const unitP = Number(it.unitPrice) || 0;
         const lineTotal = Number(it.total !== undefined ? it.total : qty * unitP);
         return {
+          inventoryItem: it.inventoryItem?._id || it.inventoryItem || null,
+          inventorySearch: '',
+          sku: it.sku || '',
           description: it.description || '',
           quantity: qty,
           unitPrice: unitP,
@@ -413,6 +437,9 @@ export default function SalesQuotationsView() {
     } else {
       const initialTotal = Number(q.totalAmount || q.netAmount || 0);
       rawItems = [{
+        inventoryItem: null,
+        inventorySearch: '',
+        sku: '',
         description: q.productSummary || '',
         quantity: 1,
         unitPrice: initialTotal,
@@ -436,8 +463,10 @@ export default function SalesQuotationsView() {
 
     setForm({
       issuingCompanyCode: q.issuingCompany?.code || '',
+      quotationCode: q.quotationCode || '',
       orderReference: q.orderReference || q.quotationNumber || '',
       clientName: q.clientName || q.customerName || '',
+      clientAddress: q.clientAddress || '',
       salePerson: q.salePerson || q.createdBy?.fullName || '',
       fileNo: q.fileNo || '',
       productSummary: q.productSummary || '',
@@ -450,6 +479,12 @@ export default function SalesQuotationsView() {
       tax: taxVal,
       taxPercentage: taxPct,
       netAmount: q.netAmount !== undefined ? Number(q.netAmount) : calculatedNet,
+      currency: q.currency || DEFAULT_TERMS.currency,
+      reference: q.reference || '',
+      availability: q.availability || DEFAULT_TERMS.availability,
+      paymentTerms: q.paymentTerms || DEFAULT_TERMS.paymentTerms,
+      priceValidity: q.priceValidity || DEFAULT_TERMS.priceValidity,
+      commercialNote: q.commercialNote || DEFAULT_TERMS.commercialNote,
       status: q.status || 'Quotation',
       creationDate: q.creationDate ? new Date(q.creationDate).toISOString().substring(0, 10) : '',
       validUntil: q.validUntil ? new Date(q.validUntil).toISOString().substring(0, 10) : '',
@@ -466,8 +501,9 @@ export default function SalesQuotationsView() {
         if (idx !== index) return it;
         const updated = { ...it };
 
-        if (field === 'description') {
-          updated.description = value;
+        if (field === 'description' || field === 'sku') {
+          updated[field] = value;
+          if (field === 'description' || field === 'sku') updated.inventoryItem = null;
         } else if (field === 'quantity') {
           const parsedQty = value === '' ? '' : Math.max(1, parseInt(value, 10) || 1);
           updated.quantity = parsedQty;
@@ -500,6 +536,23 @@ export default function SalesQuotationsView() {
         productSummary: summary || prev.productSummary
       };
     });
+  };
+
+  const handleInventoryPickerChange = (index, value) => {
+    const match = inventoryOptions.find(item => {
+      const label = `${item.name}${item.sku ? ` [${item.sku}]` : ''}`;
+      return label === value || item.name === value || (item.sku && item.sku === value);
+    });
+    setForm(prev => ({
+      ...prev,
+      items: prev.items.map((item, itemIndex) => itemIndex === index ? {
+        ...item,
+        inventorySearch: value,
+        inventoryItem: match?._id || null,
+        sku: match ? (match.sku || '') : item.sku,
+        description: match ? (match.description || match.name || '') : item.description
+      } : item)
+    }));
   };
 
   const handleDiscountPctChange = (val) => {
@@ -544,7 +597,7 @@ export default function SalesQuotationsView() {
 
   const handleAddItem = () => {
     setForm(prev => {
-      const newItems = [...prev.items, { description: '', quantity: 1, unitPrice: 0, total: 0 }];
+      const newItems = [...prev.items, { inventoryItem: null, inventorySearch: '', sku: '', description: '', quantity: 1, unitPrice: 0, total: 0 }];
       const financials = recalculateForm(newItems, prev.discountPercentage, prev.discount, prev.taxPercentage, prev.tax, 'items');
       return {
         ...prev,
@@ -580,6 +633,10 @@ export default function SalesQuotationsView() {
       setError('Select an issuing company.');
       return;
     }
+    if (!editQ && !sanitizeQuotationCode(form.quotationCode)) {
+      setError('Enter at least one letter or number for the quotation code.');
+      return;
+    }
 
     // Validate items
     const invalidItem = form.items.find(it => !it.description || !it.description.trim());
@@ -592,6 +649,8 @@ export default function SalesQuotationsView() {
       const qty = Math.max(1, parseInt(it.quantity, 10) || 1);
       const unitP = Math.max(0, parseFloat(it.unitPrice) || 0);
       return {
+        inventoryItem: it.inventoryItem || null,
+        sku: String(it.sku || '').trim(),
         description: it.description.trim(),
         quantity: qty,
         unitPrice: unitP,
@@ -613,6 +672,7 @@ export default function SalesQuotationsView() {
     try {
       const payload = {
         ...form,
+        quotationCode: sanitizeQuotationCode(form.quotationCode),
         items: cleanedItems,
         totalAmount: calculated.totalAmount,
         discount: Number(calculated.discount) || 0,
@@ -696,7 +756,7 @@ export default function SalesQuotationsView() {
     }
   };
 
-  const handleDownloadSinglePDF = (q) => {
+  const _handleDownloadSinglePDFLegacy = (q) => {
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const orderRef = q.orderReference || q.quotationNumber || 'QUO-001';
     const customer = q.clientName || q.customerName || 'Client Organization';
@@ -945,6 +1005,15 @@ export default function SalesQuotationsView() {
     doc.text('Generated via Fortline CRM • Official Commercial Quotation Proposal • System Generated', 105, 285, { align: 'center' });
 
     doc.save(`Quotation_${orderRef}.pdf`);
+  };
+
+  const handleDownloadSinglePDF = async (quotation) => {
+    try {
+      await downloadQuotationPdf(quotation);
+    } catch (pdfError) {
+      console.error(pdfError);
+      setFeedback('Could not generate the quotation PDF.');
+    }
   };
 
   // ── COMPLETE QUOTATIONS LEDGER EXPORT (PDF) ──
@@ -1634,6 +1703,7 @@ export default function SalesQuotationsView() {
                   <thead>
                     <tr style={{ borderBottom: '1px solid #CBD5E1', color: '#475569', textAlign: 'left' }}>
                       <th style={{ padding: '6px 8px', width: '30px' }}>#</th>
+                      <th style={{ padding: '6px 8px' }}>SKU</th>
                       <th style={{ padding: '6px 8px' }}>Description / Product</th>
                       <th style={{ padding: '6px 8px', textAlign: 'right' }}>Unit Price (PKR)</th>
                       <th style={{ padding: '6px 8px', textAlign: 'center' }}>Qty</th>
@@ -1648,7 +1718,8 @@ export default function SalesQuotationsView() {
                       return (
                         <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
                           <td style={{ padding: '6px 8px', color: '#94A3B8' }}>{idx + 1}</td>
-                          <td style={{ padding: '6px 8px', fontWeight: 600, color: '#1E293B' }}>{it.description || 'Product Item'}</td>
+                          <td style={{ padding: '6px 8px', color: '#475569' }}>{it.sku || '—'}</td>
+                          <td style={{ padding: '6px 8px', fontWeight: 600, color: '#1E293B', whiteSpace: 'pre-wrap' }}>{it.description || 'Product Item'}</td>
                           <td style={{ padding: '6px 8px', textAlign: 'right', color: '#475569' }}>Rs. {unitP.toLocaleString()}</td>
                           <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 700, color: '#2563EB' }}>{qty}</td>
                           <td style={{ padding: '6px 8px', textAlign: 'right', fontWeight: 800, color: '#059669' }}>Rs. {total.toLocaleString()}</td>
@@ -1658,14 +1729,14 @@ export default function SalesQuotationsView() {
                   </tbody>
                   <tfoot>
                     <tr style={{ borderTop: '2px solid #CBD5E1' }}>
-                      <td colSpan={4} style={{ padding: '6px 8px', textAlign: 'right', color: '#64748B', fontWeight: 600 }}>Subtotal (Sum of Products):</td>
+                      <td colSpan={5} style={{ padding: '6px 8px', textAlign: 'right', color: '#64748B', fontWeight: 600 }}>Subtotal (Sum of Products):</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right', color: '#1E293B', fontWeight: 700 }}>
                         Rs. {Number(viewQ.totalAmount || 0).toLocaleString()}
                       </td>
                     </tr>
                     {Number(viewQ.discount || 0) > 0 && (
                       <tr>
-                        <td colSpan={4} style={{ padding: '4px 8px', textAlign: 'right', color: '#DC2626', fontWeight: 600 }}>
+                        <td colSpan={5} style={{ padding: '4px 8px', textAlign: 'right', color: '#DC2626', fontWeight: 600 }}>
                           Discount (- {Number(viewQ.discountPercentage !== undefined && viewQ.discountPercentage !== null && Number(viewQ.discountPercentage) > 0 ? viewQ.discountPercentage : ((Number(viewQ.discount) / Math.max(1, Number(viewQ.totalAmount || 0))) * 100)).toFixed(1)}%):
                         </td>
                         <td style={{ padding: '4px 8px', textAlign: 'right', color: '#DC2626', fontWeight: 700 }}>
@@ -1675,7 +1746,7 @@ export default function SalesQuotationsView() {
                     )}
                     {Number(viewQ.tax || 0) > 0 && (
                       <tr>
-                        <td colSpan={4} style={{ padding: '4px 8px', textAlign: 'right', color: '#475569', fontWeight: 600 }}>
+                        <td colSpan={5} style={{ padding: '4px 8px', textAlign: 'right', color: '#475569', fontWeight: 600 }}>
                           Tax / GST (+ {Number(viewQ.taxPercentage !== undefined && viewQ.taxPercentage !== null && Number(viewQ.taxPercentage) > 0 ? viewQ.taxPercentage : ((Number(viewQ.tax) / Math.max(1, Number(viewQ.totalAmount || 0) - Number(viewQ.discount || 0))) * 100)).toFixed(1)}%):
                         </td>
                         <td style={{ padding: '4px 8px', textAlign: 'right', color: '#475569', fontWeight: 700 }}>
@@ -1684,13 +1755,25 @@ export default function SalesQuotationsView() {
                       </tr>
                     )}
                     <tr style={{ borderTop: '1px solid #CBD5E1', fontWeight: 800 }}>
-                      <td colSpan={4} style={{ padding: '8px', textAlign: 'right', color: '#0F172A', fontSize: '0.9rem' }}>Complete Grand Total (PKR):</td>
+                      <td colSpan={5} style={{ padding: '8px', textAlign: 'right', color: '#0F172A', fontSize: '0.9rem' }}>Complete Grand Total ({viewQ.currency || 'PKR'}):</td>
                       <td style={{ padding: '8px', textAlign: 'right', color: '#059669', fontSize: '1.05rem' }}>
                         Rs. {Number(viewQ.netAmount !== undefined ? viewQ.netAmount : (viewQ.totalAmount || 0)).toLocaleString()}
                       </td>
                     </tr>
                   </tfoot>
                 </table>
+              </div>
+
+              <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '12px', marginBottom: '16px' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8', marginBottom: '6px' }}>Commercial Terms</div>
+                <div style={{ fontSize: '0.85rem', color: '#334155', lineHeight: 1.6 }}>
+                  <div><strong>Currency:</strong> {viewQ.currency || DEFAULT_TERMS.currency}</div>
+                  <div><strong>Reference:</strong> {viewQ.reference || '—'}</div>
+                  <div><strong>Availability:</strong> {viewQ.availability || DEFAULT_TERMS.availability}</div>
+                  <div><strong>Payment Terms:</strong> {viewQ.paymentTerms || DEFAULT_TERMS.paymentTerms}</div>
+                  <div><strong>Price Validity:</strong> {viewQ.priceValidity || DEFAULT_TERMS.priceValidity}</div>
+                  <div><strong>Note:</strong> {viewQ.commercialNote || DEFAULT_TERMS.commercialNote}</div>
+                </div>
               </div>
 
               {viewQ.notes && (
@@ -1736,14 +1819,14 @@ export default function SalesQuotationsView() {
       {/* CREATE / EDIT MODAL - MULTI-PRODUCT QUANTITY, DISCOUNT, TAX & COMPLETE AMOUNT CALCULATOR */}
       {showModal && (
         <div className="sv-modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="sv-modal" style={{ maxWidth: '820px' }} onClick={e => e.stopPropagation()}>
+          <div className="sv-modal" style={{ maxWidth: '1160px' }} onClick={e => e.stopPropagation()}>
             <div className="sv-modal-header">
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>
                   {editQ ? `Edit Quotation (${editQ.orderReference || editQ.quotationNumber})` : 'New Quotation'}
                 </h3>
                 <p style={{ margin: '2px 0 0', color: '#64748B', fontSize: '0.8rem' }}>
-                  Enter products, quantities, unit prices, discount, and tax to calculate the complete quotation amount in PKR
+                  Build the quotation lines, commercial terms, GST, currency, and customer reference.
                 </p>
               </div>
               <button onClick={() => setShowModal(false)}><X size={18} /></button>
@@ -1756,8 +1839,21 @@ export default function SalesQuotationsView() {
                 <div className="sv-form-section-title"><Building size={14} color="#2563EB" /> Customer & Identification</div>
                 <div className="sv-grid-2">
                   <div className="sv-field">
-                    <label>Order Reference #</label>
-                    <input value={form.orderReference} onChange={e => setForm(p => ({ ...p, orderReference: e.target.value }))} placeholder="e.g. S01724" />
+                    <label>{editQ ? 'Quotation Number' : 'Quotation Code *'}</label>
+                    {editQ ? (
+                      <input value={form.orderReference} readOnly style={{ background: '#F1F5F9' }} />
+                    ) : (
+                      <>
+                        <input
+                          value={form.quotationCode}
+                          onChange={e => setForm(p => ({ ...p, quotationCode: sanitizeQuotationCode(e.target.value) }))}
+                          placeholder="e.g. KR"
+                          maxLength={12}
+                          required
+                        />
+                        <small style={{ color: '#64748B' }}>Preview: QO-####-{sanitizeQuotationCode(form.quotationCode) || 'CODE'} (number assigned on save)</small>
+                      </>
+                    )}
                   </div>
                   <div className="sv-field">
                     <label>Customer Name *</label>
@@ -1776,6 +1872,11 @@ export default function SalesQuotationsView() {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                <div className="sv-field">
+                  <label>Customer Address</label>
+                  <textarea rows={2} value={form.clientAddress} onChange={e => setForm(p => ({ ...p, clientAddress: e.target.value }))} placeholder="Customer address for the quotation" />
                 </div>
 
                 <div className="sv-grid-2">
@@ -1823,7 +1924,9 @@ export default function SalesQuotationsView() {
                     <thead>
                       <tr style={{ background: '#F1F5F9', color: '#475569', textAlign: 'left', borderBottom: '1px solid #E2E8F0' }}>
                         <th style={{ padding: '8px', width: '30px' }}>#</th>
-                        <th style={{ padding: '8px', minWidth: '220px' }}>Product Description / Item Scope *</th>
+                        <th style={{ padding: '8px', minWidth: '190px' }}>Inventory Product (optional)</th>
+                        <th style={{ padding: '8px', minWidth: '110px' }}>SKU</th>
+                        <th style={{ padding: '8px', minWidth: '260px' }}>Description / Specifications *</th>
                         <th style={{ padding: '8px', width: '140px' }}>Unit Price (PKR) *</th>
                         <th style={{ padding: '8px', width: '90px', textAlign: 'center' }}>Quantity *</th>
                         <th style={{ padding: '8px', width: '130px', textAlign: 'right' }}>Total (PKR)</th>
@@ -1838,10 +1941,10 @@ export default function SalesQuotationsView() {
                             <td style={{ padding: '8px', color: '#94A3B8', fontWeight: 600 }}>{idx + 1}</td>
                             <td style={{ padding: '6px 8px' }}>
                               <input
-                                value={it.description}
-                                onChange={e => handleItemChange(idx, 'description', e.target.value)}
-                                placeholder="e.g. 512 GB SSD / Dell Server R760"
-                                required
+                                list="quotation-inventory-options"
+                                value={it.inventorySearch || ''}
+                                onChange={e => handleInventoryPickerChange(idx, e.target.value)}
+                                placeholder="Search name or SKU"
                                 style={{
                                   width: '100%',
                                   padding: '7px 10px',
@@ -1850,6 +1953,24 @@ export default function SalesQuotationsView() {
                                   borderRadius: '6px',
                                   background: '#FFFFFF'
                                 }}
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                value={it.sku || ''}
+                                onChange={e => handleItemChange(idx, 'sku', e.target.value)}
+                                placeholder="SKU"
+                                style={{ width: '100%', padding: '7px 10px', fontSize: '0.82rem', border: '1px solid #CBD5E1', borderRadius: '6px', background: '#FFFFFF' }}
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <textarea
+                                rows={3}
+                                value={it.description}
+                                onChange={e => handleItemChange(idx, 'description', e.target.value)}
+                                placeholder="Multi-line product specifications"
+                                required
+                                style={{ width: '100%', minWidth: '250px', resize: 'vertical', padding: '7px 10px', fontSize: '0.82rem', border: '1px solid #CBD5E1', borderRadius: '6px', background: '#FFFFFF' }}
                               />
                             </td>
                             <td style={{ padding: '6px 8px' }}>
@@ -1922,6 +2043,11 @@ export default function SalesQuotationsView() {
                       })}
                     </tbody>
                   </table>
+                  <datalist id="quotation-inventory-options">
+                    {inventoryOptions.map(item => (
+                      <option key={item._id} value={`${item.name}${item.sku ? ` [${item.sku}]` : ''}`} />
+                    ))}
+                  </datalist>
                 </div>
 
                 {/* Section 2B: Dynamic Percentage & PKR Discount and Tax Calculator */}
@@ -2193,10 +2319,34 @@ export default function SalesQuotationsView() {
                     <label>Client Phone</label>
                     <input value={form.clientPhone} onChange={e => setForm(p => ({ ...p, clientPhone: e.target.value }))} placeholder="+92 300 0000000" />
                   </div>
+                  <div className="sv-field">
+                    <label>Currency</label>
+                    <input value={form.currency} onChange={e => setForm(p => ({ ...p, currency: e.target.value }))} placeholder="Pakistani Rupee" />
+                  </div>
+                  <div className="sv-field">
+                    <label>Reference</label>
+                    <input value={form.reference} onChange={e => setForm(p => ({ ...p, reference: e.target.value }))} placeholder="Customer enquiry / RFQ reference" />
+                  </div>
+                  <div className="sv-field">
+                    <label>Availability</label>
+                    <input value={form.availability} onChange={e => setForm(p => ({ ...p, availability: e.target.value }))} />
+                  </div>
+                  <div className="sv-field">
+                    <label>Payment Terms</label>
+                    <input value={form.paymentTerms} onChange={e => setForm(p => ({ ...p, paymentTerms: e.target.value }))} />
+                  </div>
+                  <div className="sv-field">
+                    <label>Price Validity</label>
+                    <input value={form.priceValidity} onChange={e => setForm(p => ({ ...p, priceValidity: e.target.value }))} />
+                  </div>
                 </div>
                 <div className="sv-field">
-                  <label>Notes & Conditions</label>
-                  <textarea rows={2} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Payment terms, delivery timeline..." />
+                  <label>Commercial Note</label>
+                  <textarea rows={3} value={form.commercialNote} onChange={e => setForm(p => ({ ...p, commercialNote: e.target.value }))} />
+                </div>
+                <div className="sv-field">
+                  <label>Internal Notes</label>
+                  <textarea rows={2} value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))} placeholder="Internal notes (not printed as commercial terms)" />
                 </div>
               </div>
 
