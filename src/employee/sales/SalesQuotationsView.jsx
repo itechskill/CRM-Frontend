@@ -95,6 +95,11 @@ export default function SalesQuotationsView() {
   const [feedback, setFeedback] = useState('');
   const [recordingPO, setRecordingPO] = useState(false);
   const [convertingId, setConvertingId] = useState(null);
+  const [forwardQuote, setForwardQuote] = useState(null);
+  const [forwardTargets, setForwardTargets] = useState([]);
+  const [forwardTargetId, setForwardTargetId] = useState('');
+  const [forwardNote, setForwardNote] = useState('');
+  const [forwarding, setForwarding] = useState(false);
 
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
@@ -116,6 +121,40 @@ export default function SalesQuotationsView() {
   useEffect(() => {
     fetchQ();
   }, [fetchQ]);
+
+  const openForward = async (quote) => {
+    setError('');
+    const { response, data } = await apiRequest('/api/sales-employee/quotations/forward-targets');
+    if (!response.ok || !data.success) {
+      setFeedback(data.message || 'You do not have permission to forward quotations.');
+      return;
+    }
+    setForwardTargets(data.data || []);
+    setForwardTargetId('');
+    setForwardNote('');
+    setForwardQuote(quote);
+  };
+
+  const submitForward = async (event) => {
+    event.preventDefault();
+    if (!forwardQuote || !forwardTargetId) return;
+    setForwarding(true);
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/quotations/${forwardQuote._id}/forward`, {
+        method: 'POST',
+        body: JSON.stringify({ targetUserId: forwardTargetId, note: forwardNote })
+      });
+      if (!response.ok || !data.success) {
+        setError(data.message || 'Could not forward quotation.');
+        return;
+      }
+      setForwardQuote(null);
+      setFeedback(data.message || 'Quotation forwarded.');
+      await fetchQ();
+    } finally {
+      setForwarding(false);
+    }
+  };
 
   const [poModalQuote, setPoModalQuote] = useState(null);
   const [poNumberInput, setPoNumberInput] = useState('');
@@ -1225,6 +1264,11 @@ export default function SalesQuotationsView() {
                       <span>{q.clientName || q.customerName}</span>
                     </h4>
                     <div style={{ fontSize: '0.76rem', color: '#64748B', marginTop: '3px' }}>Issuer: {companyName(q)}</div>
+                    {q.isForwardedReadOnly && (
+                      <div style={{ marginTop: '6px', color: '#B45309', fontSize: '0.75rem', fontWeight: 700 }}>
+                        Forwarded to {q.owner?.fullName || 'another salesperson'} · Read-only
+                      </div>
+                    )}
                   </div>
 
                   {/* Meta tags: Sales Person & File # */}
@@ -1274,7 +1318,7 @@ export default function SalesQuotationsView() {
                     </span>
 
                     <div className="quote-card-actions">
-                      {q.status !== 'Converted to Customer PO' && q.status !== 'Converted to Sales Order' && q.status !== 'Converted' ? (
+                      {!q.isForwardedReadOnly && q.status !== 'Converted to Customer PO' && q.status !== 'Converted to Sales Order' && q.status !== 'Converted' ? (
                         <button
                           style={{
                             display: 'inline-flex',
@@ -1299,8 +1343,8 @@ export default function SalesQuotationsView() {
                           <FileCheck size={13} /> Convert to PO
                         </button>
                       ) : (
-                        <span style={{ fontSize: '0.75rem', color: '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
-                          <CheckCircle2 size={13} /> {q.status === 'Converted to Customer PO' ? 'Converted to PO' : 'Converted'}
+                        <span style={{ fontSize: '0.75rem', color: q.isForwardedReadOnly ? '#B45309' : '#059669', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '3px' }}>
+                          <CheckCircle2 size={13} /> {q.isForwardedReadOnly ? `Forwarded to ${q.owner?.fullName || 'Sales'}` : (q.status === 'Converted to Customer PO' ? 'Converted to PO' : 'Converted')}
                         </span>
                       )}
                       <button
@@ -1318,21 +1362,15 @@ export default function SalesQuotationsView() {
                       >
                         <Eye size={14} />
                       </button>
-                      <button
-                        className="sv-btn-action-icon"
-                        onClick={() => openEdit(q)}
-                        title="Edit Quotation"
-                      >
-                        <Edit2 size={14} />
-                      </button>
-                      <button
-                        className="sv-btn-action-icon"
-                        onClick={() => setDeleteTarget(q)}
-                        title="Delete Quotation"
-                        style={{ color: '#EF4444' }}
-                      >
-                        <Trash2 size={14} />
-                      </button>
+                      {!q.isForwardedReadOnly && (
+                        <>
+                          {q.status !== 'Converted to Customer PO' && q.status !== 'Converted to Sales Order' && q.status !== 'Converted' && (
+                            <button className="sv-btn-action-icon" onClick={() => openForward(q)} title="Forward Quotation" style={{ color: '#7C3AED' }}><ArrowRight size={14} /></button>
+                          )}
+                          <button className="sv-btn-action-icon" onClick={() => openEdit(q)} title="Edit Quotation"><Edit2 size={14} /></button>
+                          <button className="sv-btn-action-icon" onClick={() => setDeleteTarget(q)} title="Delete Quotation" style={{ color: '#EF4444' }}><Trash2 size={14} /></button>
+                        </>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1399,6 +1437,7 @@ export default function SalesQuotationsView() {
                     </td>
                     <td style={{ fontWeight: 600, color: '#1E293B' }}>
                       {q.clientName || q.customerName}
+                      {q.isForwardedReadOnly && <div style={{ color: '#B45309', fontSize: '0.7rem', marginTop: '3px' }}>Forwarded to {q.owner?.fullName || 'another salesperson'} · Read-only</div>}
                     </td>
                     <td style={{ color: '#475569' }}>{companyName(q)}</td>
                     <td style={{ color: '#475569' }}>
@@ -1436,7 +1475,7 @@ export default function SalesQuotationsView() {
                     </td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                        {q.status !== 'Converted to Customer PO' && q.status !== 'Converted to Sales Order' && q.status !== 'Converted' ? (
+                        {!q.isForwardedReadOnly && q.status !== 'Converted to Customer PO' && q.status !== 'Converted to Sales Order' && q.status !== 'Converted' ? (
                           <button
                             style={{
                               display: 'inline-flex',
@@ -1458,7 +1497,7 @@ export default function SalesQuotationsView() {
                           </button>
                         ) : (
                           <span style={{ fontSize: '0.72rem', color: '#059669', fontWeight: 600 }}>
-                            {q.status === 'Converted to Customer PO' ? 'Converted to PO' : 'Converted'}
+                            {q.isForwardedReadOnly ? `Forwarded to ${q.owner?.fullName || 'Sales'}` : (q.status === 'Converted to Customer PO' ? 'Converted to PO' : 'Converted')}
                           </span>
                         )}
                         <button
@@ -1470,8 +1509,15 @@ export default function SalesQuotationsView() {
                           <Download size={14} />
                         </button>
                         <button className="sv-btn-action-icon" onClick={() => setViewQ(q)} title="View Details"><Eye size={14} /></button>
-                        <button className="sv-btn-action-icon" onClick={() => openEdit(q)} title="Edit Quotation"><Edit2 size={14} /></button>
-                        <button className="sv-btn-action-icon" onClick={() => setDeleteTarget(q)} title="Delete Quotation" style={{ color: '#EF4444' }}><Trash2 size={14} /></button>
+                        {!q.isForwardedReadOnly && (
+                          <>
+                            {q.status !== 'Converted to Customer PO' && q.status !== 'Converted to Sales Order' && q.status !== 'Converted' && (
+                              <button className="sv-btn-action-icon" onClick={() => openForward(q)} title="Forward Quotation" style={{ color: '#7C3AED' }}><ArrowRight size={14} /></button>
+                            )}
+                            <button className="sv-btn-action-icon" onClick={() => openEdit(q)} title="Edit Quotation"><Edit2 size={14} /></button>
+                            <button className="sv-btn-action-icon" onClick={() => setDeleteTarget(q)} title="Delete Quotation" style={{ color: '#EF4444' }}><Trash2 size={14} /></button>
+                          </>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -1507,6 +1553,35 @@ export default function SalesQuotationsView() {
         </div>
       )}
 
+      {forwardQuote && (
+        <div className="sv-modal-overlay" onClick={() => setForwardQuote(null)}>
+          <div className="sv-modal" style={{ maxWidth: '520px' }} onClick={(event) => event.stopPropagation()}>
+            <div className="sv-modal-header">
+              <h3 style={{ margin: 0 }}>Forward {forwardQuote.orderReference || forwardQuote.quotationNumber}</h3>
+              <button type="button" onClick={() => setForwardQuote(null)}><X size={18} /></button>
+            </div>
+            <form onSubmit={submitForward} className="sv-form">
+              {error && <div className="sv-error">{error}</div>}
+              <div className="sv-field">
+                <label>Active Sales account *</label>
+                <select value={forwardTargetId} onChange={(event) => setForwardTargetId(event.target.value)} required>
+                  <option value="">Select salesperson</option>
+                  {forwardTargets.map((target) => <option key={target._id} value={target._id}>{target.fullName} — {target.email}</option>)}
+                </select>
+              </div>
+              <div className="sv-field">
+                <label>Note (optional)</label>
+                <textarea value={forwardNote} onChange={(event) => setForwardNote(event.target.value)} rows={3} placeholder="Reason or handoff context" />
+              </div>
+              <div className="sv-modal-actions">
+                <button type="button" className="sv-btn-cancel" onClick={() => setForwardQuote(null)}>Cancel</button>
+                <button type="submit" className="sv-btn-primary" disabled={forwarding || !forwardTargetId}><ArrowRight size={14} /> {forwarding ? 'Forwarding...' : 'Forward quotation'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* VIEW MODAL */}
       {viewQ && (
         <div className="sv-modal-overlay" onClick={() => setViewQ(null)}>
@@ -1524,6 +1599,7 @@ export default function SalesQuotationsView() {
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#0F172A' }}>{viewQ.clientName || viewQ.customerName}</div>
                   <div style={{ fontSize: '0.85rem', color: '#64748B' }}>Sale Person: {viewQ.salePerson || viewQ.createdBy?.fullName || 'Sales Rep'}</div>
                   <div style={{ fontSize: '0.85rem', color: '#64748B' }}>Issuing Company: {companyName(viewQ)}</div>
+                  {viewQ.isForwardedReadOnly && <div style={{ marginTop: '6px', color: '#B45309', fontWeight: 700 }}>Forwarded to {viewQ.owner?.fullName || 'another salesperson'} · Read-only</div>}
                 </div>
                 <span className="sv-badge" style={{ background: (STATUS_COLORS[viewQ.status] || '#64748B') + '22', color: STATUS_COLORS[viewQ.status] || '#64748B', border: `1px solid ${(STATUS_COLORS[viewQ.status] || '#64748B')}44`, fontSize: '0.85rem', padding: '4px 12px' }}>
                   {viewQ.status}
@@ -1626,7 +1702,7 @@ export default function SalesQuotationsView() {
 
               <div className="sv-modal-actions" style={{ marginTop: '16px' }}>
                 <button className="sv-btn-cancel" onClick={() => setViewQ(null)}>Close</button>
-                {viewQ.status !== 'Converted to Customer PO' && viewQ.status !== 'Converted to Sales Order' && viewQ.status !== 'Converted' ? (
+                {!viewQ.isForwardedReadOnly && viewQ.status !== 'Converted to Customer PO' && viewQ.status !== 'Converted to Sales Order' && viewQ.status !== 'Converted' ? (
                   <button
                     className="sv-btn-primary"
                     style={{ background: '#059669' }}
@@ -1640,7 +1716,7 @@ export default function SalesQuotationsView() {
                   </button>
                 ) : (
                   <span style={{ fontSize: '0.85rem', color: '#059669', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '4px', padding: '0 8px' }}>
-                    <CheckCircle2 size={16} /> {viewQ.status === 'Converted to Customer PO' ? 'Converted to Customer PO' : `Converted to Sales Order ${viewQ.salesOrderNumber ? `(${viewQ.salesOrderNumber})` : ''}`}
+                    <CheckCircle2 size={16} /> {viewQ.isForwardedReadOnly ? `Forwarded to ${viewQ.owner?.fullName || 'Sales'}` : (viewQ.status === 'Converted to Customer PO' ? 'Converted to Customer PO' : `Converted to Sales Order ${viewQ.salesOrderNumber ? `(${viewQ.salesOrderNumber})` : ''}`)}
                   </span>
                 )}
                 <button
@@ -1650,9 +1726,7 @@ export default function SalesQuotationsView() {
                 >
                   <Download size={14} /> Download PDF
                 </button>
-                <button className="sv-btn-primary" onClick={() => { setViewQ(null); openEdit(viewQ); }}>
-                  <Edit2 size={14} /> Edit Quote
-                </button>
+                {!viewQ.isForwardedReadOnly && <button className="sv-btn-primary" onClick={() => { setViewQ(null); openEdit(viewQ); }}><Edit2 size={14} /> Edit Quote</button>}
               </div>
             </div>
           </div>
