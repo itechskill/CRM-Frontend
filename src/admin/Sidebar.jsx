@@ -18,7 +18,8 @@ import {
   Plane,
   Wallet,
   ShoppingBag,
-  Globe
+  Globe,
+  Target
 } from 'lucide-react';
 import './Sidebar.css';
 import '../ceo/CEOSidebar.css';
@@ -52,6 +53,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
     { id: 'registration_requests', label: 'Registration Requests', icon: UserCheck, badge: counts.pendingRegistrations > 0 ? String(counts.pendingRegistrations) : undefined },
     { id: 'create_ceo', label: 'Create CEO Account', icon: Crown },
     { id: 'users', label: 'Users', icon: Users, badge: counts.users > 0 ? String(counts.users) : undefined },
+    { id: 'target_performance', label: 'Target Performance', icon: Target },
     { id: 'audit_logs', label: 'Audit Logs', icon: ShieldCheck }
   ];
 

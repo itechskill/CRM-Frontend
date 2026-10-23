@@ -185,6 +185,9 @@ import FinanceFinancialChargesView from './finance_dept/FinanceFinancialChargesV
 import FinanceReportsView from './finance_dept/FinanceReportsView';
 import FinanceLeaveView from './finance_dept/FinanceLeaveView';
 import FinanceSupplierPOExpensesView from './finance_dept/FinanceSupplierPOExpensesView';
+import TargetPerformanceView from './target_performance/TargetPerformanceView';
+import AdminTargetPerformanceView from './target_performance/AdminTargetPerformanceView';
+import FinanceTargetPerformanceView from './target_performance/FinanceTargetPerformanceView';
 
 // 13. Logistics Department Components (src/logistics/)
 import LogisticsSidebar from './logistics/LogisticsSidebar';
@@ -518,31 +521,31 @@ export default function App() {
     const roleValidTabs = {
       employee: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'
+        'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities', 'target_performance'
       ],
       sales_member: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'price_requests', 'my_quotations', 'customer_pos', 'product_files', 'my_orders'
+        'price_requests', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'target_performance'
       ],
       sales_person: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'price_requests', 'my_quotations', 'customer_pos', 'product_files', 'my_orders'
+        'price_requests', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'target_performance'
       ],
       sales_rep: [
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
-        'price_requests', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'
+        'price_requests', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities', 'target_performance'
       ],
       support: ['dashboard', 'leave', 'support_orders', 'inventory', 'delivery_notes', 'profile'],
       logistics: ['dashboard', 'incoming_shipments', 'incoming', 'shipments', 'shipment_tracking', 'tracking', 'shipment_received', 'received', 'grn', 'grn_creation', 'grns', 'logistics_grn', 'goods_received', 'delivery_notes', 'import_inventory', 'imported_inventory', 'logistics_inventory', 'notifications', 'leave', 'attendance_leave', 'profile'],
       purchaser: ['dashboard', 'price_requests', 'pending_orders', 'inventory', 'supplier_pos', 'grn', 'grn_creation', 'grns', 'local_payables', 'leave', 'profile'],
-      sales_manager: ['dashboard', 'price_requests', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'],
+      sales_manager: ['dashboard', 'price_requests', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'target_performance', 'settings', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
-      admin: ['dashboard', 'price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      admin: ['dashboard', 'price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
       accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'local_payables', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
-      finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'finance_reports', 'reports', 'profile'],
+      finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'target_performance_overdue', 'finance_reports', 'reports', 'profile'],
       marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'],
-      ceo: ['dashboard', 'price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      ceo: ['dashboard', 'price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'target_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile']
     };
 
@@ -689,7 +692,7 @@ export default function App() {
               onMenuToggle={() => setIsSidebarOpen(true)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings', 'price_requests', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings', 'price_requests', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities', 'target_performance'].includes(activeTab)) && (
                 <EmployeeDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
@@ -725,6 +728,7 @@ export default function App() {
               {activeTab === 'followups' && <EmpSalesFollowUpsView />}
               {activeTab === 'sales_targets' && <EmpSalesTargetsView />}
               {activeTab === 'sales_activities' && <EmpSalesActivitiesView />}
+              {activeTab === 'target_performance' && <TargetPerformanceView />}
             </main>
           </div>
         </RoleProtectedRoute>
@@ -759,7 +763,7 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['price_requests', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => handleSetActiveTab(tab)} />}
+              {(activeTab === 'dashboard' || !['price_requests', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'target_performance', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => handleSetActiveTab(tab)} />}
               {activeTab === 'price_requests' && <PriceRequestsView />}
               {activeTab === 'leads' && <SalesLeadsView />}
               {activeTab === 'deals' && <SalesDealsView />}
@@ -774,6 +778,7 @@ export default function App() {
               {activeTab === 'meetings' && <SalesMeetingsView />}
               {activeTab === 'clients' && <SalesClientsView />}
               {activeTab === 'team' && <SalesTeamsView />}
+              {activeTab === 'target_performance' && <TargetPerformanceView />}
               {activeTab === 'settings' && <SalesSettingsView />}
               {activeTab === 'notifications' && <SalesNotificationsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => { setCurrentUser(updated); setUser(updated); }} />}
@@ -852,7 +857,7 @@ export default function App() {
             />
 
             <main className="content-area">
-              {(activeTab === 'dashboard' || (!['price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'settings', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && (
+              {(activeTab === 'dashboard' || (!['price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'settings', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && (
                 <AdminDashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />
               )}
 
@@ -868,6 +873,7 @@ export default function App() {
                   onOpenInviteModal={() => setIsInviteModalOpen(true)}
                 />
               )}
+              {activeTab === 'target_performance' && <AdminTargetPerformanceView />}
 
               {activeTab.startsWith('org_') && <OrgOverview activeTab={activeTab} setActiveTab={handleSetActiveTab} />}
               {activeTab === 'settings' && <SettingsView />}
@@ -1089,7 +1095,7 @@ export default function App() {
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'target_performance_overdue', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
                 <FinanceDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => handleSetActiveTab(tab)}
@@ -1134,6 +1140,7 @@ export default function App() {
               {activeTab === 'local_payables' && <LocalPurchaserPayablesView searchQuery={portalSearch} readOnly canRecordPayments />}
               {activeTab === 'financial_charges' && <FinanceFinancialChargesView searchQuery={portalSearch} />}
               {activeTab === 'supplier_po_expenses' && <FinanceSupplierPOExpensesView searchQuery={portalSearch} />}
+              {activeTab === 'target_performance_overdue' && <FinanceTargetPerformanceView />}
               {(activeTab === 'finance_reports' || activeTab === 'reports') && <FinanceReportsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
@@ -1411,12 +1418,13 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || (!['price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
+              {(activeTab === 'dashboard' || (!['price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'target_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
               {activeTab === 'price_requests' && <PriceRequestsView />}
               {activeTab === 'business_overview' && <BusinessOverviewView />}
               {activeTab === 'projects_performance' && <ProjectsPerformanceView />}
               {activeTab === 'sales_finance' && <SalesFinanceView />}
               {activeTab === 'team_performance' && <TeamPerformanceView />}
+              {activeTab === 'target_performance' && <AdminTargetPerformanceView />}
               {activeTab === 'reports_analytics' && <ReportsAnalyticsView />}
               {activeTab === 'edit_requests' && <CEOEditRequestsView onNavigateHistory={() => handleSetActiveTab('edit_history')} />}
               {activeTab === 'edit_history' && <CEOEditHistoryView onNavigateRequests={() => handleSetActiveTab('edit_requests')} />}

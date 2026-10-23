@@ -20,7 +20,8 @@ import {
   History,
   LogOut,
   ShoppingBag,
-  Globe
+  Globe,
+  Target
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import './CEOSidebar.css';
@@ -57,6 +58,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
     { id: 'price_requests', label: 'Price Requests', icon: Wallet },
     { id: 'business_overview', label: 'Business Overview', icon: TrendingUp },
     { id: 'sales_finance', label: 'Sales & Finance', icon: Calculator },
+    { id: 'target_performance', label: 'Target Performance', icon: Target },
     { id: 'edit_requests', label: 'Edit Requests', icon: ShieldCheck, badge: pendingCount > 0 ? pendingCount : null },
     { id: 'edit_history', label: 'Edit History', icon: History }
   ];
