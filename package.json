@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "oxlint",
     "test:release-8.1": "node --test tests/release81.sales-order-pdf.test.mjs",
+    "test:release-10.1": "node --test tests/release101.finance-navigation.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
