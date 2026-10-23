@@ -42,6 +42,7 @@ function EditUserModal({ user, onClose, onSave }) {
   const [purchaserSubDept, setPurchaserSubDept] = useState(user.purchaserSubDept || 'Local');
   const [department, setDepartment] = useState(user.department || '');
   const [status, setStatus] = useState(user.status === 'Active' || user.status === 'active' ? 'active' : 'suspended');
+  const [canForwardQuotations, setCanForwardQuotations] = useState(Boolean(user.canForwardQuotations));
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -106,6 +107,18 @@ function EditUserModal({ user, onClose, onSave }) {
           method: 'PATCH',
           body: JSON.stringify({ status })
         });
+      }
+
+      if (canForwardQuotations !== Boolean(user.canForwardQuotations)) {
+        const permissionRes = await apiRequest(`/api/admin/users/${targetId}/sales-permissions`, {
+          method: 'PATCH',
+          body: JSON.stringify({ canForwardQuotations })
+        });
+        if (!permissionRes.response.ok || !permissionRes.data.success) {
+          setErrorMsg(permissionRes.data.message || 'Failed to update quotation forwarding permission.');
+          setSaving(false);
+          return;
+        }
       }
 
       // 5. Password Reset if provided
@@ -210,6 +223,21 @@ function EditUserModal({ user, onClose, onSave }) {
                 <option value="suspended">Suspended</option>
               </select>
             </div>
+
+            {['employee', 'sales_member', 'sales_rep', 'sales_person', 'sales_manager'].includes(role) && (
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px', border: '1px solid #CBD5E1', borderRadius: '8px', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={canForwardQuotations}
+                  onChange={(e) => setCanForwardQuotations(e.target.checked)}
+                  style={{ marginTop: '2px' }}
+                />
+                <span>
+                  <strong style={{ display: 'block', fontSize: '0.86rem', color: '#0F172A' }}>Can forward quotations</strong>
+                  <span style={{ display: 'block', marginTop: '3px', fontSize: '0.74rem', color: '#64748B' }}>Allows this user to transfer an owned quotation to another active Sales account.</span>
+                </span>
+              </label>
+            )}
 
             <div style={{ marginTop: '10px', paddingTop: '12px', borderTop: '1px solid #E2E8F0' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -443,6 +471,7 @@ export default function UsersView({ onOpenInviteModal }) {
           initials: (u.fullName || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
           avatarBg: avatarColors[idx % avatarColors.length],
           role: u.role,
+          canForwardQuotations: Boolean(u.canForwardQuotations),
           department: u.department || 'General',
           status: u.status === 'active' || u.status === 'Active' ? 'Active' : 'Inactive',
           lastActive: 'Just now',
