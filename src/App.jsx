@@ -184,6 +184,7 @@ import FinanceReceivablesView from './finance_dept/FinanceReceivablesView';
 import FinanceFinancialChargesView from './finance_dept/FinanceFinancialChargesView';
 import FinanceReportsView from './finance_dept/FinanceReportsView';
 import FinanceLeaveView from './finance_dept/FinanceLeaveView';
+import FinanceSupplierPOExpensesView from './finance_dept/FinanceSupplierPOExpensesView';
 
 // 13. Logistics Department Components (src/logistics/)
 import LogisticsSidebar from './logistics/LogisticsSidebar';
@@ -1088,7 +1089,7 @@ export default function App() {
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
                 <FinanceDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => handleSetActiveTab(tab)}
@@ -1132,6 +1133,7 @@ export default function App() {
               )}
               {activeTab === 'local_payables' && <LocalPurchaserPayablesView searchQuery={portalSearch} readOnly canRecordPayments />}
               {activeTab === 'financial_charges' && <FinanceFinancialChargesView searchQuery={portalSearch} />}
+              {activeTab === 'supplier_po_expenses' && <FinanceSupplierPOExpensesView searchQuery={portalSearch} />}
               {(activeTab === 'finance_reports' || activeTab === 'reports') && <FinanceReportsView />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
