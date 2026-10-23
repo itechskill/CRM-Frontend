@@ -48,7 +48,8 @@ const DELIVERY_COLORS = {
   'Pending': '#F59E0B',
   'Partially Delivered': '#3B82F6',
   'Fully Delivered': '#10B981',
-  'Delivered': '#10B981'
+  'Delivered': '#10B981',
+  'DN Created': '#2563EB'
 };
 
 const INVOICE_COLORS = {

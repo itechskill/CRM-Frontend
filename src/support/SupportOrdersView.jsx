@@ -57,6 +57,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
             'Goods Received in Office',
             'Shipment Received in Office',
             'Delivery Note Created',
+            'DN Created',
             'Delivery Note Confirmed',
             'Delivery Note Delivered',
             'Sent to Accounts',
@@ -202,7 +203,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
   };
 
   const isOrderCompletedInSupport = (o) => {
-    return !!o.deliveryNoteId || ['Delivery Note Created', 'Delivery Note Confirmed', 'Sent to Accounts', 'Draft Invoice Created', 'Sent to Finance', 'Pending Finance Finalization', 'Completed'].includes(o.workflowStatus);
+    return !!o.deliveryNoteId || ['DN Created', 'Delivery Note Created', 'Delivery Note Confirmed', 'Sent to Accounts', 'Draft Invoice Created', 'Sent to Finance', 'Pending Finance Finalization', 'Completed'].includes(o.workflowStatus);
   };
 
   const pendingOrders = orders.filter(o => !isOrderCompletedInSupport(o));

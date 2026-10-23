@@ -9,7 +9,8 @@ import {
   Plus,
   Eye,
   Edit3,
-  Trash2
+  Trash2,
+  History
 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import IssuingCompanySelect from '../../components/IssuingCompanySelect';
@@ -25,6 +26,10 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
   const [filterText, setFilterText] = useState('');
   const [processingId, setProcessingId] = useState(null);
   const [toast, setToast] = useState('');
+  const [linkOrder, setLinkOrder] = useState(null);
+  const [linkAnalysis, setLinkAnalysis] = useState([]);
+  const [linkSelections, setLinkSelections] = useState({});
+  const [linkingIndex, setLinkingIndex] = useState(null);
 
   // Add Product to Inventory Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -105,12 +110,38 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
         fetchData();
         setTimeout(() => setToast(''), 4500);
       } else {
+        const analysis = res.data?.data?.itemAnalysis || [];
+        if (analysis.length) {
+          setLinkOrder(order);
+          setLinkAnalysis(analysis);
+          setLinkSelections(Object.fromEntries(analysis.map((line, index) => [index, line.productId || ''])));
+        }
         alert(res.message || 'Error processing inventory check.');
       }
     } catch (err) {
       alert('Failed to send order to Support.');
     } finally {
       setProcessingId(null);
+    }
+  };
+
+  const handleLinkInventory = async (itemIndex) => {
+    const inventoryItemId = linkSelections[itemIndex];
+    if (!linkOrder || !inventoryItemId) return;
+    setLinkingIndex(itemIndex);
+    try {
+      const res = await apiRequest(`/api/purchaser/orders/${linkOrder._id}/inventory-link`, 'POST', { itemIndex, inventoryItemId });
+      if (!res.success) {
+        alert(res.message || 'Unable to link the inventory item.');
+        return;
+      }
+      setToast(res.message || 'Order line linked. Recheck stock before sending to Support.');
+      setLinkAnalysis(lines => lines.map((line, index) => index === itemIndex
+        ? { ...line, productId: inventoryItemId, status: 'Linked — recheck required', matchNote: '' }
+        : line));
+      await fetchData();
+    } finally {
+      setLinkingIndex(null);
     }
   };
 
@@ -470,7 +501,9 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
               </tr>
             ) : filtered.length > 0 ? (
               filtered.map((item, idx) => {
-                const stock = item.quantityOnHand !== undefined ? item.quantityOnHand : (item.quantity || item.availableStock || 0);
+                const onHand = item.quantityOnHand !== undefined ? Number(item.quantityOnHand) : Number(item.quantity || item.availableStock || 0);
+                const reserved = Number(item.reservedQuantity) || 0;
+                const stock = Math.max(0, onHand - reserved);
                 const minStock = item.minStockLevel !== undefined ? item.minStockLevel : 5;
                 return (
                   <tr key={item._id || idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -492,6 +525,7 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
                     </td>
                     <td style={{ padding: '14px 18px', textAlign: 'center', fontWeight: 800, fontSize: '0.95rem', color: stock > minStock ? '#059669' : stock > 0 ? '#D97706' : '#DC2626' }}>
                       {stock} <span style={{ fontSize: '0.75rem', fontWeight: 500, color: '#64748B' }}>{item.unit || 'pcs'}</span>
+                      <div style={{ fontSize: '0.68rem', color: '#64748B', marginTop: '2px' }}>On hand {onHand} · Reserved {reserved}</div>
                     </td>
                     <td style={{ padding: '14px 18px', textAlign: 'center', color: '#64748B', fontWeight: 600 }}>
                       {minStock}
@@ -525,6 +559,13 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
                           title="View Product Details"
                         >
                           <Eye size={14} />
+                        </button>
+                        <button
+                          onClick={() => setViewModalItem(item)}
+                          style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', color: '#475569', borderRadius: '6px', padding: '5px 8px', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                          title="Read-only Stock Movement History"
+                        >
+                          <History size={14} />
                         </button>
                         {!isLocalPurchaser && (
                           <>
@@ -587,8 +628,9 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
               <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>Available Stock</div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
-                  {viewModalItem.quantityOnHand !== undefined ? viewModalItem.quantityOnHand : (viewModalItem.quantity || 0)} {viewModalItem.unit || 'pcs'}
+                  {Math.max(0, Number(viewModalItem.quantityOnHand || viewModalItem.quantity || 0) - Number(viewModalItem.reservedQuantity || 0))} {viewModalItem.unit || 'pcs'}
                 </div>
+                <div style={{ fontSize: '0.7rem', color: '#64748B' }}>On hand {Number(viewModalItem.quantityOnHand || 0)} · Reserved {Number(viewModalItem.reservedQuantity || 0)}</div>
               </div>
               <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
                 <div style={{ fontSize: '0.72rem', color: '#94A3B8', fontWeight: 700, textTransform: 'uppercase' }}>Minimum Alert Stock</div>
@@ -619,6 +661,28 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
               </div>
             )}
 
+            <div style={{ marginBottom: '18px' }}>
+              <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#334155', marginBottom: '8px' }}>Read-only Stock Movement History</div>
+              <div style={{ overflowX: 'auto', maxHeight: '220px', overflowY: 'auto', border: '1px solid #E2E8F0', borderRadius: '8px' }}>
+                <table style={{ width: '100%', minWidth: '700px', borderCollapse: 'collapse', fontSize: '0.76rem' }}>
+                  <thead><tr style={{ background: '#F8FAFC' }}><th>Date</th><th>Type</th><th>Qty</th><th>Order</th><th>By</th><th>Remarks</th></tr></thead>
+                  <tbody>
+                    {[...(viewModalItem.stockMovements || [])].reverse().map((movement, index) => (
+                      <tr key={movement._id || index} style={{ borderTop: '1px solid #E2E8F0' }}>
+                        <td style={{ padding: '7px' }}>{movement.timestamp ? new Date(movement.timestamp).toLocaleString() : '—'}</td>
+                        <td style={{ padding: '7px', fontWeight: 700 }}>{movement.type}</td>
+                        <td style={{ padding: '7px' }}>{Number(movement.quantity || 0).toLocaleString()}</td>
+                        <td style={{ padding: '7px' }}>{movement.orderNumber || '—'}</td>
+                        <td style={{ padding: '7px' }}>{movement.performedByName || '—'}</td>
+                        <td style={{ padding: '7px' }}>{movement.remarks || '—'}</td>
+                      </tr>
+                    ))}
+                    {(viewModalItem.stockMovements || []).length === 0 && <tr><td colSpan={6} style={{ padding: '12px', textAlign: 'center', color: '#94A3B8' }}>No movements recorded.</td></tr>}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
               {!isLocalPurchaser && (
               <button
@@ -638,6 +702,36 @@ export default function LocalPurchaserInventoryView({ searchQuery, currentUser }
               >
                 Close
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {linkOrder && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1200, padding: '20px' }} onClick={() => setLinkOrder(null)}>
+          <div style={{ background: '#FFF', borderRadius: '14px', width: 'min(900px, 96vw)', maxHeight: '88vh', overflowY: 'auto', padding: '22px' }} onClick={event => event.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '14px' }}>
+              <div><h3 style={{ margin: 0 }}>Link Order Lines to Inventory</h3><div style={{ color: '#64748B', fontSize: '0.8rem' }}>{linkOrder.orderReference || linkOrder.orderNumber} — choose the exact stock row, then recheck.</div></div>
+              <button onClick={() => setLinkOrder(null)} style={{ border: 0, background: 'transparent', cursor: 'pointer' }}><X size={18} /></button>
+            </div>
+            <div style={{ display: 'grid', gap: '10px' }}>
+              {linkAnalysis.map((line, index) => (
+                <div key={`${line.productName}-${index}`} style={{ border: '1px solid #E2E8F0', borderRadius: '10px', padding: '12px', background: line.shortageQuantity > 0 || line.ambiguous ? '#FFF7ED' : '#F8FAFC' }}>
+                  <div style={{ fontWeight: 800 }}>{line.productName}</div>
+                  <div style={{ fontSize: '0.76rem', color: '#64748B', margin: '3px 0 8px' }}>Required {line.requiredQuantity}; available {line.availableQuantity}. {line.matchNote || line.status}</div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <select value={linkSelections[index] || ''} onChange={event => setLinkSelections(values => ({ ...values, [index]: event.target.value }))} style={{ flex: '1 1 420px', padding: '8px', border: '1px solid #CBD5E1', borderRadius: '7px' }}>
+                      <option value="">Select inventory item</option>
+                      {inventory.map(item => (
+                        <option key={item._id} value={item._id}>{item.name} · {item.sku || 'No SKU'} · Available {Math.max(0, Number(item.quantityOnHand || 0) - Number(item.reservedQuantity || 0))}</option>
+                      ))}
+                    </select>
+                    <button onClick={() => handleLinkInventory(index)} disabled={!linkSelections[index] || linkingIndex === index} style={{ border: 0, borderRadius: '7px', background: '#2563EB', color: '#FFF', padding: '8px 14px', fontWeight: 700, cursor: 'pointer' }}>
+                      {linkingIndex === index ? 'Linking…' : 'Link Selected Item'}
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

@@ -79,7 +79,7 @@ export default function AccountsOrdersReadyView({ onNavigateCreateInvoice, searc
             <FileCheck size={22} color="#2563EB" /> Delivery Notes Awaiting Invoicing
           </h2>
           <p className="sv-subtitle">
-            Support team confirmed delivery notes ready for commercial draft invoice generation
+            Delivery Notes appear here as soon as Support creates them; signed delivery confirmation may follow later
           </p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748B', fontSize: '0.85rem' }}>
@@ -162,7 +162,7 @@ export default function AccountsOrdersReadyView({ onNavigateCreateInvoice, searc
           <h3>{activeTab === 'pending' ? 'No Pending Delivery Notes' : 'No Delivery Notes Found'}</h3>
           <p>
             {activeTab === 'pending'
-              ? 'All confirmed delivery notes have been drafted into invoices.'
+                ? 'All created delivery notes have been drafted into invoices.'
               : 'No delivery notes match your current filters.'}
           </p>
         </div>
@@ -192,6 +192,9 @@ export default function AccountsOrdersReadyView({ onNavigateCreateInvoice, searc
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
                         <Truck size={14} color="#2563EB" /> {dnNumber}
                       </span>
+                      <div style={{ fontSize: '0.7rem', marginTop: '3px', color: ['Done', 'Delivered', 'Confirmed'].includes(dn.status) ? '#047857' : '#B45309' }}>
+                        {['Done', 'Delivered', 'Confirmed'].includes(dn.status) ? 'Delivered — signed DN confirmed' : 'DN Created — awaiting signed confirmation'}
+                      </div>
                     </td>
                     <td>
                       <div style={{ fontWeight: 600, color: '#1E293B' }}>{dn.clientName}</div>
@@ -281,6 +284,8 @@ export default function AccountsOrdersReadyView({ onNavigateCreateInvoice, searc
                       <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', textAlign: 'left' }}>
                         <th style={{ padding: '8px 12px' }}>Item</th>
                         <th style={{ padding: '8px 12px', textAlign: 'center' }}>Quantity</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Unit Price</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Line Total</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -288,10 +293,13 @@ export default function AccountsOrdersReadyView({ onNavigateCreateInvoice, searc
                         <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
                           <td style={{ padding: '8px 12px' }}>{it.description || it.product}</td>
                           <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700 }}>{it.quantity || it.demand || 1}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right' }}>PKR {Number(it.unitPrice || 0).toLocaleString()}</td>
+                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 800 }}>PKR {Number(it.lineTotal || ((Number(it.quantity) || 1) * Number(it.unitPrice || 0))).toLocaleString()}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
+                  <div style={{ marginTop: '10px', textAlign: 'right', fontWeight: 900 }}>Grand Total: PKR {Number(viewDN.grandTotal ?? viewDN.salesOrder?.netAmount ?? 0).toLocaleString()}</div>
                 </div>
               )}
 

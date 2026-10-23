@@ -139,6 +139,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
       'International Supplier PO Issued',
       'Goods Received in Office',
       'Delivery Note Created',
+      'DN Created',
       'Delivery Note Delivered',
       'Invoice Draft Created',
       'Invoice Finalized',
