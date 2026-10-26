@@ -68,10 +68,8 @@ const INVOICE_STATUS_STYLES = {
 
 export default function SalesInvoicesView() {
   const [invoices, setInvoices] = useState([]);
-  const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
-  const [selectedMember, setSelectedMember] = useState('all');
   const [search, setSearch] = useState('');
 
   // Modals
@@ -90,26 +88,19 @@ export default function SalesInvoicesView() {
     try {
       const params = new URLSearchParams();
       if (filter !== 'all') params.set('status', filter);
-      if (selectedMember !== 'all') params.set('employeeId', selectedMember);
       if (search.trim()) params.set('search', search.trim());
 
-      const [invRes, teamRes] = await Promise.all([
-        apiRequest(`/api/sales-manager/invoices?${params}`),
-        apiRequest('/api/sales-manager/team-members')
-      ]);
+      const invRes = await apiRequest(`/api/sales-manager/invoices?${params}`);
 
       if (invRes.response.ok && invRes.data.success) {
         setInvoices(invRes.data.data || []);
-      }
-      if (teamRes.response.ok && teamRes.data.success) {
-        setTeamMembers(teamRes.data.data || []);
       }
     } catch (e) {
       console.error('Fetch sales manager invoices error:', e);
     } finally {
       setLoading(false);
     }
-  }, [filter, selectedMember, search]);
+  }, [filter, search]);
 
   useEffect(() => {
     fetchInvoices();
@@ -606,7 +597,7 @@ export default function SalesInvoicesView() {
       {/* Header */}
       <div className="sv-header">
         <div>
-          <h2 className="sv-title"><FileText size={22} color="#2563EB" /> Sales Team Invoices & Billing Management</h2>
+          <h2 className="sv-title"><FileText size={22} color="#2563EB" /> My Invoices & Billing</h2>
           <p className="sv-subtitle">Review, edit, approve, and oversee all invoices submitted by sales team members</p>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginLeft: 'auto', flexWrap: 'wrap' }}>
@@ -668,16 +659,6 @@ export default function SalesInvoicesView() {
             />
           </div>
 
-          <select
-            value={selectedMember}
-            onChange={e => setSelectedMember(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#F8FAFC', fontSize: '0.85rem', color: '#334155' }}
-          >
-            <option value="all">All Sales Team Members</option>
-            {teamMembers.map(m => (
-              <option key={m._id} value={m._id}>{m.fullName} ({m.position || 'Sales'})</option>
-            ))}
-          </select>
         </div>
 
         <div className="sv-status-tabs">

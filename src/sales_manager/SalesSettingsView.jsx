@@ -23,7 +23,6 @@ import './SalesSettingsView.css';
 import '../employee/sales/SalesViews.css';
 
 const settingsNavItems = [
-  { key: 'team', label: 'Team Management', icon: Users },
   { key: 'notifications', label: 'Notifications', icon: Bell },
   { key: 'security', label: 'Security', icon: Shield },
 ];
@@ -33,7 +32,7 @@ const initialNotifications = [];
 const avatarColors = ['#2563EB', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#38BDF8'];
 
 export default function SalesSettingsView() {
-  const [activeSection, setActiveSection] = useState('team');
+  const [activeSection, setActiveSection] = useState('notifications');
 
   // Real Team state from MongoDB
   const [teamMembers, setTeamMembers] = useState([]);
@@ -95,8 +94,8 @@ export default function SalesSettingsView() {
   }, []);
 
   useEffect(() => {
-    fetchTeamMembers();
-  }, [fetchTeamMembers]);
+    if (activeSection === 'team') fetchTeamMembers();
+  }, [activeSection, fetchTeamMembers]);
 
   // Toggle active/inactive status
   const handleToggleStatus = async (member) => {
@@ -504,9 +503,8 @@ export default function SalesSettingsView() {
         return renderNotifications();
       case 'security':
         return renderSecurity();
-      case 'team':
       default:
-        return renderTeam();
+        return renderNotifications();
     }
   };
 
@@ -516,7 +514,7 @@ export default function SalesSettingsView() {
       <div className="settings-nav-panel">
         <div className="settings-nav-header">
           <h2>Settings</h2>
-          <p>Sales Manager & Team Controls</p>
+          <p>Personal preferences and security</p>
         </div>
 
         <div className="settings-nav-list">

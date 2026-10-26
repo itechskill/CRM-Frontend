@@ -15,9 +15,7 @@ const TYPE_COLORS = {
 export default function SalesManagerPaymentsView() {
   const [payments, setPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
-  const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMember, setSelectedMember] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [viewPayment, setViewPayment] = useState(null);
@@ -41,13 +39,11 @@ export default function SalesManagerPaymentsView() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [payRes, tmRes, invRes] = await Promise.all([
+      const [payRes, invRes] = await Promise.all([
         apiRequest('/api/sales-manager/all-payments'),
-        apiRequest('/api/sales-manager/team-members'),
-        apiRequest('/api/sales-manager/all-invoices')
+        apiRequest('/api/sales-manager/invoices')
       ]);
       if (payRes.response.ok && payRes.data.success) setPayments(payRes.data.data);
-      if (tmRes.response.ok && tmRes.data.success) setTeamMembers(tmRes.data.data || []);
       if (invRes.response.ok && invRes.data.success) {
         // Only invoices that are approved or eligible for payment
         const approvedInvs = (invRes.data.data || []).filter(i => ['Approved', 'Sent', 'Partially Paid', 'Paid'].includes(i.status));
@@ -66,7 +62,6 @@ export default function SalesManagerPaymentsView() {
 
   const filteredPayments = useMemo(() => {
     return payments.filter(p => {
-      const matchesMember = selectedMember === 'all' || (p.createdBy?._id === selectedMember || p.createdBy === selectedMember);
       const matchesType = typeFilter === 'all' || p.paymentType === typeFilter;
       const term = searchTerm.toLowerCase();
       const matchesSearch = !term ||
@@ -74,9 +69,9 @@ export default function SalesManagerPaymentsView() {
         (p.customerName && p.customerName.toLowerCase().includes(term)) ||
         (p.salesOrderNumber && p.salesOrderNumber.toLowerCase().includes(term)) ||
         (p.invoiceNumber && p.invoiceNumber.toLowerCase().includes(term));
-      return matchesMember && matchesType && matchesSearch;
+      return matchesType && matchesSearch;
     });
-  }, [payments, selectedMember, typeFilter, searchTerm]);
+  }, [payments, typeFilter, searchTerm]);
 
   const totalCollected = filteredPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
 
@@ -543,17 +538,6 @@ export default function SalesManagerPaymentsView() {
             style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.875rem' }}
           />
         </div>
-
-        <select
-          value={selectedMember}
-          onChange={e => setSelectedMember(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFF', fontSize: '0.875rem' }}
-        >
-          <option value="all">All Team Members</option>
-          {teamMembers.map(m => (
-            <option key={m._id} value={m._id}>{m.fullName || m.email}</option>
-          ))}
-        </select>
 
         <select
           value={typeFilter}

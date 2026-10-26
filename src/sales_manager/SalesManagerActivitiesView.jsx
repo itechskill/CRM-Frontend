@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { apiRequest } from '../utils/api';
-import { Activity, Search, User, Filter, Calendar, Clock } from 'lucide-react';
+import { Activity, Search, Clock } from 'lucide-react';
 import './SalesManagerDashboard.css';
 
 const TYPE_BADGES = {
@@ -20,21 +20,15 @@ const TYPE_BADGES = {
 
 export default function SalesManagerActivitiesView() {
   const [activities, setActivities] = useState([]);
-  const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMember, setSelectedMember] = useState('all');
   const [typeFilter, setTypeFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [actRes, tmRes] = await Promise.all([
-        apiRequest('/api/sales-manager/all-activities'),
-        apiRequest('/api/sales-manager/team-members')
-      ]);
+      const actRes = await apiRequest('/api/sales-manager/all-activities');
       if (actRes.response.ok && actRes.data.success) setActivities(actRes.data.data);
-      if (tmRes.response.ok && tmRes.data.success) setTeamMembers(tmRes.data.data || []);
     } catch (e) {
       console.error(e);
     } finally {
@@ -48,7 +42,6 @@ export default function SalesManagerActivitiesView() {
 
   const filteredActivities = useMemo(() => {
     return activities.filter(a => {
-      const matchesMember = selectedMember === 'all' || (a.performedBy?._id === selectedMember || a.performedBy === selectedMember);
       const matchesType = typeFilter === 'all' || a.type === typeFilter;
       const term = searchTerm.toLowerCase();
       const matchesSearch = !term ||
@@ -56,19 +49,19 @@ export default function SalesManagerActivitiesView() {
         (a.type && a.type.toLowerCase().includes(term)) ||
         (a.relatedCustomer && a.relatedCustomer.toLowerCase().includes(term)) ||
         (a.salesMemberName && a.salesMemberName.toLowerCase().includes(term));
-      return matchesMember && matchesType && matchesSearch;
+      return matchesType && matchesSearch;
     });
-  }, [activities, selectedMember, typeFilter, searchTerm]);
+  }, [activities, typeFilter, searchTerm]);
 
   return (
     <div className="smd-section-container" style={{ padding: '24px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <Activity size={24} color="#8B5CF6" /> Live Sales Team Activities
+            <Activity size={24} color="#8B5CF6" /> My Sales Activities
           </h2>
           <p style={{ margin: '4px 0 0', color: '#64748B', fontSize: '0.85rem' }}>
-            Real-time chronological timeline of all sales actions, quotes, customer POs, and payments across the department
+            Your chronological timeline of sales actions, quotes, customer POs, and payments
           </p>
         </div>
       </div>
@@ -79,23 +72,12 @@ export default function SalesManagerActivitiesView() {
           <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94A3B8' }} />
           <input
             type="text"
-            placeholder="Search activity description, customer, member..."
+            placeholder="Search activity description or customer..."
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
             style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '8px', border: '1px solid #E2E8F0', fontSize: '0.875rem' }}
           />
         </div>
-
-        <select
-          value={selectedMember}
-          onChange={e => setSelectedMember(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #E2E8F0', background: '#FFF', fontSize: '0.875rem' }}
-        >
-          <option value="all">All Sales Members</option>
-          {teamMembers.map(m => (
-            <option key={m._id} value={m._id}>{m.fullName || m.email}</option>
-          ))}
-        </select>
 
         <select
           value={typeFilter}

@@ -19,9 +19,11 @@ export default function SalesHeader({
       case 'price_requests': return 'Price Requests';
       case 'leads': return 'Leads & Prospects';
       case 'contacts': return 'Contacts';
-      case 'meetings': return 'Meetings';
+      case 'my_quotations': return 'My Quotations';
+      case 'customer_pos': return 'My Customer POs';
+      case 'product_files': return 'My Product Files';
       case 'quotations': return 'Quotations Management';
-      case 'orders': return 'Sales Team Orders';
+      case 'orders': return 'My Sales Orders';
       case 'proforma_invoices': return 'Proforma Invoices';
       case 'deliveries': return 'Delivery Notes';
       case 'invoices': return 'Invoices & Receivables';
@@ -30,8 +32,6 @@ export default function SalesHeader({
       case 'clients': return 'Clients';
       case 'deals': return 'Deals & Pipeline';
       case 'pipeline': return 'Sales Funnel';
-      case 'team': return 'Sales Team Management';
-      case 'reports': return 'Sales Performance Reports';
       case 'settings': return 'Settings';
       case 'notifications': return 'Notifications';
       case 'profile': return 'My Profile';

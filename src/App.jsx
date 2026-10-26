@@ -54,12 +54,8 @@ import SalesManagerDashboard from './sales_manager/SalesManagerDashboard';
 import SalesLeadsView from './sales_manager/SalesLeadsView';
 import SalesDealsView from './sales_manager/SalesDealsView';
 import SalesPipelineView from './sales_manager/SalesPipelineView';
-import SalesTeamsView from './sales_manager/SalesTeamsView';
-import SalesReportsView from './sales_manager/SalesReportsView';
 import SalesSettingsView from './sales_manager/SalesSettingsView';
 import SalesContactsView from './sales_manager/SalesContactsView';
-import SalesMeetingsView from './sales_manager/SalesMeetingsView';
-import SalesProposalsView from './sales_manager/SalesProposalsView';
 import SalesClientsView from './sales_manager/ClientsView';
 import SalesNotificationsView from './sales_manager/SalesNotificationsView';
 import SalesMgrInvoicesView from './sales_manager/SalesInvoicesView';
@@ -453,9 +449,9 @@ export default function App() {
         setUsersList(uRes.data.data.map((u, idx) => ({
           ...u,
           id: u._id,
-          name: u.fullName,
-          email: u.email,
-          initials: (u.fullName || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
+          name: u.name || u.fullName,
+          email: u.email || '',
+          initials: (u.name || u.fullName || 'U').split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase(),
           avatarBg: avatarColors[idx % avatarColors.length],
           role: u.role,
           department: u.department || 'Operations',
@@ -538,7 +534,7 @@ export default function App() {
       support: ['dashboard', 'leave', 'support_orders', 'inventory', 'delivery_notes', 'profile'],
       logistics: ['dashboard', 'incoming_shipments', 'incoming', 'shipments', 'shipment_tracking', 'tracking', 'shipment_received', 'received', 'grn', 'grn_creation', 'grns', 'logistics_grn', 'goods_received', 'delivery_notes', 'import_inventory', 'imported_inventory', 'logistics_inventory', 'notifications', 'leave', 'attendance_leave', 'profile'],
       purchaser: ['dashboard', 'price_requests', 'pending_orders', 'inventory', 'supplier_pos', 'grn', 'grn_creation', 'grns', 'local_payables', 'leave', 'profile'],
-      sales_manager: ['dashboard', 'price_requests', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'target_performance', 'settings', 'notifications', 'profile'],
+      sales_manager: ['dashboard', 'price_requests', 'leads', 'deals', 'pipeline', 'my_quotations', 'customer_pos', 'product_files', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'clients', 'target_performance', 'settings', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
       admin: ['dashboard', 'price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
@@ -763,11 +759,14 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['price_requests', 'leads', 'deals', 'pipeline', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'meetings', 'clients', 'team', 'target_performance', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => handleSetActiveTab(tab)} />}
+              {(activeTab === 'dashboard' || !['price_requests', 'leads', 'deals', 'pipeline', 'my_quotations', 'customer_pos', 'product_files', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'clients', 'target_performance', 'settings', 'notifications', 'profile'].includes(activeTab)) && <SalesManagerDashboard currentUser={currentUser} onNavigateTab={(tab) => handleSetActiveTab(tab)} />}
               {activeTab === 'price_requests' && <PriceRequestsView />}
               {activeTab === 'leads' && <SalesLeadsView />}
               {activeTab === 'deals' && <SalesDealsView />}
               {activeTab === 'pipeline' && <SalesPipelineView />}
+              {activeTab === 'my_quotations' && <EmpSalesQuotationsView />}
+              {activeTab === 'customer_pos' && <EmpSalesCustomerPOsView />}
+              {activeTab === 'product_files' && <EmpSalesProductFilesView />}
               {activeTab === 'orders' && <SalesManagerOrdersView />}
               {activeTab === 'proforma_invoices' && <EmpSalesProformaInvoicesView />}
               {activeTab === 'deliveries' && <EmpSalesDeliveryNotesView />}
@@ -775,9 +774,7 @@ export default function App() {
               {activeTab === 'activities' && <SalesManagerActivitiesView />}
               {activeTab === 'invoices' && <SalesMgrInvoicesView />}
               {activeTab === 'contacts' && <SalesContactsView />}
-              {activeTab === 'meetings' && <SalesMeetingsView />}
               {activeTab === 'clients' && <SalesClientsView />}
-              {activeTab === 'team' && <SalesTeamsView />}
               {activeTab === 'target_performance' && <TargetPerformanceView />}
               {activeTab === 'settings' && <SalesSettingsView />}
               {activeTab === 'notifications' && <SalesNotificationsView />}

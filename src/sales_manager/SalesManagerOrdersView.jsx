@@ -58,9 +58,7 @@ const PAYMENT_COLORS = {
 
 export default function SalesManagerOrdersView() {
   const [orders, setOrders] = useState([]);
-  const [teamMembers, setTeamMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [selectedMember, setSelectedMember] = useState('all');
   const [deliveryFilter, setDeliveryFilter] = useState('all');
   const [paymentFilter, setPaymentFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
@@ -79,15 +77,9 @@ export default function SalesManagerOrdersView() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [ordRes, tmRes] = await Promise.all([
-        apiRequest('/api/sales-manager/all-orders'),
-        apiRequest('/api/sales-manager/team-members')
-      ]);
+      const ordRes = await apiRequest('/api/sales-manager/all-orders');
       if (ordRes.response.ok && ordRes.data.success) {
         setOrders(ordRes.data.data || []);
-      }
-      if (tmRes.response.ok && tmRes.data.success) {
-        setTeamMembers(tmRes.data.data || []);
       }
     } catch (e) {
       console.error('Fetch orders error:', e);
@@ -246,12 +238,8 @@ export default function SalesManagerOrdersView() {
 
   const filteredOrders = useMemo(() => {
     let result = orders.filter(o => {
-      const creatorId = o.createdBy?._id || o.createdBy || o.salesPerson?._id || o.salesPerson;
       const creatorName = (o.createdBy?.fullName || o.salesPerson?.fullName || o.salePerson || '').toLowerCase();
       
-      const matchesMember = selectedMember === 'all' || 
-        creatorId === selectedMember || 
-        creatorName === selectedMember.toLowerCase();
 
       const matchesDelivery = deliveryFilter === 'all' || 
         o.deliveryStatus === deliveryFilter ||
@@ -273,7 +261,7 @@ export default function SalesManagerOrdersView() {
         (o.productSummary && o.productSummary.toLowerCase().includes(term)) ||
         creatorName.includes(term);
 
-      return matchesMember && matchesDelivery && matchesPayment && matchesSearch;
+      return matchesDelivery && matchesPayment && matchesSearch;
     });
 
     // Sorting
@@ -297,7 +285,7 @@ export default function SalesManagerOrdersView() {
     });
 
     return result;
-  }, [orders, selectedMember, deliveryFilter, paymentFilter, searchTerm, sortBy]);
+  }, [orders, deliveryFilter, paymentFilter, searchTerm, sortBy]);
 
   // Helper to reliably determine collected payment for an order
   const getOrderPaid = useCallback((o) => {
@@ -442,10 +430,10 @@ export default function SalesManagerOrdersView() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
         <div>
           <h2 style={{ margin: 0, fontSize: '1.4rem', fontWeight: 800, color: '#0F172A', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <ShoppingCart size={24} color="#2563EB" /> Team Sales Orders
+            <ShoppingCart size={24} color="#2563EB" /> My Sales Orders
           </h2>
           <p style={{ margin: '4px 0 0', color: '#64748B', fontSize: '0.85rem' }}>
-            Complete list of Sales Orders created by Farhan and all Sales Team Members with real-time financial balances
+            Your Sales Orders with real-time financial balances
           </p>
         </div>
 
@@ -524,17 +512,6 @@ export default function SalesManagerOrdersView() {
             style={{ width: '100%', padding: '9px 12px 9px 36px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.875rem' }}
           />
         </div>
-
-        <select
-          value={selectedMember}
-          onChange={e => setSelectedMember(e.target.value)}
-          style={{ padding: '9px 14px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#FFF', fontSize: '0.875rem', fontWeight: 600, color: '#334155' }}
-        >
-          <option value="all">All Sales Members</option>
-          {teamMembers.map(m => (
-            <option key={m._id} value={m._id}>{m.fullName || m.email}</option>
-          ))}
-        </select>
 
         <select
           value={deliveryFilter}
