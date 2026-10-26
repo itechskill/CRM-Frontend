@@ -17,7 +17,6 @@ import { apiRequest } from '../utils/api';
 import { getUser } from '../utils/authStorage';
 import './PriceRequestsView.css';
 
-const ACCESS_ROLES = ['sales_member', 'sales_rep', 'sales_person', 'sales_manager', 'purchaser', 'admin', 'ceo'];
 const CATEGORIES = ['Servers', 'Desktops/Laptops/Workstations', 'Networking', 'Software', 'Other'];
 const BRANDS = ['Cisco', 'VMware', 'Lenovo', 'Microsoft', 'BDCOM', 'Fortinet', 'Dell', 'HP', 'Other'];
 const ROUTABLE_BRANDS = BRANDS.filter((brand) => brand !== 'Other');
@@ -49,7 +48,7 @@ const EMPTY_RULE = {
 };
 
 const userLabel = (user) => user
-  ? `${user.name || user.fullName || 'Unknown'}${user.email ? ` — ${user.email}` : ''} — ${user.role || 'no role'}${user.purchaserSubDept ? ` (${user.purchaserSubDept})` : ''}`
+  ? `${user.name || user.fullName || 'Unknown'}${user.label || user.priceRequestLabel ? ` - ${user.label || user.priceRequestLabel}` : ''}`
   : '';
 
 const getId = (value) => String(value?._id || value || '');
@@ -82,10 +81,7 @@ export default function PriceRequestsView() {
   const [ruleForm, setRuleForm] = useState(EMPTY_RULE);
   const [editingRule, setEditingRule] = useState(null);
 
-  const eligibleUsers = useMemo(
-    () => users.filter((user) => ACCESS_ROLES.includes(user.role)),
-    [users]
-  );
+  const eligibleUsers = useMemo(() => users, [users]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -93,7 +89,7 @@ export default function PriceRequestsView() {
     try {
       const [requestResult, userResult, ruleResult] = await Promise.all([
         apiRequest('/api/price-requests'),
-        apiRequest('/api/users'),
+        apiRequest('/api/price-requests/labelled-users'),
         apiRequest('/api/price-requests/routing-rules')
       ]);
       if (!requestResult.response.ok) throw new Error(requestResult.data.message || 'Could not load price requests.');

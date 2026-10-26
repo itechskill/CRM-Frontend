@@ -43,6 +43,7 @@ function EditUserModal({ user, onClose, onSave }) {
   const [department, setDepartment] = useState(user.department || '');
   const [status, setStatus] = useState(user.status === 'Active' || user.status === 'active' ? 'active' : 'suspended');
   const [canForwardQuotations, setCanForwardQuotations] = useState(Boolean(user.canForwardQuotations));
+  const [priceRequestLabel, setPriceRequestLabel] = useState(user.priceRequestLabel || '');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -116,6 +117,19 @@ function EditUserModal({ user, onClose, onSave }) {
         });
         if (!permissionRes.response.ok || !permissionRes.data.success) {
           setErrorMsg(permissionRes.data.message || 'Failed to update quotation forwarding permission.');
+          setSaving(false);
+          return;
+        }
+      }
+
+      const normalizedPriceRequestLabel = priceRequestLabel.trim();
+      if (normalizedPriceRequestLabel !== (user.priceRequestLabel || '')) {
+        const labelRes = await apiRequest(`/api/admin/users/${targetId}/price-request-label`, {
+          method: 'PATCH',
+          body: JSON.stringify({ priceRequestLabel: normalizedPriceRequestLabel })
+        });
+        if (!labelRes.response.ok || !labelRes.data.success) {
+          setErrorMsg(labelRes.data.message || 'Failed to update Price Request label.');
           setSaving(false);
           return;
         }
@@ -222,6 +236,21 @@ function EditUserModal({ user, onClose, onSave }) {
                 <option value="active">Active</option>
                 <option value="suspended">Suspended</option>
               </select>
+            </div>
+
+            <div className="form-group">
+              <label>Price Request label (optional)</label>
+              <input
+                className="form-input"
+                value={priceRequestLabel}
+                onChange={(e) => setPriceRequestLabel(e.target.value)}
+                maxLength={80}
+                placeholder="e.g. DELL Configurator"
+                style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '10px 12px', fontSize: '0.88rem' }}
+              />
+              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                Only labelled active users appear in Price Request person selectors.
+              </span>
             </div>
 
             {['employee', 'sales_member', 'sales_rep', 'sales_person', 'sales_manager'].includes(role) && (
@@ -472,6 +501,7 @@ export default function UsersView({ onOpenInviteModal }) {
           avatarBg: avatarColors[idx % avatarColors.length],
           role: u.role,
           canForwardQuotations: Boolean(u.canForwardQuotations),
+          priceRequestLabel: u.priceRequestLabel || '',
           department: u.department || 'General',
           status: u.status === 'active' || u.status === 'Active' ? 'Active' : 'Inactive',
           lastActive: 'Just now',

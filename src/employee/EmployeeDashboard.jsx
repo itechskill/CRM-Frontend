@@ -2,40 +2,40 @@ import React, { useState, useEffect } from 'react';
 import { apiRequest } from '../utils/api';
 import {
   Briefcase,
-  Clock,
   CheckCircle,
   AlertTriangle,
-  Star,
-  TrendingUp,
   Plus,
   ArrowUpRight,
-  Calendar,
-  MoreVertical,
   CheckSquare,
-  MessageSquare,
-  GitCommit,
-  Users,
   FileText,
   Target,
-  PhoneCall,
   DollarSign,
   ShoppingCart,
-  BarChart2,
   FolderKanban,
   CheckCircle2,
-  ShieldCheck,
-  ChevronRight,
-  Activity
 } from 'lucide-react';
 import './EmployeeDashboard.css';
+
+const currentMonth = () => new Date().toISOString().slice(0, 7);
+const money = value => `Rs. ${Number(value || 0).toLocaleString()}`;
+
+const DashboardTile = ({ icon: Icon, label, count, amount, note, onClick, tone = '#2563EB' }) => (
+  <button type="button" className="sales-dashboard-nine-tile" onClick={onClick} disabled={!onClick}>
+    <span className="sales-dashboard-nine-icon" style={{ color: tone, background: `${tone}14` }}><Icon size={21} /></span>
+    <span className="sales-dashboard-nine-label">{label}</span>
+    {count != null && <span className="sales-dashboard-nine-count">{count}</span>}
+    <span className="sales-dashboard-nine-amount">{amount}</span>
+    {note && <span className="sales-dashboard-nine-note">{note}</span>}
+  </button>
+);
 
 export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNewTaskModal }) {
   const [tasksList, setTasksList] = useState([]);
   const [projectsList, setProjectsList] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [salesStats, setSalesStats] = useState(null);
   const [salesLoading, setSalesLoading] = useState(false);
-  const [recentActivities, setRecentActivities] = useState([]);
+  const [targetPerformance, setTargetPerformance] = useState(null);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
   const isAhmedAnjum = (currentUser?.fullName || '').toLowerCase().includes('ahmed') ||
     (currentUser?.email || '').toLowerCase().includes('quote@fortline.net') ||
@@ -47,6 +47,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
   const isSalesDept = (currentUser?.department || '').trim().toLowerCase() === 'sales' ||
     (currentUser?.role || '').toLowerCase() === 'sales_member' ||
     (currentUser?.role || '').toLowerCase() === 'sales_rep' ||
+    (currentUser?.role || '').toLowerCase() === 'sales_person' ||
     isSalesRep;
   const firstName = currentUser?.fullName ? currentUser.fullName.split(' ')[0] : 'there';
   const todayFormatted = new Date().toLocaleDateString('en-US', {
@@ -79,26 +80,26 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
       }
     } catch (err) {
       console.error('Fetch tasks & projects error:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
-  // Fetch real sales stats and activities from MongoDB (only if sales department)
+  // Fetch real sales dashboard and Target Performance data (only for Sales)
   const fetchSalesData = async () => {
     if (!isSalesDept) return;
     setSalesLoading(true);
     try {
-      const [statsRes, actRes] = await Promise.all([
-        apiRequest('/api/sales-employee/stats'),
-        apiRequest('/api/sales-employee/activities')
+      const [statsRes, targetRes] = await Promise.all([
+        apiRequest(`/api/sales-employee/stats?month=${selectedMonth}`),
+        apiRequest(`/api/target-performance/me?month=${selectedMonth}`)
       ]);
 
       if (statsRes.response.ok && statsRes.data.success) {
         setSalesStats(statsRes.data.data);
       }
-      if (actRes.response.ok && actRes.data.success && Array.isArray(actRes.data.data)) {
-        setRecentActivities(actRes.data.data.slice(0, 6));
+      if (targetRes.response.ok && targetRes.data.success) {
+        setTargetPerformance(targetRes.data.data || null);
+      } else {
+        setTargetPerformance(null);
       }
     } catch (err) {
       console.error('Fetch sales stats error:', err);
@@ -112,7 +113,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
     if (isSalesDept) {
       fetchSalesData();
     }
-  }, [isSalesDept]);
+  }, [isSalesDept, selectedMonth]);
 
   const handleToggleTaskStatus = async (id) => {
     const task = tasksList.find(t => t.id === id);
@@ -127,34 +128,6 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
     } catch (e) {
       console.error('Update task error:', e);
     }
-  };
-
-  const salesPerf = salesStats?.salesPerformance || {
-    monthlyTarget: salesStats?.monthlyTarget || 0,
-    salesAchieved: salesStats?.salesAchieved || 0,
-    remainingTarget: salesStats?.remainingTarget || 0,
-    targetAchievementPct: salesStats?.targetAchievementPct || 0,
-    totalLeads: salesStats?.totalLeads || 0,
-    convertedLeads: salesStats?.convertedLeads || 0,
-    qualifiedLeads: 0,
-    leadConversionRate: 0,
-    totalQuotations: salesStats?.totalQuotations || 0,
-    acceptedQuotations: salesStats?.acceptedQuotations || 0,
-    totalOrders: salesStats?.totalOrders || 0,
-    completedOrders: salesStats?.completedOrders || 0,
-    wonDealsCount: 0,
-    wonDealsValue: 0
-  };
-
-  const finPerf = salesStats?.financialPerformance || {
-    receivables: salesStats?.receivables || 0,
-    overdueAmount: salesStats?.overdueAmount || 0,
-    salaryTarget: salesStats?.salaryTarget || 0,
-    liability: salesStats?.liability || 0,
-    netRevenue: salesStats?.salesAchieved || 0,
-    totalInvoicesCount: salesStats?.totalInvoicesCount || 0,
-    approvedInvoicesCount: salesStats?.approvedInvoicesCount || 0,
-    paidInvoicesAmount: salesStats?.paidInvoicesAmount || 0
   };
 
   const pendingTasks = tasksList.filter(t => t.status !== 'Completed');
@@ -316,102 +289,31 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
   // ══════════════════════════════════════════════════════════════
   // SALES MEMBER DASHBOARD (For Sales Department Employees)
   // ══════════════════════════════════════════════════════════════
-  const activeOrdersCount = Math.max(0, (salesPerf.totalOrders || 0) - (salesPerf.completedOrders || 0));
+  const tiles = salesStats?.dashboardTiles || {};
+  const targetIsSet = Boolean(targetPerformance?.visible && Number(targetPerformance?.salaryCents || 0) > 0);
+  const targetAmount = targetIsSet ? Number(targetPerformance.targetCents || 0) / 100 : null;
+  const achievedGP = targetIsSet ? Number(targetPerformance.achievedGrossProfitCents || 0) / 100 : null;
+  const remainingTarget = targetIsSet ? Math.max(0, targetAmount - achievedGP) : null;
+  const go = tab => () => onNavigateTab?.(tab);
+  const dashboardTiles = [
+    { label: 'Price Requested', ...tiles.priceRequested, amount: 'requests created', icon: DollarSign, onClick: go('price_requests') },
+    { label: 'Price Received', ...tiles.priceReceived, amount: 'priced requests', icon: CheckCircle, tone: '#059669', onClick: go('price_requests') },
+    { label: 'Quotation Sent', ...tiles.quotationSent, amount: money(tiles.quotationSent?.amount), icon: FileText, onClick: go('my_quotations') },
+    { label: 'Sale Order', ...tiles.saleOrder, amount: money(tiles.saleOrder?.amount), icon: ShoppingCart, onClick: go('my_orders') },
+    { label: 'Invoiced', ...tiles.invoiced, amount: money(tiles.invoiced?.amount), icon: FileText, tone: '#7C3AED', onClick: go('my_invoices') },
+    { label: 'Receivable', ...tiles.receivable, amount: money(tiles.receivable?.amount), note: 'As of today', icon: DollarSign, tone: '#0284C7', onClick: go('my_invoices') },
+    { label: 'Overdue', ...tiles.overdue, amount: money(tiles.overdue?.amount), note: 'As of today', icon: AlertTriangle, tone: '#DC2626', onClick: go('my_invoices') },
+    { label: 'GP Target', count: null, amount: targetIsSet ? money(targetAmount) : 'Target not set', note: targetIsSet ? 'Salary × 5 for selected month' : '', icon: Target, tone: '#D97706', onClick: go('target_performance') },
+    { label: 'Remaining Target', count: null, amount: targetIsSet ? money(remainingTarget) : 'Target not set', note: targetIsSet ? `Achieved GP: ${money(achievedGP)}` : '', icon: Target, tone: '#EA580C', onClick: go('target_performance') }
+  ];
 
   return (
     <div className="employee-dashboard-container">
-      {/* Top Welcome Banner */}
       <div className="employee-welcome-banner">
-        <div className="employee-welcome-left">
-          <h2 className="welcome-title">Welcome back, {firstName} 👋</h2>
-          <p className="welcome-subtitle">Here is your real-time sales targets and performance dashboard for {todayFormatted}</p>
-        </div>
-        <div className="welcome-quick-actions">
-          <button className="sv-btn-primary" onClick={() => onNavigateTab?.('my_quotations')}>
-            <FileText size={15} /> Quotations
-          </button>
-          <button className="sv-btn-cancel" onClick={() => onNavigateTab?.('my_orders')}>
-            <Briefcase size={15} /> Sales Orders
-          </button>
-        </div>
+        <div className="employee-welcome-left"><h2 className="welcome-title">Welcome back, {firstName} 👋</h2><p className="welcome-subtitle">Your own sales activity and financial position</p></div>
+        <label className="sales-dashboard-month"><span>Month</span><input type="month" value={selectedMonth} onChange={event => setSelectedMonth(event.target.value)} /></label>
       </div>
-
-      {/* ── SALES PERFORMANCE CARD ONLY ── */}
-      <div className="hero-kpi-row" style={{ gridTemplateColumns: '1fr' }}>
-        <div className="hero-kpi-card sales-hero-card" style={{ width: '100%' }}>
-          <div className="hero-card-header">
-            <div className="hero-header-left">
-              <div className="hero-icon-box sales">
-                <Target size={22} color="#FFFFFF" />
-              </div>
-              <div>
-                <h3 className="hero-card-title">Sales Performance</h3>
-                <p className="hero-card-subtitle">Monthly sales target &amp; order progress</p>
-              </div>
-            </div>
-            <div className="hero-badge-pct">
-              <span>{salesPerf.targetAchievementPct}%</span>
-              <span className="hero-badge-sub">Achieved</span>
-            </div>
-          </div>
-
-          <div className="hero-card-main-val">
-            <div className="hero-val-group">
-              <span className="hero-val-label">Sales Achieved</span>
-              <span className="hero-val-num" title={`Rs. ${Number(salesPerf.salesAchieved || 0).toLocaleString()}`}>
-                <span className="hero-val-prefix">Rs.</span>
-                <span className="hero-val-text">{Math.round(Number(salesPerf.salesAchieved || 0)).toLocaleString()}</span>
-              </span>
-            </div>
-            <div className="hero-val-group">
-              <span className="hero-val-label">Sales Target</span>
-              <span className="hero-val-num light" title={`Rs. ${Number(salesPerf.monthlyTarget || 0).toLocaleString()}`}>
-                <span className="hero-val-prefix">Rs.</span>
-                <span className="hero-val-text">{Math.round(Number(salesPerf.monthlyTarget || 0)).toLocaleString()}</span>
-              </span>
-            </div>
-            <div className="hero-val-group">
-              <span className="hero-val-label">Remaining</span>
-              <span className="hero-val-num rem" title={`Rs. ${Number(salesPerf.remainingTarget || 0).toLocaleString()}`}>
-                <span className="hero-val-prefix">Rs.</span>
-                <span className="hero-val-text">{Math.round(Number(salesPerf.remainingTarget || 0)).toLocaleString()}</span>
-              </span>
-            </div>
-          </div>
-
-          {/* Target Progress Bar */}
-          <div className="hero-progress-track">
-            <div
-              className="hero-progress-fill sales"
-              style={{ width: `${Math.min(100, salesPerf.targetAchievementPct)}%` }}
-            />
-          </div>
-
-          {/* Sales Performance Key Metric Pills (Quotations & Sales Orders) */}
-          <div className="hero-pills-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))' }}>
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_quotations')}>
-              <span className="pill-title">Total Quotations</span>
-              <span className="pill-value">{salesPerf.totalQuotations || 0}</span>
-              <span className="pill-sub">Formal Proposals</span>
-            </div>
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_quotations')}>
-              <span className="pill-title">Accepted Quotations</span>
-              <span className="pill-value" style={{ color: '#059669' }}>{salesPerf.acceptedQuotations || 0}</span>
-              <span className="pill-sub positive">Client Approved</span>
-            </div>
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_orders')}>
-              <span className="pill-title">Total Sales Order Active</span>
-              <span className="pill-value" style={{ color: '#2563EB' }}>{activeOrdersCount}</span>
-              <span className="pill-sub">In Progress</span>
-            </div>
-            <div className="hero-pill-item" onClick={() => onNavigateTab?.('my_orders')}>
-              <span className="pill-title">Total Sales Order Processed</span>
-              <span className="pill-value" style={{ color: '#10B981' }}>{salesPerf.completedOrders || 0}</span>
-              <span className="pill-sub positive">Completed &amp; Delivered</span>
-            </div>
-          </div>
-        </div>
-      </div>
+      {salesLoading ? <div className="sv-empty">Loading dashboard…</div> : <div className="sales-dashboard-nine-grid">{dashboardTiles.map(tile => <DashboardTile key={tile.label} {...tile} />)}</div>}
     </div>
   );
 }
