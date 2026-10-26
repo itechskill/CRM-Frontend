@@ -719,3 +719,106 @@
   background-color: #EFF6FF;
   color: #2563EB;
 }
+
+.sales-dashboard-month {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #475569;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.sales-dashboard-month input {
+  border: 1px solid #CBD5E1;
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #0F172A;
+  background: #FFFFFF;
+  font: inherit;
+}
+
+.sales-dashboard-nine-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sales-dashboard-nine-tile {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    "icon label"
+    "count count"
+    "amount amount"
+    "note note";
+  align-content: start;
+  gap: 6px 10px;
+  min-height: 160px;
+  padding: 20px;
+  text-align: left;
+  border: 1px solid #E2E8F0;
+  border-radius: 14px;
+  background: #FFFFFF;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.05);
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.sales-dashboard-nine-tile:not(:disabled) { cursor: pointer; }
+.sales-dashboard-nine-tile:disabled { cursor: default; opacity: 1; }
+.sales-dashboard-nine-tile:not(:disabled):hover {
+  transform: translateY(-2px);
+  border-color: #93C5FD;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.09);
+}
+
+.sales-dashboard-nine-icon {
+  grid-area: icon;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.sales-dashboard-nine-label {
+  grid-area: label;
+  align-self: center;
+  color: #475569;
+  font-size: 0.82rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sales-dashboard-nine-count {
+  grid-area: count;
+  color: #0F172A;
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+.sales-dashboard-nine-amount {
+  grid-area: amount;
+  color: #0F172A;
+  font-size: 1.05rem;
+  font-weight: 750;
+}
+
+.sales-dashboard-nine-note {
+  grid-area: note;
+  color: #64748B;
+  font-size: 0.76rem;
+}
+
+@media (max-width: 900px) {
+  .sales-dashboard-nine-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 600px) {
+  .sales-dashboard-nine-grid { grid-template-columns: 1fr; }
+  .sales-dashboard-month { width: 100%; justify-content: space-between; }
+}
