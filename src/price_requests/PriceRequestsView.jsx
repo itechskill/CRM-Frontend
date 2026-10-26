@@ -49,7 +49,7 @@ const EMPTY_RULE = {
 };
 
 const userLabel = (user) => user
-  ? `${user.fullName || 'Unknown'} — ${user.email || 'no email'} — ${user.role || 'no role'}${user.purchaserSubDept ? ` (${user.purchaserSubDept})` : ''}`
+  ? `${user.name || user.fullName || 'Unknown'}${user.email ? ` — ${user.email}` : ''} — ${user.role || 'no role'}${user.purchaserSubDept ? ` (${user.purchaserSubDept})` : ''}`
   : '';
 
 const getId = (value) => String(value?._id || value || '');

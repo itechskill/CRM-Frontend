@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Users,
   TrendingUp,
   Calendar,
   FileText,
@@ -103,7 +102,7 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
       color: '#DC2626',
       value: `Rs. ${Number(stats?.overdueInvoiceAmount || 0).toLocaleString()}`,
       label: 'Total Overdue Amount',
-      sub: 'Past due balances for entire sales team',
+      sub: 'Your past-due balances',
       clickable: true,
       onClick: () => { setBreakdownType('overdue'); setBreakdownSearch(''); }
     },
@@ -114,7 +113,7 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
       color: '#0284C7',
       value: `Rs. ${Number(stats?.totalReceivables || 0).toLocaleString()}`,
       label: 'Total Receivables Amount',
-      sub: 'All unpaid orders & invoices',
+      sub: 'Your unpaid orders & invoices',
       clickable: true,
       onClick: () => { setBreakdownType('receivables'); setBreakdownSearch(''); }
     },
@@ -124,21 +123,9 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
       bg: '#FFFBEB',
       color: '#D97706',
       value: `${stats?.teamTargetAchievementPct || 0}%`,
-      label: 'Team Target Attainment',
+      label: 'My Target Attainment',
       sub: `Rs. ${Number(stats?.totalAchievedTarget || stats?.totalMonthlyRevenue || 0).toLocaleString()} achieved`,
-      clickable: true,
-      onClick: () => onNavigateTab?.('team')
-    },
-    {
-      id: 'team',
-      icon: Users,
-      bg: '#F8FAFC',
-      color: '#475569',
-      value: String(stats?.totalTeamMembers || 0),
-      label: 'Sales Representatives',
-      sub: `${stats?.activeTeamMembers || 0} active team members`,
-      clickable: true,
-      onClick: () => onNavigateTab?.('team')
+      clickable: false
     },
     {
       id: 'leads',
@@ -170,15 +157,12 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
       <div className="smd-top-banner">
         <div>
           <h1 className="smd-title">Sales Manager Executive Portal</h1>
-          <p className="smd-subtitle">Organization sales pipeline, team quotas, performance metrics & live analytics — {todayFormatted}</p>
+          <p className="smd-subtitle">Your sales pipeline, performance metrics & live analytics — {todayFormatted}</p>
         </div>
         <div className="smd-actions-row">
           <button className="smd-refresh-btn" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw size={15} className={refreshing ? 'spinning' : ''} />
             {refreshing ? 'Syncing...' : 'Sync Data'}
-          </button>
-          <button className="smd-primary-btn" onClick={() => onNavigateTab?.('team')}>
-            <Users size={16} /> Manage Sales Team
           </button>
         </div>
       </div>
@@ -318,19 +302,19 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
           <div className="smd-widget-header">
             <div className="widget-header-title">
               <Activity size={18} color="#2563EB" />
-              <h3>Recent Sales Team Activities</h3>
+              <h3>My Recent Sales Activities</h3>
             </div>
           </div>
           <div className="smd-activities-list">
             {recentActivities.length === 0 ? (
-              <div className="sv-empty">No recent team activities recorded yet.</div>
+              <div className="sv-empty">No recent sales activities recorded yet.</div>
             ) : (
               recentActivities.map((act) => (
                 <div key={act._id} className="smd-act-item">
                   <div className="smd-act-node" />
                   <div className="smd-act-info">
                     <div className="smd-act-header-row">
-                      <span className="smd-act-rep">{act.performedBy?.fullName || 'Sales Team Member'}</span>
+                      <span className="smd-act-rep">{act.performedBy?.fullName || 'Sales User'}</span>
                       <span className="smd-act-time">{act.createdAt ? new Date(act.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}</span>
                     </div>
                     <p className="smd-act-desc">{act.description}</p>
@@ -398,13 +382,13 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#0F172A' }}>
                     {breakdownType === 'overdue'
-                      ? 'Total Overdue Balances List (Entire Sales Team)'
-                      : 'Total Outstanding Receivables List (Entire Sales Team)'}
+                      ? 'My Overdue Balances'
+                      : 'My Outstanding Receivables'}
                   </h3>
                   <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#64748B' }}>
                     {breakdownType === 'overdue'
-                      ? 'Showing overdue and past-due unpaid balances across all sales representatives'
-                      : 'Showing all active unpaid and outstanding customer balances across all sales representatives'}
+                      ? 'Showing your overdue and past-due unpaid balances'
+                      : 'Showing your active unpaid and outstanding customer balances'}
                   </p>
                 </div>
               </div>
@@ -460,9 +444,9 @@ export default function SalesManagerDashboard({ currentUser, onNavigateTab }) {
                       </div>
                     </div>
                     <div>
-                      <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>Sales Team Scope</span>
+                      <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', color: '#64748B' }}>Owner Scope</span>
                       <div style={{ fontSize: '1rem', fontWeight: 700, color: '#334155', marginTop: '4px' }}>
-                        All Sales Representatives ({stats?.totalTeamMembers || 3} members)
+                        {currentUser?.fullName || 'Current user'}
                       </div>
                     </div>
                   </div>
