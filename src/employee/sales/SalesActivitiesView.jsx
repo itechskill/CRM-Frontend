@@ -6,20 +6,24 @@ import './SalesViews.css';
 const ACTIVITY_ICONS = {
   'Lead Created': '🎯', 'Lead Updated': '✏️', 'Lead Converted': '🏆',
   'Quotation Created': '📄', 'Quotation Sent': '📤', 'Quotation Accepted': '✅', 'Quotation Rejected': '❌',
+  'Quotation Converted to Customer PO': '📄', 'Customer PO Converted to Product File': '📁',
+  'Product File Converted to Sales Order': '🛒', 'Order Sent to Finance': '💳',
   'Sales Order Created': '🛒', 'Sales Order Updated': '🔄',
   'Delivery Note Created': '📦',
   'Follow-up Created': '📅', 'Follow-up Completed': '✔️',
   'Customer Contacted': '📞',
-  'Target Updated': '🎯',
+  'Target Updated': '🎯', 'Invoice Finalized': '✅', 'Inventory IN': '📦',
   'Other': '📋'
 };
 
 const ACTIVITY_COLORS = {
   'Lead Created': '#6366F1', 'Lead Converted': '#F59E0B',
   'Quotation Created': '#3B82F6', 'Quotation Accepted': '#10B981', 'Quotation Rejected': '#EF4444',
+  'Quotation Converted to Customer PO': '#2563EB', 'Customer PO Converted to Product File': '#7C3AED',
+  'Product File Converted to Sales Order': '#059669', 'Order Sent to Finance': '#D97706',
   'Sales Order Created': '#2563EB',
   'Follow-up Completed': '#10B981', 'Follow-up Created': '#EC4899',
-  'Customer Contacted': '#8B5CF6',
+  'Customer Contacted': '#8B5CF6', 'Invoice Finalized': '#047857', 'Inventory IN': '#0891B2',
   default: '#64748B'
 };
 

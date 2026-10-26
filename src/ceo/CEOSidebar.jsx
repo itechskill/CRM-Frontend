@@ -21,7 +21,8 @@ import {
   LogOut,
   ShoppingBag,
   Globe,
-  Target
+  Target,
+  DollarSign
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import './CEOSidebar.css';
@@ -59,6 +60,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
     { id: 'business_overview', label: 'Business Overview', icon: TrendingUp },
     { id: 'sales_finance', label: 'Sales & Finance', icon: Calculator },
     { id: 'target_performance', label: 'Target Performance', icon: Target },
+    { id: 'supplier_po_expenses', label: 'Supplier PO Expenses', icon: DollarSign },
     { id: 'edit_requests', label: 'Edit Requests', icon: ShieldCheck, badge: pendingCount > 0 ? pendingCount : null },
     { id: 'edit_history', label: 'Edit History', icon: History }
   ];

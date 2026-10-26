@@ -56,7 +56,7 @@ export function ExpenseDraftPanel({ value = [], onChange }) {
   );
 }
 
-export default function SupplierPOExpensesModal({ po, onClose, readOnly = false, onChanged }) {
+export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddProp, canEditDelete: canEditDeleteProp, onChanged }) {
   const [record, setRecord] = useState(null);
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyExpense());
@@ -64,7 +64,8 @@ export default function SupplierPOExpensesModal({ po, onClose, readOnly = false,
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const role = getUser()?.role;
-  const effectiveReadOnly = readOnly || role === 'ceo';
+  const canAdd = canAddProp ?? ['support', 'finance', 'purchaser', 'admin'].includes(role);
+  const canEditDelete = canEditDeleteProp ?? ['finance', 'admin'].includes(role);
 
   const load = async () => {
     const [poResult, categoryResult] = await Promise.all([
@@ -115,7 +116,7 @@ export default function SupplierPOExpensesModal({ po, onClose, readOnly = false,
         </div>
         {message && <div style={{ padding: 10, marginTop: 12, borderRadius: 8, background: '#EFF6FF', color: '#1E40AF' }}>{message}</div>}
         <div style={{ overflowX: 'auto', marginTop: 14 }}><table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}><thead><tr style={{ background: '#F8FAFC' }}>{['Category','Description','Basis','Taxable','PKR amount','GRN','Added by','Actions'].map(label => <th key={label} style={{ textAlign: 'left', padding: 9 }}>{label}</th>)}</tr></thead><tbody>
-          {active.map(expense => <tr key={expense._id} style={{ borderTop: '1px solid #E2E8F0' }}><td style={{ padding: 9 }}>{expense.category}</td><td>{expense.description || '—'}{(expense.attachments || []).map(file => <div key={file.name}><a href={file.data} download={file.name} style={{ fontSize: 11 }}>{file.name}</a></div>)}</td><td>{expense.calculationType === 'Percentage' ? `${expense.percentage}% of PO subtotal` : `${expense.currency} ${(Number(expense.amountCents) / 100).toLocaleString()} @ ${expense.exchangeRateToPKR}`}</td><td>{expense.taxable ? 'Yes' : 'No'}</td><td>{money(expense.amountPKRCents)}</td><td>{expense.grnNumber || 'Later entry'}</td><td>{expense.addedByName || '—'}</td><td>{!effectiveReadOnly && <div style={{ display: 'flex', gap: 5 }}><button onClick={() => edit(expense)} title="Edit"><Edit3 size={14} /></button><button onClick={() => remove(expense)} title="Soft delete"><Trash2 size={14} /></button></div>}</td></tr>)}
+          {active.map(expense => <tr key={expense._id} style={{ borderTop: '1px solid #E2E8F0' }}><td style={{ padding: 9 }}>{expense.category}</td><td>{expense.description || '—'}{(expense.attachments || []).map(file => <div key={file.name}><a href={file.data} download={file.name} style={{ fontSize: 11 }}>{file.name}</a></div>)}</td><td>{expense.calculationType === 'Percentage' ? `${expense.percentage}% of PO subtotal` : `${expense.currency} ${(Number(expense.amountCents) / 100).toLocaleString()} @ ${expense.exchangeRateToPKR}`}</td><td>{expense.taxable ? 'Yes' : 'No'}</td><td>{money(expense.amountPKRCents)}</td><td>{expense.grnNumber || 'Later entry'}</td><td>{expense.addedByName || '—'}</td><td>{canEditDelete && <div style={{ display: 'flex', gap: 5 }}><button onClick={() => edit(expense)} title="Edit"><Edit3 size={14} /></button><button onClick={() => remove(expense)} title="Soft delete"><Trash2 size={14} /></button></div>}</td></tr>)}
           {!active.length && <tr><td colSpan="8" style={{ padding: 20, textAlign: 'center', color: '#64748B' }}>No supplier purchase expenses recorded.</td></tr>}
         </tbody></table></div>
         <div style={{ marginTop: 14, marginLeft: 'auto', maxWidth: 430, border: '1px solid #CBD5E1', borderRadius: 10, padding: 12 }}>
@@ -124,7 +125,7 @@ export default function SupplierPOExpensesModal({ po, onClose, readOnly = false,
           <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Total expenses</span><strong>{money(totals.totalExpensesPKRCents)}</strong></div>
           <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #CBD5E1', marginTop: 7, paddingTop: 7, color: '#6D28D9' }}><span>Landed cost = PO total in PKR + expenses</span><strong>{money(totals.landedCostPKRCents)}</strong></div>
         </div>
-        {!effectiveReadOnly && <form onSubmit={save} style={{ marginTop: 16, padding: 14, background: '#F8FAFC', borderRadius: 10 }}><h4 style={{ margin: '0 0 10px' }}>{editingId ? 'Edit expense' : 'Add expense'}</h4><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 9 }}>
+        {(editingId ? canEditDelete : canAdd) && <form onSubmit={save} style={{ marginTop: 16, padding: 14, background: '#F8FAFC', borderRadius: 10 }}><h4 style={{ margin: '0 0 10px' }}>{editingId ? 'Edit expense' : 'Add expense'}</h4><div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 9 }}>
           <label>Category<input required list="expense-categories" style={inputStyle} value={form.category} onChange={e => setForm({ ...form, category: e.target.value })} /></label><datalist id="expense-categories">{categories.filter(item => item.isActive).map(item => <option key={item.key} value={item.name} />)}</datalist>
           <label>Description<input style={inputStyle} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></label>
           <label>Calculation<select style={inputStyle} value={form.calculationType} onChange={e => setForm({ ...form, calculationType: e.target.value })}><option>Fixed</option><option>Percentage</option></select></label>

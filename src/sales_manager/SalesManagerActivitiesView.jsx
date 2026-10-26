@@ -7,14 +7,20 @@ const TYPE_BADGES = {
   'Lead Created': { bg: '#EFF6FF', color: '#1D4ED8' },
   'Deal Updated': { bg: '#F5F3FF', color: '#7C3AED' },
   'Quotation Created': { bg: '#FEF3C7', color: '#B45309' },
+  'Quotation Converted to Customer PO': { bg: '#EFF6FF', color: '#1D4ED8' },
   'Customer PO Uploaded': { bg: '#ECFDF5', color: '#047857' },
+  'Customer PO Converted to Product File': { bg: '#F5F3FF', color: '#7C3AED' },
   'Product File Created': { bg: '#EFF6FF', color: '#2563EB' },
+  'Product File Converted to Sales Order': { bg: '#ECFDF5', color: '#059669' },
   'Order Created': { bg: '#ECFDF5', color: '#059669' },
+  'Order Sent to Finance': { bg: '#FFFBEB', color: '#D97706' },
   'Delivery Note Created': { bg: '#F5F3FF', color: '#6D28D9' },
   'Delivery Completed': { bg: '#ECFDF5', color: '#047857' },
   'Payment Recorded': { bg: '#ECFDF5', color: '#065F46' },
   'Invoice Created': { bg: '#FEF2F2', color: '#B91C1C' },
   'Invoice Updated': { bg: '#FFFBEB', color: '#D97706' },
+  'Invoice Finalized': { bg: '#ECFDF5', color: '#047857' },
+  'Inventory IN': { bg: '#ECFEFF', color: '#0E7490' },
   'Follow-up Created': { bg: '#F1F5F9', color: '#475569' }
 };
 
@@ -88,12 +94,18 @@ export default function SalesManagerActivitiesView() {
           <option value="Lead Created">Lead Created</option>
           <option value="Deal Updated">Deal Updated</option>
           <option value="Quotation Created">Quotation Created</option>
+          <option value="Quotation Converted to Customer PO">Quotation Converted to Customer PO</option>
           <option value="Customer PO Uploaded">Customer PO Uploaded</option>
+          <option value="Customer PO Converted to Product File">Customer PO Converted to Product File</option>
           <option value="Product File Created">Product File Created</option>
+          <option value="Product File Converted to Sales Order">Product File Converted to Sales Order</option>
           <option value="Order Created">Order Created</option>
+          <option value="Order Sent to Finance">Order Sent to Finance</option>
           <option value="Delivery Note Created">Delivery Note</option>
           <option value="Payment Recorded">Payment Recorded</option>
           <option value="Invoice Created">Invoice Created</option>
+          <option value="Invoice Finalized">Invoice Finalized</option>
+          <option value="Inventory IN">Inventory IN</option>
           <option value="Follow-up Created">Follow-up</option>
         </select>
       </div>
