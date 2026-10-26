@@ -373,6 +373,18 @@ export default function App() {
     setIsSidebarOpen(false);
   };
 
+  useEffect(() => {
+    const handleNotificationNavigation = (event) => {
+      const { role, tab } = event.detail || {};
+      if (!tab || (role && role !== backendVerifiedRole)) return;
+      setActiveTab(tab);
+      setActiveTabStorage(tab);
+      setIsSidebarOpen(false);
+    };
+    window.addEventListener('crm:navigate-tab', handleNotificationNavigation);
+    return () => window.removeEventListener('crm:navigate-tab', handleNotificationNavigation);
+  }, [backendVerifiedRole]);
+
   const handleSwitchRole = (role, subDept) => {
     if (canSwitchPortal(currentUser?.role)) {
       setViewPortal(role);
@@ -536,12 +548,12 @@ export default function App() {
       purchaser: ['dashboard', 'price_requests', 'pending_orders', 'inventory', 'supplier_pos', 'grn', 'grn_creation', 'grns', 'local_payables', 'leave', 'profile'],
       sales_manager: ['dashboard', 'price_requests', 'leads', 'deals', 'pipeline', 'my_quotations', 'customer_pos', 'product_files', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'clients', 'target_performance', 'settings', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
-      admin: ['dashboard', 'price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      admin: ['dashboard', 'price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'supplier_po_expenses', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
       accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'local_payables', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
       finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'target_performance_overdue', 'finance_reports', 'reports', 'profile'],
       marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'],
-      ceo: ['dashboard', 'price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'target_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      ceo: ['dashboard', 'price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'target_performance', 'supplier_po_expenses', 'reports_analytics', 'edit_requests', 'edit_history', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile']
     };
 
@@ -854,7 +866,7 @@ export default function App() {
             />
 
             <main className="content-area">
-              {(activeTab === 'dashboard' || (!['price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'settings', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && (
+              {(activeTab === 'dashboard' || (!['price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'supplier_po_expenses', 'settings', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && (
                 <AdminDashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />
               )}
 
@@ -871,6 +883,7 @@ export default function App() {
                 />
               )}
               {activeTab === 'target_performance' && <AdminTargetPerformanceView />}
+              {activeTab === 'supplier_po_expenses' && <FinanceSupplierPOExpensesView searchQuery={portalSearch} />}
 
               {activeTab.startsWith('org_') && <OrgOverview activeTab={activeTab} setActiveTab={handleSetActiveTab} />}
               {activeTab === 'settings' && <SettingsView />}
@@ -1415,13 +1428,14 @@ export default function App() {
               onSearchChange={setPortalSearch}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || (!['price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'target_performance', 'reports_analytics', 'edit_requests', 'edit_history', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
+              {(activeTab === 'dashboard' || (!['price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'target_performance', 'supplier_po_expenses', 'reports_analytics', 'edit_requests', 'edit_history', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && <CEODashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />}
               {activeTab === 'price_requests' && <PriceRequestsView />}
               {activeTab === 'business_overview' && <BusinessOverviewView />}
               {activeTab === 'projects_performance' && <ProjectsPerformanceView />}
               {activeTab === 'sales_finance' && <SalesFinanceView />}
               {activeTab === 'team_performance' && <TeamPerformanceView />}
               {activeTab === 'target_performance' && <AdminTargetPerformanceView />}
+              {activeTab === 'supplier_po_expenses' && <FinanceSupplierPOExpensesView searchQuery={portalSearch} />}
               {activeTab === 'reports_analytics' && <ReportsAnalyticsView />}
               {activeTab === 'edit_requests' && <CEOEditRequestsView onNavigateHistory={() => handleSetActiveTab('edit_history')} />}
               {activeTab === 'edit_history' && <CEOEditHistoryView onNavigateRequests={() => handleSetActiveTab('edit_requests')} />}

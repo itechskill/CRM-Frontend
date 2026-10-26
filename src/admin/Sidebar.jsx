@@ -19,7 +19,8 @@ import {
   Wallet,
   ShoppingBag,
   Globe,
-  Target
+  Target,
+  DollarSign
 } from 'lucide-react';
 import './Sidebar.css';
 import '../ceo/CEOSidebar.css';
@@ -54,6 +55,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
     { id: 'create_ceo', label: 'Create CEO Account', icon: Crown },
     { id: 'users', label: 'Users', icon: Users, badge: counts.users > 0 ? String(counts.users) : undefined },
     { id: 'target_performance', label: 'Target Performance', icon: Target },
+    { id: 'supplier_po_expenses', label: 'Supplier PO Expenses', icon: DollarSign },
     { id: 'audit_logs', label: 'Audit Logs', icon: ShieldCheck }
   ];
 

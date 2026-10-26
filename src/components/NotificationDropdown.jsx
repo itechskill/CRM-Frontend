@@ -101,6 +101,16 @@ export default function NotificationDropdown() {
     }
   };
 
+  const handleNotificationClick = async (notif) => {
+    if (!notif.isRead) await handleMarkAsRead(notif._id);
+    if (notif.link === '/admin/supplier-po-expenses') {
+      window.dispatchEvent(new CustomEvent('crm:navigate-tab', {
+        detail: { role: 'admin', tab: 'supplier_po_expenses' }
+      }));
+      setIsOpen(false);
+    }
+  };
+
   return (
     <div className="notif-dropdown-wrapper" ref={dropdownRef}>
       <button
@@ -150,7 +160,7 @@ export default function NotificationDropdown() {
                 <div
                   key={notif._id}
                   className={`notif-item ${notif.isRead ? 'read' : 'unread'}`}
-                  onClick={() => !notif.isRead && handleMarkAsRead(notif._id)}
+                  onClick={() => handleNotificationClick(notif)}
                 >
                   <div className={`notif-indicator ${notif.type || 'system'}`} />
                   <div className="notif-content">
