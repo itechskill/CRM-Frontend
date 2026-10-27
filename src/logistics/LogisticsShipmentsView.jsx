@@ -23,6 +23,7 @@ export default function LogisticsShipmentsView({
   searchQuery,
   currentUser
 }) {
+  const canSetShipmentStatus = currentUser?.role === 'logistics';
   const [shipments, setShipments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState(searchQuery || '');
@@ -153,9 +154,11 @@ export default function LogisticsShipmentsView({
     }
     setSubmittingTracking(true);
     try {
+      const trackingPayload = { ...trackingForm };
+      if (!canSetShipmentStatus) delete trackingPayload.status;
       const { response, data } = await apiRequest(`/api/logistics/shipments/${trackingModalShipment._id}/tracking`, {
         method: 'PATCH',
-        body: JSON.stringify(trackingForm)
+        body: JSON.stringify(trackingPayload)
       });
       if (response.ok && data.success) {
         setFeedback(`Tracking updated for shipment ${trackingModalShipment.shipmentId}!`);
@@ -290,7 +293,7 @@ export default function LogisticsShipmentsView({
           <input
             type="checkbox"
             checked={pickedUp}
-            disabled={pickedUp || Boolean(updatingShipmentStep)}
+            disabled={!canSetShipmentStatus || pickedUp || Boolean(updatingShipmentStep)}
             onChange={() => handleShipmentStepUpdate(shipment, 'Picked Up')}
           />
           {updatingShipmentStep === `${shipment._id}-Picked Up` ? 'Saving...' : 'Picked Up'}
@@ -300,7 +303,7 @@ export default function LogisticsShipmentsView({
           <input
             type="checkbox"
             checked={inTransit}
-            disabled={inTransit || !pickedUp || Boolean(updatingShipmentStep)}
+            disabled={!canSetShipmentStatus || inTransit || !pickedUp || Boolean(updatingShipmentStep)}
             onChange={() => handleShipmentStepUpdate(shipment, 'In Transit')}
           />
           {updatingShipmentStep === `${shipment._id}-In Transit` ? 'Saving...' : 'In Transit'}
@@ -885,20 +888,22 @@ export default function LogisticsShipmentsView({
 
                 <div className="logistics-form-group">
                   <label>Shipment Status</label>
-                  <select
-                    value={trackingForm.status}
-                    onChange={(e) => setTrackingForm({ ...trackingForm, status: e.target.value })}
-                  >
-                    <option value="PO Issued">PO Issued</option>
-                    <option value="Shipment Pending">Shipment Pending</option>
-                    <option value="Booked">Booked</option>
-                    <option value="Dispatched">Dispatched</option>
-                    <option value="Picked Up">Picked Up</option>
-                    <option value="In Transit">In Transit</option>
-                    <option value="Arrived">Arrived at Port / Airport</option>
-                    <option value="Delayed">Delayed</option>
-                    <option value="Cancelled">Cancelled</option>
-                  </select>
+                  {canSetShipmentStatus ? (
+                    <select
+                      value={trackingForm.status}
+                      onChange={(e) => setTrackingForm({ ...trackingForm, status: e.target.value })}
+                    >
+                      <option value="PO Issued">PO Issued</option>
+                      <option value="Shipment Pending">Shipment Pending</option>
+                      <option value="Booked">Booked</option>
+                      <option value="Dispatched">Dispatched</option>
+                      <option value="Picked Up">Picked Up</option>
+                      <option value="In Transit">In Transit</option>
+                      <option value="Arrived">Arrived at Port / Airport</option>
+                      <option value="Delayed">Delayed</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                  ) : <input type="text" value={trackingForm.status} readOnly />}
                 </div>
 
                 <div className="logistics-form-group">
