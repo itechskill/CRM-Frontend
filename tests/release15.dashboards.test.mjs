@@ -22,6 +22,9 @@ test('Release 15 dashboards show the exact requested tile labels and month selec
   assert.match(global, /missingExchangeRateCount/);
   assert.match(local, /amountCents/);
   assert.match(support, /grnInput\?\.total/);
+  assert.match(support, /support-grn-breakdown/);
+  assert.match(support, /support-grn-breakdown-label">Local/);
+  assert.match(support, /support-grn-breakdown-label">Global/);
 });
 
 test('Support Tickets navigation and form are wired to the dedicated API', async () => {
@@ -37,7 +40,25 @@ test('Support Tickets navigation and form are wired to the dedicated API', async
   assert.match(tickets, /deliveryNoteNumber/);
   assert.match(tickets, /\/api\/support-tickets/);
   assert.match(tickets, /currentUser\?\.role === 'support'/);
-  assert.doesNotMatch(tickets, /<option>Pending<\/option>/);
+  assert.doesNotMatch(tickets, /<select/);
+  assert.match(tickets, /const filters = \['All', 'Received', 'Solved'\]/);
+  assert.match(tickets, /tickets\.filter\(ticket => ticket\.status === 'Received'\)\.length/);
+  assert.match(tickets, /tickets\.filter\(ticket => ticket\.status === 'Solved'\)\.length/);
+  assert.match(tickets, /ticket\.status === 'Received'/);
+  assert.match(tickets, /Mark Solved/);
+  assert.match(tickets, /\{canWrite && \(/);
+  assert.match(tickets, /saving \? 'Saving\.\.\.' : 'Save Ticket'/);
+  assert.match(tickets, /support-ticket-field-error/);
+  assert.match(tickets, /Ticket created successfully/);
+  assert.match(tickets, /No tickets yet/);
   assert.match(deliveryNotes, /Expiry Date \(Optional\)/);
   assert.match(deliveryNotes, /delivery-notes\/\$\{dn\._id\}\/expiry/);
+});
+
+test('Support Tickets is read-only for Admin and CEO because write controls require Support', async () => {
+  const tickets = await read('src/support/SupportTicketsView.jsx');
+  assert.match(tickets, /const canWrite = currentUser\?\.role === 'support'/);
+  assert.match(tickets, /\{canWrite && \(\s*<form/);
+  assert.match(tickets, /\{canWrite && \(\s*<td data-label="Action">/);
+  assert.match(tickets, /ticket\.status === 'Received' \? \(/);
 });
