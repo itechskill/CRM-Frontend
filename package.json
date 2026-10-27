@@ -11,6 +11,7 @@
     "test:release-10.1": "node --test tests/release101.finance-navigation.test.mjs",
     "test:release-10.2": "node --test tests/release102.expense-permissions.test.mjs",
     "test:release-14": "node --test tests/release14.ui.test.mjs",
+    "test:release-15": "node --test tests/release15.dashboards.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
