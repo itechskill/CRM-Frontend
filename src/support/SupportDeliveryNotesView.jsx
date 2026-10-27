@@ -51,6 +51,7 @@ const getFutureDateStr = (days = 3, baseDateStr = null) => {
   d.setDate(d.getDate() + days);
   return d.toISOString().split('T')[0];
 };
+const dateInputValue = value => value ? String(value).slice(0, 10) : '';
 
 const EMPTY_FORM = {
   deliveryNumber: '',
@@ -66,6 +67,7 @@ const EMPTY_FORM = {
   sourceLocation: 'WH/Stock',
   scheduledDate: new Date().toISOString().split('T')[0],
   deadline: getFutureDateStr(3),
+  expiryDate: '',
   status: 'Ready',
   isPartial: false,
   items: [{ ...EMPTY_ITEM, product: 'Standard Goods / Equipment', description: 'Standard Goods / Equipment', demand: 1, quantity: 1, unit: 'pcs', availability: 'Available' }],
@@ -87,6 +89,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
   const [saving, setSaving] = useState(false);
   const [selectedStockCheck, setSelectedStockCheck] = useState(null);
   const [deliveryNoteStockChecks, setDeliveryNoteStockChecks] = useState({});
+  const [expirySavingId, setExpirySavingId] = useState('');
 
   const fetchDeliveryNotes = useCallback(async () => {
     setLoading(true);
@@ -314,6 +317,29 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
     link.href = dn.signedDeliveryNoteDocument;
     link.download = dn.signedDeliveryNoteDocumentName || 'signed-delivery-note';
     link.click();
+  };
+
+  const handleUpdateExpiry = async (dn, expiryDate) => {
+    setExpirySavingId(dn._id);
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/delivery-notes/${dn._id}/expiry`, {
+        method: 'PATCH',
+        body: JSON.stringify({ expiryDate: expiryDate || null })
+      });
+      if (!response.ok || !data.success) {
+        alert(data.message || 'Failed to update the Delivery Note expiry date.');
+        return;
+      }
+      const saved = data.data;
+      setDeliveryNotes(current => current.map(item => item._id === saved._id ? { ...item, expiryDate: saved.expiryDate } : item));
+      setViewDN(current => current?._id === saved._id ? { ...current, expiryDate: saved.expiryDate } : current);
+      setFeedback(`Delivery Note ${saved.deliveryNumber || saved.deliveryNoteNumber} expiry date updated.`);
+      setTimeout(() => setFeedback(''), 4000);
+    } catch {
+      alert('Server error updating the Delivery Note expiry date.');
+    } finally {
+      setExpirySavingId('');
+    }
   };
 
   const handleDownloadPDF = (dn) => {
@@ -999,6 +1025,14 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                       required
                     />
                   </div>
+                  <div className="sv-field">
+                    <label>Expiry Date (Optional)</label>
+                    <input
+                      type="date"
+                      value={form.expiryDate}
+                      onChange={e => setForm(p => ({ ...p, expiryDate: e.target.value }))}
+                    />
+                  </div>
                 </div>
 
                 <div className="sv-grid-2">
@@ -1117,6 +1151,16 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                     <div>
                       <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem' }}>Promised Deadline:</span>
                       <strong style={{ color: '#0F172A' }}>{viewDN.deadline ? new Date(viewDN.deadline).toLocaleDateString('en-GB') : '—'}</strong>
+                    </div>
+                    <div style={{ gridColumn: '1 / -1' }}>
+                      <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem' }}>Expiry Date (Optional):</span>
+                      <input
+                        type="date"
+                        value={dateInputValue(viewDN.expiryDate)}
+                        disabled={expirySavingId === viewDN._id}
+                        onChange={event => handleUpdateExpiry(viewDN, event.target.value)}
+                        style={{ marginTop: 4, padding: '6px 8px', border: '1px solid #CBD5E1', borderRadius: 6 }}
+                      />
                     </div>
                   </div>
                 </div>

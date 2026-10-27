@@ -17,7 +17,8 @@ import {
   Calculator,
   Heart,
   TrendingUp,
-  Headphones
+  Headphones,
+  TicketCheck
 } from 'lucide-react';
 import '../employee/EmployeeSidebar.css';
 
@@ -44,7 +45,8 @@ export default function SupportSidebar({
     { id: 'dashboard', label: 'Support Dashboard', icon: LayoutGrid },
     { id: 'support_orders', label: 'Pending Sales Orders', icon: ShoppingCart },
     { id: 'inventory', label: 'Inventory Management', icon: Boxes },
-    { id: 'delivery_notes', label: 'Delivery Notes', icon: Truck }
+    { id: 'delivery_notes', label: 'Delivery Notes', icon: Truck },
+    { id: 'tickets', label: 'Tickets', icon: TicketCheck }
   ];
 
   const accountNav = [

@@ -161,6 +161,7 @@ import SupportOrdersView from './support/SupportOrdersView';
 import SupportInventoryView from './support/SupportInventoryView';
 import SupportDeliveryNotesView from './support/SupportDeliveryNotesView';
 import SupportLeaveView from './support/SupportLeaveView';
+import SupportTicketsView from './support/SupportTicketsView';
 
 // 11. Accounts Department Components (src/accounts/)
 import AccountsSidebar from './accounts/AccountsSidebar';
@@ -543,7 +544,7 @@ export default function App() {
         'dashboard', 'leave', 'projects', 'tasks', 'work_updates', 'completed_tasks', 'activity', 'notifications', 'profile', 'settings',
         'price_requests', 'my_leads', 'my_deals', 'my_quotations', 'customer_pos', 'product_files', 'my_orders', 'proforma_invoices', 'delivery_notes', 'my_invoices', 'my_payments', 'followups', 'sales_targets', 'sales_activities', 'target_performance'
       ],
-      support: ['dashboard', 'leave', 'support_orders', 'inventory', 'delivery_notes', 'profile'],
+      support: ['dashboard', 'leave', 'support_orders', 'inventory', 'delivery_notes', 'tickets', 'profile'],
       logistics: ['dashboard', 'incoming_shipments', 'incoming', 'shipments', 'shipment_tracking', 'tracking', 'shipment_received', 'received', 'grn', 'grn_creation', 'grns', 'logistics_grn', 'goods_received', 'delivery_notes', 'import_inventory', 'imported_inventory', 'logistics_inventory', 'notifications', 'leave', 'attendance_leave', 'profile'],
       purchaser: ['dashboard', 'price_requests', 'pending_orders', 'inventory', 'supplier_pos', 'grn', 'grn_creation', 'grns', 'local_payables', 'leave', 'profile'],
       sales_manager: ['dashboard', 'price_requests', 'leads', 'deals', 'pipeline', 'my_quotations', 'customer_pos', 'product_files', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'clients', 'target_performance', 'settings', 'notifications', 'profile'],
@@ -962,7 +963,7 @@ export default function App() {
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'support_orders', 'inventory', 'delivery_notes', 'profile'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'support_orders', 'inventory', 'delivery_notes', 'tickets', 'profile'].includes(activeTab)) && (
                 <SupportDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => setActiveTab(tab)}
@@ -984,6 +985,7 @@ export default function App() {
                   onClearSelectedOrder={() => setSupportOrderForDN(null)}
                 />
               )}
+              {activeTab === 'tickets' && <SupportTicketsView currentUser={currentUser} />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
