@@ -13,6 +13,7 @@
     "test:release-14": "node --test tests/release14.ui.test.mjs",
     "test:release-15": "node --test tests/release15.dashboards.test.mjs",
     "test:release-16": "node --test tests/release16.logistics-dashboard.test.mjs",
+    "test:release-17": "node --test tests/release17.finance-dashboard.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
