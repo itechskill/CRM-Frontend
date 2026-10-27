@@ -17,21 +17,28 @@ test('Admin user editor supports an optional validated Price Request label', asy
   assert.match(source, /maxLength=\{80\}/);
 });
 
-test('salesperson and manager dashboards render the same nine always-visible own-record tiles', async () => {
+test('salesperson and manager dashboards render the same eleven always-visible own-record tiles', async () => {
   const employee = await read('src/employee/EmployeeDashboard.jsx');
   const manager = await read('src/sales_manager/SalesManagerDashboard.jsx');
   for (const source of [employee, manager]) {
     assert.match(source, /type="month"/);
     assert.match(source, /dashboardTiles/);
-    for (const label of ['Price Requested', 'Price Received', 'Quotation Sent', 'Sale Order', 'Invoiced', 'Receivable', 'Overdue', 'GP Target', 'Remaining Target']) {
+    const labels = ['Price Requested', 'Price Received', 'Quotation Sent', 'Sale Order', 'Invoiced', 'Safe Receivable', 'Due Receivable', 'GP Target', 'Remaining Target', 'Above 45 days', 'GP Achieved'];
+    for (const label of labels) {
       assert.match(source, new RegExp(`label: '${label}'`));
     }
-    assert.match(source, /As of today/);
+    const positions = labels.map(label => source.indexOf(`label: '${label}'`));
+    assert.deepEqual([...positions].sort((a, b) => a - b), positions);
+    assert.match(source, /note: '1-30 days'/);
+    assert.match(source, /note: '31-45 days, grace period'/);
     assert.match(source, /\/api\/target-performance\/me\?month=/);
     assert.match(source, /targetPerformance\?\.visible/);
     assert.match(source, /salaryCents \|\| 0/);
     assert.match(source, /Target not set/);
-    assert.match(source, /Achieved GP:/);
+    assert.match(source, /label: 'GP Achieved'.*amount: targetIsSet \? money\(achievedGP\) : 'Target not set'/);
+    assert.doesNotMatch(source, /Achieved GP:/);
+    assert.doesNotMatch(source, /label: 'Receivable'/);
+    assert.doesNotMatch(source, /label: 'Overdue'/);
     assert.doesNotMatch(source, /100% achieved/i);
     assert.doesNotMatch(source, /Sales Progress/);
   }
