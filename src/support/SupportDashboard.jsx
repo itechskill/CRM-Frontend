@@ -44,7 +44,16 @@ export default function SupportDashboard() {
           <Tile icon={ShoppingCart} label="Sale Order Received" count={tiles.saleOrderReceived?.count || 0} />
           <Tile icon={FileCheck} label="DN Created" count={tiles.dnCreated?.count || 0} tone="#2563EB" />
           <Tile icon={PackageCheck} label="GRN Input" count={tiles.grnInput?.total || 0} tone="#059669">
-            <span className="sales-dashboard-nine-note">Local {tiles.grnInput?.local || 0} &nbsp;|&nbsp; Global {tiles.grnInput?.global || 0}</span>
+            <span className="support-grn-breakdown">
+              <span className="support-grn-breakdown-item">
+                <span className="support-grn-breakdown-label">Local</span>
+                <span className="support-grn-breakdown-value">{tiles.grnInput?.local || 0}</span>
+              </span>
+              <span className="support-grn-breakdown-item">
+                <span className="support-grn-breakdown-label">Global</span>
+                <span className="support-grn-breakdown-value">{tiles.grnInput?.global || 0}</span>
+              </span>
+            </span>
           </Tile>
           <Tile icon={AlertTriangle} label="Expiry Date Notification" count={tiles.expiryDateNotification?.count || 0} tone="#D97706" />
           <Tile icon={Headphones} label="Ticket Received" count={tiles.ticketReceived?.count || 0} tone="#7C3AED" />

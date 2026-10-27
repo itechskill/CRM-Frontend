@@ -1,80 +1,226 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { CheckCircle2, LoaderCircle, Ticket } from 'lucide-react';
 import { apiRequest } from '../utils/api';
+import './SupportPortal.css';
 
 const emptyForm = { deliveryNoteNumber: '', complaint: '', status: 'Received' };
+const filters = ['All', 'Received', 'Solved'];
+
+const formatDate = value => value
+  ? new Date(value).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+  : '—';
 
 export default function SupportTicketsView({ currentUser }) {
   const [tickets, setTickets] = useState([]);
   const [form, setForm] = useState(emptyForm);
-  const [editingId, setEditingId] = useState('');
-  const [message, setMessage] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All');
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [solvingId, setSolvingId] = useState('');
+  const [dnError, setDnError] = useState('');
+  const [formError, setFormError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+  const [listError, setListError] = useState('');
   const canWrite = currentUser?.role === 'support';
 
   const loadTickets = async () => {
     setLoading(true);
-    const { response, data } = await apiRequest('/api/support-tickets');
-    if (response.ok && data.success) setTickets(data.data || []);
-    else setMessage(data.message || 'Could not load Support tickets.');
-    setLoading(false);
+    setListError('');
+    try {
+      const { response, data } = await apiRequest('/api/support-tickets');
+      if (response.ok && data.success) setTickets(data.data || []);
+      else setListError(data.message || 'Could not load Support tickets.');
+    } catch {
+      setListError('Could not load Support tickets.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => { loadTickets(); }, []);
 
-  const submit = async event => {
-    event.preventDefault();
-    setMessage('');
-    const path = editingId ? `/api/support-tickets/${editingId}` : '/api/support-tickets';
-    const body = editingId ? { complaint: form.complaint, status: form.status } : form;
-    const { response, data } = await apiRequest(path, { method: editingId ? 'PATCH' : 'POST', body });
-    if (!response.ok || !data.success) return setMessage(data.message || 'Could not save Support ticket.');
-    const wasEditing = Boolean(editingId);
-    setForm(emptyForm);
-    setEditingId('');
-    setMessage(wasEditing ? 'Ticket updated.' : 'Ticket created.');
-    await loadTickets();
+  const counts = useMemo(() => ({
+    All: tickets.length,
+    Received: tickets.filter(ticket => ticket.status === 'Received').length,
+    Solved: tickets.filter(ticket => ticket.status === 'Solved').length
+  }), [tickets]);
+
+  const visibleTickets = useMemo(() => activeFilter === 'All'
+    ? tickets
+    : tickets.filter(ticket => ticket.status === activeFilter), [activeFilter, tickets]);
+
+  const updateField = (field, value) => {
+    setForm(current => ({ ...current, [field]: value }));
+    setSuccessMessage('');
+    setFormError('');
+    if (field === 'deliveryNoteNumber') setDnError('');
   };
 
-  const startEdit = ticket => {
-    setEditingId(ticket._id);
-    setForm({ deliveryNoteNumber: ticket.deliveryNoteNumber, complaint: ticket.complaint, status: ticket.status });
-    setMessage('');
+  const submit = async event => {
+    event.preventDefault();
+    const deliveryNoteNumber = form.deliveryNoteNumber.trim();
+    const complaint = form.complaint.trim();
+    setDnError('');
+    setFormError('');
+    setSuccessMessage('');
+
+    if (!deliveryNoteNumber) {
+      setDnError('DN Number is required.');
+      return;
+    }
+    if (!complaint) {
+      setFormError('Complaint is required.');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const { response, data } = await apiRequest('/api/support-tickets', {
+        method: 'POST',
+        body: { deliveryNoteNumber, complaint, status: 'Received' }
+      });
+      if (!response.ok || !data.success) {
+        const errorMessage = data.message || 'Could not save Support ticket.';
+        if (/delivery note|dn number/i.test(errorMessage)) setDnError(errorMessage);
+        else setFormError(errorMessage);
+        return;
+      }
+      setForm(emptyForm);
+      setSuccessMessage('Ticket created successfully.');
+      await loadTickets();
+    } catch {
+      setFormError('Could not save Support ticket.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const markSolved = async ticket => {
+    setSolvingId(ticket._id);
+    setListError('');
+    setSuccessMessage('');
+    try {
+      const { response, data } = await apiRequest(`/api/support-tickets/${ticket._id}`, {
+        method: 'PATCH',
+        body: { complaint: ticket.complaint, status: 'Solved' }
+      });
+      if (!response.ok || !data.success) {
+        setListError(data.message || 'Could not mark the ticket as solved.');
+        return;
+      }
+      setSuccessMessage('Ticket marked as solved.');
+      await loadTickets();
+    } catch {
+      setListError('Could not mark the ticket as solved.');
+    } finally {
+      setSolvingId('');
+    }
   };
 
   return (
-    <div className="support-dashboard-container">
-      <div className="sales-dashboard-section-header"><div><h2>Tickets</h2><p>Support complaints linked to a valid Delivery Note</p></div></div>
-      {message && <div style={{ padding: 12, borderRadius: 8, background: '#EFF6FF', color: '#1E40AF' }}>{message}</div>}
+    <div className="support-dashboard-container support-tickets-page">
+      <div className="sales-dashboard-section-header">
+        <div><h2>Tickets</h2><p>Support complaints linked to a valid Delivery Note</p></div>
+      </div>
+
       {canWrite && (
-        <form onSubmit={submit} style={{ marginBottom: 20, padding: 18, background: '#fff', border: '1px solid #E2E8F0', borderRadius: 12 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-            <label>DN Number<input value={form.deliveryNoteNumber} disabled={Boolean(editingId)} required onChange={event => setForm({ ...form, deliveryNoteNumber: event.target.value })} /></label>
-            <label>Status<select value={form.status} onChange={event => setForm({ ...form, status: event.target.value })}><option>Received</option><option>Solved</option></select></label>
-            <label style={{ gridColumn: '1 / -1' }}>Complaint<textarea rows="3" value={form.complaint} required onChange={event => setForm({ ...form, complaint: event.target.value })} /></label>
+        <form className="support-ticket-form-card" onSubmit={submit} noValidate>
+          <div className="support-ticket-card-heading">
+            <span className="support-ticket-heading-icon"><Ticket size={20} /></span>
+            <div><h3>New Ticket</h3><p>Enter the Delivery Note and complaint details.</p></div>
           </div>
-          <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-            <button type="submit" className="sv-btn-primary">{editingId ? 'Update Ticket' : 'Save Ticket'}</button>
-            {editingId && <button type="button" className="sv-btn-cancel" onClick={() => { setEditingId(''); setForm(emptyForm); }}>Cancel</button>}
+          <div className="support-ticket-form-grid">
+            <label className="support-ticket-field">
+              <span>DN Number</span>
+              <input
+                value={form.deliveryNoteNumber}
+                onChange={event => updateField('deliveryNoteNumber', event.target.value)}
+                placeholder="e.g. DN-000123"
+                aria-invalid={Boolean(dnError)}
+                aria-describedby={dnError ? 'ticket-dn-error' : undefined}
+              />
+              {dnError && <small id="ticket-dn-error" className="support-ticket-field-error">{dnError}</small>}
+            </label>
+            <label className="support-ticket-field">
+              <span>Complaint</span>
+              <textarea
+                rows="4"
+                value={form.complaint}
+                onChange={event => updateField('complaint', event.target.value)}
+                placeholder="Describe the customer complaint"
+              />
+            </label>
+          </div>
+          {formError && <p className="support-ticket-form-error" role="alert">{formError}</p>}
+          <div className="support-ticket-form-actions">
+            <button type="submit" className="sv-btn-primary" disabled={saving}>
+              {saving && <LoaderCircle className="support-ticket-spinner" size={16} />}
+              {saving ? 'Saving...' : 'Save Ticket'}
+            </button>
           </div>
         </form>
       )}
-      {loading ? <div className="sv-empty">Loading tickets…</div> : (
-        <div className="support-table-card">
-          <table className="support-table">
-            <thead><tr><th>DN Number</th><th>Complaint</th><th>Status</th><th>Created By</th><th>Created</th><th>Solved</th>{canWrite && <th>Action</th>}</tr></thead>
-            <tbody>
-              {tickets.map(ticket => <tr key={ticket._id}>
-                <td>{ticket.deliveryNoteNumber}</td><td>{ticket.complaint}</td><td>{ticket.status}</td>
-                <td>{ticket.createdByName || ticket.createdBy?.fullName || '-'}</td>
-                <td>{ticket.createdAt ? new Date(ticket.createdAt).toLocaleString() : '-'}</td>
-                <td>{ticket.solvedAt ? new Date(ticket.solvedAt).toLocaleString() : '-'}</td>
-                {canWrite && <td><button type="button" className="sv-btn-cancel" onClick={() => startEdit(ticket)}>Edit</button></td>}
-              </tr>)}
-              {!tickets.length && <tr><td colSpan={canWrite ? 7 : 6} className="sv-empty">No tickets found.</td></tr>}
-            </tbody>
-          </table>
+
+      {successMessage && <div className="support-ticket-success" role="status"><CheckCircle2 size={17} />{successMessage}</div>}
+      {listError && <div className="support-ticket-list-error" role="alert">{listError}</div>}
+
+      <section className="support-ticket-list-card">
+        <div className="support-ticket-list-header">
+          <div><h3>Tickets</h3><p>Review received complaints and their resolution status.</p></div>
+          <div className="support-ticket-tabs" role="tablist" aria-label="Ticket status filters">
+            {filters.map(filter => (
+              <button
+                key={filter}
+                type="button"
+                className={`support-ticket-tab ${activeFilter === filter ? 'is-active' : ''}`}
+                onClick={() => setActiveFilter(filter)}
+                aria-pressed={activeFilter === filter}
+              >
+                {filter}<span>{counts[filter]}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      )}
+
+        {loading ? <div className="support-ticket-empty">Loading tickets…</div> : visibleTickets.length === 0 ? (
+          <div className="support-ticket-empty">
+            <span className="support-ticket-empty-icon"><Ticket size={24} /></span>
+            <strong>No tickets yet</strong>
+            <p>Tickets will appear here when a complaint is recorded.</p>
+          </div>
+        ) : (
+          <div className="support-ticket-table-wrap">
+            <table className="support-table support-ticket-table">
+              <thead><tr><th>DN Number</th><th>Complaint</th><th>Status</th><th>Created date</th><th>Solved date</th>{canWrite && <th>Action</th>}</tr></thead>
+              <tbody>
+                {visibleTickets.map(ticket => (
+                  <tr key={ticket._id}>
+                    <td data-label="DN Number"><strong>{ticket.deliveryNoteNumber}</strong></td>
+                    <td data-label="Complaint"><span className="support-ticket-complaint" title={ticket.complaint}>{ticket.complaint}</span></td>
+                    <td data-label="Status"><span className={`support-ticket-status is-${ticket.status.toLowerCase()}`}>{ticket.status}</span></td>
+                    <td data-label="Created date">{formatDate(ticket.createdAt)}</td>
+                    <td data-label="Solved date">{formatDate(ticket.solvedAt)}</td>
+                    {canWrite && (
+                      <td data-label="Action">
+                        {ticket.status === 'Received' ? (
+                          <button
+                            type="button"
+                            className="support-ticket-solve-btn"
+                            disabled={solvingId === ticket._id}
+                            onClick={() => markSolved(ticket)}
+                          >
+                            {solvingId === ticket._id ? 'Saving...' : 'Mark Solved'}
+                          </button>
+                        ) : <span className="support-ticket-no-action">—</span>}
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </section>
     </div>
   );
 }
