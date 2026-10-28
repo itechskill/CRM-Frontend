@@ -110,7 +110,18 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
   // 2. Open Supplier PO Modal for Shortage
   const handleOpenPoModal = (order, customItems = null) => {
     setSelectedOrder(order);
-    const orderItems = customItems || (order.items && order.items.length > 0 ? order.items.map(i => ({
+    const shortageItems = (order.inventoryAnalysis || []).map((analysis, index) => {
+      const orderItem = order.items?.[index] || {};
+      const shortageQuantity = Number(analysis.shortageQty) || 0;
+      if (shortageQuantity <= 0) return null;
+      return {
+        productName: orderItem.description || orderItem.productName || analysis.productName || 'Stock Item',
+        quantity: shortageQuantity,
+        unitPrice: Number(orderItem.unitPrice) || 0,
+        totalAmount: shortageQuantity * (Number(orderItem.unitPrice) || 0)
+      };
+    }).filter(Boolean);
+    const orderItems = customItems || (shortageItems.length ? shortageItems : (order.items && order.items.length > 0 ? order.items.map(i => ({
       productName: i.description || i.productName || 'Stock Item',
       quantity: Number(i.quantity) || 1,
       unitPrice: Number(i.unitPrice) || 0,
@@ -120,7 +131,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
       quantity: 1,
       unitPrice: Number(order.netAmount || 0),
       totalAmount: Number(order.netAmount || 0)
-    }]);
+    }]));
 
     setPoForm({
       issuingCompanyCode: defaultCompanyCode(order, DOCUMENT_TYPES.LOCAL_PO),
@@ -274,7 +285,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
             <ShoppingBag size={26} color="#059669" /> Pending Sales Orders (Local Procurement)
           </h2>
           <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>
-            Finance-approved Green File orders. Check warehouse inventory: if available, dispatch directly to Support; if short, issue Local Supplier PO &rarr; GRN &rarr; Local Payable.
+            Finance-approved Green File orders. Check inventory, reserve in-stock goods, or issue one Supplier PO for a shortage.
           </p>
         </div>
         <button
@@ -361,6 +372,9 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                     <td style={{ padding: '14px 18px', fontWeight: 700, color: '#0F172A' }}>
                       {order.orderNumber || order.orderReference}
                       <span style={{ display: 'block', fontSize: '0.74rem', color: '#059669', fontWeight: 700 }}>Green File</span>
+                      <span style={{ display: 'block', fontSize: '0.74rem', color: '#64748B', fontWeight: 700 }}>
+                        {order.workflowStatus === 'Local PO Issued / Awaiting Supplier Goods' ? order.workflowStatus : 'Pending SO'}
+                      </span>
                     </td>
                     <td style={{ padding: '14px 18px', fontWeight: 600, color: '#334155' }}>
                       {order.clientName}
@@ -404,7 +418,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                     <td style={{ padding: '14px 18px' }}>
                       <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         {/* 1. Check Inventory */}
-                        <button
+                        {order.workflowStatus !== 'Local PO Issued / Awaiting Supplier Goods' && <button
                           onClick={() => handleCheckInventory(order)}
                           disabled={isChecking}
                           style={{
@@ -424,10 +438,10 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                         >
                           <PackageCheck size={14} />
                           {isChecking ? 'Checking...' : 'Check Inventory'}
-                        </button>
+                        </button>}
 
                         {/* 2. Procure Shortage / Issue PO */}
-                        <button
+                        {invStatus === 'Shortage' && order.workflowStatus !== 'Local PO Issued / Awaiting Supplier Goods' && <button
                           onClick={() => handleOpenPoModal(order)}
                           style={{
                             background: '#F8FAFC',
@@ -444,11 +458,11 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                           }}
                           title="Issue Local Supplier PO for this order"
                         >
-                          <Plus size={14} /> Issue Local PO
-                        </button>
+                          <Plus size={14} /> Issue Supplier PO
+                        </button>}
 
                         {/* 3. Route directly to Support if already fulfilled */}
-                        <button
+                        {invStatus === 'In Stock' && order.workflowStatus !== 'Local PO Issued / Awaiting Supplier Goods' && <button
                           onClick={() => handleRouteToSupport(order)}
                           style={{
                             background: '#F0FDF4',
@@ -463,10 +477,11 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                             alignItems: 'center',
                             gap: '4px'
                           }}
-                          title="Mark procurement completed and send directly to Support for DN creation"
+                          title="Atomically reserve available stock and send the order to Support"
                         >
-                          <Send size={13} /> Route to Support
-                        </button>
+                          <Send size={13} /> Send to Support
+                        </button>}
+                        {order.workflowStatus === 'Local PO Issued / Awaiting Supplier Goods' && <span style={{ color: '#92400E', fontWeight: 700, fontSize: '0.8rem' }}>Awaiting supplier goods</span>}
                       </div>
                     </td>
                   </tr>
@@ -636,62 +651,6 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                     Close
                   </button>
 
-                  {/* 1. BUTTON TO MOVE TO SUPPORT */}
-                  {isAllInStock && <button
-                    type="button"
-                    onClick={() => {
-                      const targetOrd = analysisModal.order;
-                      setAnalysisModal(null);
-                      handleRouteToSupport(targetOrd);
-                    }}
-                    style={{
-                      backgroundColor: '#059669',
-                      color: '#FFF',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '10px 22px',
-                      fontWeight: 700,
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '8px',
-                      boxShadow: '0 2px 6px rgba(5, 150, 105, 0.25)'
-                    }}
-                  >
-                    <Send size={16} /> Move to Support Department (Generate DN)
-                  </button>}
-
-                  {/* 2. BUTTON TO ISSUE SUPPLIER PO (IF SHORTAGE) */}
-                  {!isAllInStock && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const shortageItems = (analysisModal.analysis || [])
-                          .filter(it => (it.shortageQuantity || it.shortageQty || 0) > 0)
-                          .map(it => ({
-                            productName: it.productName,
-                            quantity: it.shortageQuantity || it.shortageQty || 1,
-                            unitPrice: Number(it.unitPrice) || 0,
-                            totalAmount: (Number(it.shortageQuantity || it.shortageQty) || 1) * (Number(it.unitPrice) || 0)
-                          }));
-                        handleOpenPoModal(analysisModal.order, shortageItems.length > 0 ? shortageItems : null);
-                      }}
-                      style={{
-                        backgroundColor: '#D97706',
-                        color: '#FFF',
-                        border: 'none',
-                        borderRadius: '8px',
-                        padding: '10px 20px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <Plus size={16} /> Issue Supplier PO for Shortage
-                    </button>
-                  )}
                 </div>
               </div>
             </div>
@@ -706,7 +665,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
             <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F0FDF4' }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#065F46', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <Plus size={20} color="#059669" /> Issue Local Supplier PO
+                  <Plus size={20} color="#059669" /> Issue Supplier PO
                 </h3>
                 <span style={{ fontSize: '0.85rem', color: '#047857' }}>
                   Linked to Sales Order #{selectedOrder.orderNumber || selectedOrder.orderReference} — {selectedOrder.clientName}
@@ -893,7 +852,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                   disabled={submittingPo}
                   style={{ backgroundColor: '#059669', color: '#FFF', border: 'none', borderRadius: '8px', padding: '10px 24px', fontWeight: 700, cursor: 'pointer' }}
                 >
-                  {submittingPo ? 'Issuing PO...' : 'Issue Local Supplier PO'}
+                  {submittingPo ? 'Issuing PO...' : 'Issue Supplier PO'}
                 </button>
               </div>
             </form>
