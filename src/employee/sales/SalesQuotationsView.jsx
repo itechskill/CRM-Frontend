@@ -38,7 +38,6 @@ import { CUSTOMER_PO_ATTACHMENT_ACCEPT, readCustomerPOAttachment } from './custo
 import { getUser } from '../../utils/authStorage';
 import { DOCUMENT_TYPES, companiesFor, companyName } from '../../utils/companies';
 import { drawSalesDocumentHeader, getClientContactLayout, getDocumentIssuerName } from '../../utils/salesDocumentPdfLayout';
-import { fileNumberCore } from '../../utils/fileClassification';
 import { downloadQuotationPdf, DEFAULT_TERMS } from '../../utils/quotationPdf';
 import { initialsFromName, sanitizeQuotationCode } from '../../utils/quotationNumber';
 
@@ -761,7 +760,6 @@ export default function SalesQuotationsView() {
     const orderRef = q.orderReference || q.quotationNumber || 'QUO-001';
     const customer = q.clientName || q.customerName || 'Client Organization';
     const salePerson = q.salePerson || q.createdBy?.fullName || 'Sales Executive';
-    const fileNo = fileNumberCore(q.fileNo) || '—';
     const issuerName = getDocumentIssuerName(q);
     const creationDate = q.creationDate ? new Date(q.creationDate).toLocaleDateString('en-GB') : (q.createdAt ? new Date(q.createdAt).toLocaleDateString('en-GB') : '—');
     const validUntil = q.validUntil ? new Date(q.validUntil).toLocaleDateString('en-GB') : '—';
@@ -832,13 +830,6 @@ export default function SalesQuotationsView() {
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(15, 23, 42);
     doc.text(salePerson, 155, 58);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(71, 85, 105);
-    doc.text('Product File #:', 114, 64);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(`${fileNo}`, 155, 64);
 
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(71, 85, 105);
@@ -1340,18 +1331,12 @@ export default function SalesQuotationsView() {
                     )}
                   </div>
 
-                  {/* Meta tags: Sales Person & File # */}
+                  {/* Meta tags */}
                   <div className="quote-card-meta-row">
                     <span className="quote-card-tag">
                       <User size={12} color="#64748B" />
                       {q.salePerson || q.createdBy?.fullName || 'Sales Rep'}
                     </span>
-                    {q.fileNo && (
-                      <span className="quote-card-tag">
-                        <Tag size={12} color="#64748B" />
-                        File: {fileNumberCore(q.fileNo)}
-                      </span>
-                    )}
                     <span className="quote-card-tag">
                       <Calendar size={12} color="#64748B" />
                       {dateStr}
@@ -1483,7 +1468,6 @@ export default function SalesQuotationsView() {
                 <th>Customer Name</th>
                 <th>Issuing Company</th>
                 <th>Sale Person</th>
-                <th>File-No#</th>
                 <th>Product Summary & Items</th>
                 <th style={{ textAlign: 'right' }}>Total Amount (PKR)</th>
                 <th>Status</th>
@@ -1511,9 +1495,6 @@ export default function SalesQuotationsView() {
                     <td style={{ color: '#475569' }}>{companyName(q)}</td>
                     <td style={{ color: '#475569' }}>
                       {q.salePerson || q.createdBy?.fullName || 'Sales Executive'}
-                    </td>
-                    <td style={{ color: '#475569', fontWeight: 600 }}>
-                      {fileNumberCore(q.fileNo) || '—'}
                     </td>
                     <td style={{ maxWidth: '280px', color: '#334155' }}>
                       <div style={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={q.productSummary}>
@@ -1675,16 +1656,12 @@ export default function SalesQuotationsView() {
                 </span>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px', marginBottom: '16px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '16px' }}>
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>Complete Amount (PKR)</div>
                   <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
                     Rs. {Number(viewQ.netAmount !== undefined ? viewQ.netAmount : (viewQ.totalAmount || 0)).toLocaleString()}
                   </div>
-                </div>
-                <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px' }}>
-                  <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>File-No#</div>
-                  <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#334155', marginTop: '2px' }}>{fileNumberCore(viewQ.fileNo) || '—'}</div>
                 </div>
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>Creation Date</div>
@@ -1879,15 +1856,9 @@ export default function SalesQuotationsView() {
                   <textarea rows={2} value={form.clientAddress} onChange={e => setForm(p => ({ ...p, clientAddress: e.target.value }))} placeholder="Customer address for the quotation" />
                 </div>
 
-                <div className="sv-grid-2">
-                  <div className="sv-field">
-                    <label>Sale Person</label>
-                    <input value={form.salePerson} readOnly placeholder="Logged-in sales person" />
-                  </div>
-                  <div className="sv-field">
-                    <label>File-No#</label>
-                    <input value={fileNumberCore(form.fileNo)} readOnly placeholder="Numeric file number assigned automatically on save" style={{ background: '#F1F5F9' }} />
-                  </div>
+                <div className="sv-field">
+                  <label>Sale Person</label>
+                  <input value={form.salePerson} readOnly placeholder="Logged-in sales person" />
                 </div>
               </div>
 
