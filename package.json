@@ -17,6 +17,7 @@
     "test:release-18": "node --test tests/release18.quotation-expenses.test.mjs",
     "test:release-19": "node --test tests/release19.local-workflow.test.mjs",
     "test:release-20": "node --test tests/release20.finance-accounts.test.mjs",
+    "test:release-21": "node --test tests/release21.monetary-visibility.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

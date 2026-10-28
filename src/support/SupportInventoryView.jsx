@@ -15,7 +15,6 @@ import {
   Package,
   Tag,
   MapPin,
-  DollarSign,
   Layers,
   FileText,
   Building,
@@ -24,8 +23,10 @@ import {
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import './SupportPortal.css';
+import { canViewFullMonetaryData } from '../utils/monetaryVisibility';
 
-export default function SupportInventoryView() {
+export default function SupportInventoryView({ currentUser }) {
+  const showMoney = canViewFullMonetaryData(currentUser);
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -131,9 +132,10 @@ export default function SupportInventoryView() {
         id: editItem ? editItem._id : undefined,
         ...form,
         quantityOnHand: Number(form.quantityOnHand) || 0,
-        minStockLevel: Number(form.minStockLevel) || 5,
-        unitPrice: Number(form.unitPrice) || 0
+        minStockLevel: Number(form.minStockLevel) || 5
       };
+      if (showMoney) payload.unitPrice = Number(form.unitPrice) || 0;
+      else delete payload.unitPrice;
       const { response, data } = await apiRequest('/api/sales-employee/inventory', {
         method: 'POST',
         body: JSON.stringify(payload)
@@ -187,18 +189,23 @@ export default function SupportInventoryView() {
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
-    doc.text('FORTLINE CRM — WAREHOUSE INVENTORY & STOCK VALUATION', 14, 12);
+    doc.text(showMoney ? 'FORTLINE CRM — WAREHOUSE INVENTORY & STOCK VALUATION' : 'FORTLINE CRM — WAREHOUSE INVENTORY', 14, 12);
 
     doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(226, 232, 240);
-    doc.text(`Generated on: ${new Date().toLocaleDateString('en-GB')} • All amounts in Pakistani Rupees (PKR)`, 14, 20);
+    doc.text(
+      showMoney
+        ? `Generated on: ${new Date().toLocaleDateString('en-GB')} • All amounts in Pakistani Rupees (PKR)`
+        : `Generated on: ${new Date().toLocaleDateString('en-GB')}`,
+      14,
+      20
+    );
 
     const rows = filteredItems.map((item, idx) => {
       const available = (item.quantityOnHand || 0) - (item.reservedQuantity || 0);
-      const totalVal = (item.quantityOnHand || 0) * (item.unitPrice || 0);
       const latestGrn = [...(item.stockMovements || [])].reverse().find((movement) => movement.grnNumber)?.grnNumber || '-';
-      return [
+      const quantityColumns = [
         (idx + 1).toString(),
         item.name || 'Product Item',
         item.sku || 'No SKU',
@@ -207,8 +214,16 @@ export default function SupportInventoryView() {
         `${item.quantityOnHand || 0} ${item.unit || 'pcs'}`,
         `${item.reservedQuantity || 0} ${item.unit || 'pcs'}`,
         `${available} ${item.unit || 'pcs'}`,
-        `Rs. ${(item.unitPrice || 0).toLocaleString()}`,
-        `Rs. ${totalVal.toLocaleString()}`,
+      ];
+      const moneyColumns = showMoney
+        ? [
+          `Rs. ${(item.unitPrice || 0).toLocaleString()}`,
+          `Rs. ${((item.quantityOnHand || 0) * (item.unitPrice || 0)).toLocaleString()}`
+        ]
+        : [];
+      return [
+        ...quantityColumns,
+        ...moneyColumns,
         latestGrn,
         item.status || 'In Stock'
       ];
@@ -217,7 +232,11 @@ export default function SupportInventoryView() {
     autoTable(doc, {
       startY: 32,
       margin: { left: 14, right: 14 },
-      head: [['#', 'Product Name', 'SKU', 'Category', 'Location', 'Total Qty', 'Reserved', 'Available', 'Unit Price', 'Stock Value', 'Latest GRN', 'Status']],
+      head: [[
+        '#', 'Product Name', 'SKU', 'Category', 'Location', 'Total Qty', 'Reserved', 'Available',
+        ...(showMoney ? ['Unit Price', 'Stock Value'] : []),
+        'Latest GRN', 'Status'
+      ]],
       body: rows,
       theme: 'grid',
       headStyles: {
@@ -247,22 +266,27 @@ export default function SupportInventoryView() {
       }
     });
 
-    const totalValAll = filteredItems.reduce((s, it) => s + ((it.quantityOnHand || 0) * (it.unitPrice || 0)), 0);
-    const finalY = doc.lastAutoTable.finalY + 8;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(`Total Stock Asset Value: Rs. ${totalValAll.toLocaleString()}`, 14, finalY > 195 ? 195 : finalY);
+    if (showMoney) {
+      const totalValAll = filteredItems.reduce((s, it) => s + ((it.quantityOnHand || 0) * (it.unitPrice || 0)), 0);
+      const finalY = doc.lastAutoTable.finalY + 8;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Total Stock Asset Value: Rs. ${totalValAll.toLocaleString()}`, 14, finalY > 195 ? 195 : finalY);
+    }
 
     doc.save(`Fortline_Inventory_Register_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   // Full Inventory List Excel CSV Export
   const handleExportExcel = () => {
-    const headers = ['#', 'Product Name', 'SKU Code', 'Category', 'Unit', 'Total Stock', 'Reserved Qty', 'Available Qty', 'Min Alert Level', 'Unit Price (PKR)', 'Total Value (PKR)', 'Location', 'GRN Numbers', 'Status', 'Description'];
+    const headers = [
+      '#', 'Product Name', 'SKU Code', 'Category', 'Unit', 'Total Stock', 'Reserved Qty', 'Available Qty', 'Min Alert Level',
+      ...(showMoney ? ['Unit Price (PKR)', 'Total Value (PKR)'] : []),
+      'Location', 'GRN Numbers', 'Status', 'Description'
+    ];
     const rows = filteredItems.map((item, idx) => {
       const available = (item.quantityOnHand || 0) - (item.reservedQuantity || 0);
-      const totalVal = (item.quantityOnHand || 0) * (item.unitPrice || 0);
       return [
         idx + 1,
         `"${(item.name || '').replace(/"/g, '""')}"`,
@@ -273,8 +297,7 @@ export default function SupportInventoryView() {
         item.reservedQuantity || 0,
         available,
         item.minStockLevel || 5,
-        item.unitPrice || 0,
-        totalVal,
+        ...(showMoney ? [item.unitPrice || 0, (item.quantityOnHand || 0) * (item.unitPrice || 0)] : []),
         `"${(item.location || '').replace(/"/g, '""')}"`,
         `"${(item.stockMovements || []).map((movement) => movement.grnNumber).filter(Boolean).join('; ')}"`,
         `"${item.status || 'In Stock'}"`,
@@ -620,7 +643,7 @@ export default function SupportInventoryView() {
                     letterSpacing: '0.03em'
                   }}
                 >
-                  <Building size={14} color="#059669" /> Warehouse Stock &amp; Valuation
+                  <Building size={14} color="#059669" /> {showMoney ? 'Warehouse Stock & Valuation' : 'Warehouse Stock'}
                 </div>
 
                 <div className="sv-grid-2">
@@ -655,7 +678,7 @@ export default function SupportInventoryView() {
                 </div>
 
                 <div className="sv-grid-2">
-                  <div className="sv-field">
+                  {showMoney && <div className="sv-field">
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px', display: 'block' }}>
                       Unit Price (PKR)
                     </label>
@@ -667,7 +690,7 @@ export default function SupportInventoryView() {
                       onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
                       placeholder="e.g. 150000"
                     />
-                  </div>
+                  </div>}
 
                   <div className="sv-field">
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px', display: 'block' }}>

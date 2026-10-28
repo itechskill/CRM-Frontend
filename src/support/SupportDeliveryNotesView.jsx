@@ -27,6 +27,7 @@ import {
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import './SupportPortal.css';
+import { canViewFullMonetaryData } from '../utils/monetaryVisibility';
 
 const SIGNED_DN_ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp';
 const SIGNED_DN_EXTENSIONS = /\.(pdf|png|jpe?g|webp|gif|bmp)$/i;
@@ -74,7 +75,8 @@ const EMPTY_FORM = {
   notes: ''
 };
 
-export default function SupportDeliveryNotesView({ initialSelectedOrder, onClearSelectedOrder }) {
+export default function SupportDeliveryNotesView({ initialSelectedOrder, onClearSelectedOrder, currentUser }) {
+  const showMoney = canViewFullMonetaryData(currentUser);
   const [deliveryNotes, setDeliveryNotes] = useState([]);
   const [salesOrders, setSalesOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -230,9 +232,16 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
     if (saving) return;
     setSaving(true);
     try {
+      const deliveryPayload = {
+        ...form,
+        items: form.items.map(item => ({
+          orderItemId: item.orderItemId,
+          quantity: Number(item.quantity) || 1
+        }))
+      };
       const { response, data } = await apiRequest('/api/sales-employee/delivery-notes', {
         method: 'POST',
-        body: JSON.stringify(form)
+        body: JSON.stringify(deliveryPayload)
       });
       if (response.ok && data.success) {
         setFeedback(`Delivery Note ${data.data?.deliveryNumber || data.data?.deliveryNoteNumber} created successfully!`);
@@ -449,23 +458,27 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
       it.description && it.description !== it.product ? it.description : 'Standard Scope',
       `${it.demand || it.quantity || 1} ${it.unit || 'pcs'}`,
       `${it.quantity || it.demand || 1} ${it.unit || 'pcs'}`,
-      `PKR ${Number(it.unitPrice || 0).toLocaleString()}`,
-      `PKR ${Number(it.lineTotal || ((Number(it.quantity) || 1) * Number(it.unitPrice || 0))).toLocaleString()}`
+      ...(showMoney ? [
+        `PKR ${Number(it.unitPrice || 0).toLocaleString()}`,
+        `PKR ${Number(it.lineTotal || ((Number(it.quantity) || 1) * Number(it.unitPrice || 0))).toLocaleString()}`
+      ] : [])
     ]) : [[
       '1',
       'Standard Package Goods',
       'Delivered as per order specification',
       '1 pcs',
       '1 pcs',
-      'PKR 0',
-      'PKR 0'
+      ...(showMoney ? ['PKR 0', 'PKR 0'] : [])
     ]];
 
     autoTable(doc, {
       startY: 90,
       margin: { left: 14, right: 14 },
       tableWidth: 182,
-      head: [['#', 'Product Item', 'Description / Scope', 'Ordered', 'Delivered', 'Unit Price', 'Line Total']],
+      head: [[
+        '#', 'Product Item', 'Description / Scope', 'Ordered', 'Delivered',
+        ...(showMoney ? ['Unit Price', 'Line Total'] : [])
+      ]],
       body: tableRows,
       theme: 'grid',
       headStyles: {
@@ -503,11 +516,13 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
       finalY = 20;
     }
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(`Grand Total: PKR ${Number(dn.grandTotal ?? dn.salesOrder?.netAmount ?? 0).toLocaleString()}`, 196, finalY, { align: 'right' });
-    finalY += 7;
+    if (showMoney) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(15, 23, 42);
+      doc.text(`Grand Total: PKR ${Number(dn.grandTotal ?? dn.salesOrder?.netAmount ?? 0).toLocaleString()}`, 196, finalY, { align: 'right' });
+      finalY += 7;
+    }
 
     // Special Dispatch Notes (if any)
     if (dn.notes) {
@@ -846,7 +861,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                     {salesOrders.map(ord => {
                       return (
                         <option key={ord._id} value={ord._id}>
-                          {ord.orderReference || ord.orderNumber} — {ord.clientName || ord.customerName} (Rs. {Number(ord.netAmount || ord.totalAmount || 0).toLocaleString()})
+                          {ord.orderReference || ord.orderNumber} — {ord.clientName || ord.customerName}
                         </option>
                       );
                     })}
@@ -887,7 +902,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                   <div style={{ border: '1px solid #E2E8F0', borderRadius: '8px', overflow: 'hidden' }}>
                     <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', fontSize: '0.8rem' }}>
                       <thead style={{ background: '#F8FAFC', color: '#475569' }}>
-                        <tr><th style={{ padding: '8px', textAlign: 'left' }}>Product</th><th style={{ padding: '8px', width: '92px' }}>Delivery Qty</th><th style={{ padding: '8px', width: '60px' }}>Unit</th><th style={{ padding: '8px', width: '105px', textAlign: 'right' }}>Unit Price</th><th style={{ padding: '8px', width: '110px', textAlign: 'right' }}>Line Total</th></tr>
+                        <tr><th style={{ padding: '8px', textAlign: 'left' }}>Product</th><th style={{ padding: '8px', width: '92px' }}>Delivery Qty</th><th style={{ padding: '8px', width: '60px' }}>Unit</th>{showMoney && <><th style={{ padding: '8px', width: '105px', textAlign: 'right' }}>Unit Price</th><th style={{ padding: '8px', width: '110px', textAlign: 'right' }}>Line Total</th></>}</tr>
                       </thead>
                       <tbody>
                         {form.items.map((item, index) => (
@@ -900,14 +915,13 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                               }} style={{ width: '66px', padding: '5px', textAlign: 'center' }} />
                             </td>
                             <td style={{ padding: '9px 8px', textAlign: 'center' }}>{item.unit || 'pcs'}</td>
-                            <td style={{ padding: '9px 8px', textAlign: 'right' }}>Rs. {Number(item.unitPrice || 0).toLocaleString()}</td>
-                            <td style={{ padding: '9px 8px', textAlign: 'right', fontWeight: 800 }}>Rs. {Number(item.lineTotal || (item.quantity * item.unitPrice) || 0).toLocaleString()}</td>
+                            {showMoney && <><td style={{ padding: '9px 8px', textAlign: 'right' }}>Rs. {Number(item.unitPrice || 0).toLocaleString()}</td><td style={{ padding: '9px 8px', textAlign: 'right', fontWeight: 800 }}>Rs. {Number(item.lineTotal || (item.quantity * item.unitPrice) || 0).toLocaleString()}</td></>}
                           </tr>
                         ))}
                       </tbody>
                     </table>
                   </div>
-                  <div style={{ marginTop: '10px', fontSize: '0.76rem', color: '#64748B' }}>Prices come from the Sales Order and cannot be edited. Reduce delivery quantity only for a partial delivery.</div>
+                  <div style={{ marginTop: '10px', fontSize: '0.76rem', color: '#64748B' }}>Reduce delivery quantity only for a partial delivery.</div>
                 </div>
 
                 <div className="support-dn-form-panel">
@@ -1180,8 +1194,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                         <th style={{ padding: '10px 14px' }}>Description / Scope</th>
                         <th style={{ padding: '10px 14px', textAlign: 'center', width: '100px' }}>Ordered Demand</th>
                         <th style={{ padding: '10px 14px', textAlign: 'center', width: '100px' }}>Delivered Qty</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'right', width: '110px' }}>Unit Price</th>
-                        <th style={{ padding: '10px 14px', textAlign: 'right', width: '120px' }}>Line Total</th>
+                        {showMoney && <><th style={{ padding: '10px 14px', textAlign: 'right', width: '110px' }}>Unit Price</th><th style={{ padding: '10px 14px', textAlign: 'right', width: '120px' }}>Line Total</th></>}
                       </tr>
                     </thead>
                     <tbody>
@@ -1197,8 +1210,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                             <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 800, color: '#059669' }}>
                               {item.quantity || item.demand || 1} {item.unit || 'pcs'}
                             </td>
-                            <td style={{ padding: '10px 14px', textAlign: 'right' }}>PKR {Number(item.unitPrice || 0).toLocaleString()}</td>
-                            <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800 }}>PKR {Number(item.lineTotal || ((Number(item.quantity) || 1) * Number(item.unitPrice || 0))).toLocaleString()}</td>
+                            {showMoney && <><td style={{ padding: '10px 14px', textAlign: 'right' }}>PKR {Number(item.unitPrice || 0).toLocaleString()}</td><td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 800 }}>PKR {Number(item.lineTotal || ((Number(item.quantity) || 1) * Number(item.unitPrice || 0))).toLocaleString()}</td></>}
                           </tr>
                         ))
                       ) : (
@@ -1208,14 +1220,13 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                           <td style={{ padding: '10px 14px' }}>General Order Scope</td>
                           <td style={{ padding: '10px 14px', textAlign: 'center' }}>1 pcs</td>
                           <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 800, color: '#059669' }}>1 pcs</td>
-                          <td style={{ padding: '10px 14px', textAlign: 'right' }}>PKR 0</td>
-                          <td style={{ padding: '10px 14px', textAlign: 'right' }}>PKR 0</td>
+                          {showMoney && <><td style={{ padding: '10px 14px', textAlign: 'right' }}>PKR 0</td><td style={{ padding: '10px 14px', textAlign: 'right' }}>PKR 0</td></>}
                         </tr>
                       )}
                     </tbody>
                   </table>
                 </div>
-                <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>Grand Total: PKR {Number(viewDN.grandTotal ?? viewDN.salesOrder?.netAmount ?? 0).toLocaleString()}</div>
+                {showMoney && <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '1rem', fontWeight: 900, color: '#0F172A' }}>Grand Total: PKR {Number(viewDN.grandTotal ?? viewDN.salesOrder?.netAmount ?? 0).toLocaleString()}</div>}
               </div>
 
               {/* Notes & Acknowledgement Status */}
