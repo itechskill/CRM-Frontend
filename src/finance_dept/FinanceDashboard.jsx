@@ -18,10 +18,11 @@ const money = cents => `PKR ${(Number(cents || 0) / 100).toLocaleString('en-PK',
   maximumFractionDigits: 2
 })}`;
 
-const Tile = ({ icon: Icon, label, value, tone = '#2563EB', amount = true, rateNote = false }) => (
+const Tile = ({ icon: Icon, label, subtitle = '', value, tone = '#2563EB', amount = true, rateNote = false }) => (
   <button type="button" className="sales-dashboard-nine-tile" disabled>
     <span className="sales-dashboard-nine-icon" style={{ color: tone, background: `${tone}14` }}><Icon size={21} /></span>
     <span className="sales-dashboard-nine-label">{label}</span>
+    {subtitle && <span className="sales-dashboard-nine-note">{subtitle}</span>}
     <span className="sales-dashboard-nine-count">{value?.count || 0}</span>
     {amount && <span className="sales-dashboard-nine-amount">{money(value?.amountCents)}</span>}
     {rateNote && Number(value?.missingExchangeRateCount || 0) > 0 && (
@@ -68,16 +69,17 @@ export default function FinanceDashboard() {
             <Tile icon={PackageCheck} label="Local GRN Input" value={tiles.localGrnInput} tone="#059669" amount={false} />
           </div>
 
-          <div className="sales-dashboard-nine-grid">
+          <div className="sales-dashboard-nine-grid finance-dashboard-row-four">
             <Tile icon={PackageCheck} label="Global GRN Input" value={tiles.globalGrnInput} tone="#0F766E" amount={false} />
             <Tile icon={FileCheck2} label="Delivery Note" value={tiles.deliveryNote} tone="#0284C7" amount={false} />
-            <Tile icon={Receipt} label="Invoiced" value={tiles.invoiced} tone="#059669" />
+            <Tile icon={Receipt} label="Total Invoices Created" value={tiles.invoiced} tone="#059669" />
+            <Tile icon={FileCheck2} label="Total Invoices Allocated" value={tiles.invoicesAllocated} tone="#047857" />
           </div>
 
           <div className="sales-dashboard-nine-grid">
-            <Tile icon={Clock3} label="Receivable 1-30" value={tiles.receivable1To30} tone="#2563EB" />
-            <Tile icon={AlertTriangle} label="Overdue Grace 31-45" value={tiles.overdueGrace31To45} tone="#D97706" />
-            <Tile icon={AlertTriangle} label="Overdue 45+" value={tiles.overdue45Plus} tone="#DC2626" />
+            <Tile icon={Clock3} label="Receivable within due date" subtitle="1-30 days" value={tiles.receivable1To30} tone="#2563EB" />
+            <Tile icon={AlertTriangle} label="Safe period after due date" subtitle="31-45 days" value={tiles.overdueGrace31To45} tone="#D97706" />
+            <Tile icon={AlertTriangle} label="Overdue" subtitle="Above 45 days" value={tiles.overdue45Plus} tone="#DC2626" />
           </div>
         </div>
       )}

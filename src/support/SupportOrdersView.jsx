@@ -22,7 +22,6 @@ import {
 import '../employee/sales/SalesViews.css';
 import './SupportPortal.css';
 import { companyName } from '../utils/companies';
-import { ExpenseDraftPanel } from '../components/SupplierPOExpenses';
 
 export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
   const [orders, setOrders] = useState([]);
@@ -120,7 +119,6 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
         receiptId: createReceiptId(),
         supplierName: data.data.supplierPO?.supplierName || o.supplierPO?.supplierName || shipment.supplierName || '-',
         remarks: '',
-        expenses: [],
         items: lines
       });
     } catch {
@@ -846,8 +844,6 @@ function ReceiveGoodsModal({ order, preview, form, loading, submitting, onClose,
               <label style={labelStyle}>Receiving remarks</label>
               <textarea rows="2" className="sv-input" value={form.remarks} onChange={(e) => onChange({ ...form, remarks: e.target.value })} />
             </div>
-
-            <ExpenseDraftPanel value={form.expenses || []} onChange={(expenses) => onChange({ ...form, expenses })} />
 
             <div className="sv-modal-actions" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
               <button type="button" className="sv-btn-cancel" onClick={onClose}>Cancel</button>
