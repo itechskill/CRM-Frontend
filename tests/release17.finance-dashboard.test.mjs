@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 
 const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
-test('Finance dashboard renders the ten tiles in the requested 4/3/3 row order', async () => {
+test('Finance dashboard renders the eleven tiles in the requested 4/4/3 row order', async () => {
   const dashboard = await read('src/finance_dept/FinanceDashboard.jsx');
   const labels = [
     'SO',
@@ -13,10 +13,11 @@ test('Finance dashboard renders the ten tiles in the requested 4/3/3 row order',
     'Local GRN Input',
     'Global GRN Input',
     'Delivery Note',
-    'Invoiced',
-    'Receivable 1-30',
-    'Overdue Grace 31-45',
-    'Overdue 45+'
+    'Total Invoices Created',
+    'Total Invoices Allocated',
+    'Receivable within due date',
+    'Safe period after due date',
+    'Overdue'
   ];
   let previous = -1;
   for (const label of labels) {
@@ -25,7 +26,11 @@ test('Finance dashboard renders the ten tiles in the requested 4/3/3 row order',
     previous = position;
   }
   assert.equal((dashboard.match(/<div className="sales-dashboard-nine-grid/g) || []).length, 3);
-  assert.match(dashboard, /finance-dashboard-row-four/);
+  assert.equal((dashboard.match(/finance-dashboard-row-four/g) || []).length, 2);
+  assert.match(dashboard, /label="Receivable within due date" subtitle="1-30 days"/);
+  assert.match(dashboard, /label="Safe period after due date" subtitle="31-45 days"/);
+  assert.match(dashboard, /label="Overdue" subtitle="Above 45 days"/);
+  assert.match(dashboard, /value=\{tiles\.invoicesAllocated\}/);
 });
 
 test('Finance dashboard uses month metrics, cents, missing-rate notes and count-only operational tiles', async () => {

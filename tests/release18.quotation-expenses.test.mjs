@@ -31,7 +31,7 @@ test('Local and Global purchaser PO screens expose no Supplier PO expense contro
   }
 });
 
-test('Finance, Admin and CEO retain Supplier PO expense access while purchaser add is disabled', async () => {
+test('Finance and Admin retain expense editing, CEO remains read-only, and Support/purchaser add is disabled', async () => {
   const [component, app, financeSidebar, adminSidebar, ceoSidebar] = await Promise.all([
     read('src/components/SupplierPOExpenses.jsx'),
     read('src/App.jsx'),
@@ -40,8 +40,8 @@ test('Finance, Admin and CEO retain Supplier PO expense access while purchaser a
     read('src/ceo/CEOSidebar.jsx')
   ]);
 
-  assert.match(component, /\['support', 'finance', 'admin'\]\.includes\(role\)/);
   assert.match(component, /\['finance', 'admin'\]\.includes\(role\)/);
+  assert.doesNotMatch(component, /\['support', 'finance', 'admin'\]\.includes\(role\)/);
   assert.doesNotMatch(component, /\['support', 'finance', 'purchaser', 'admin'\]/);
   assert.match(app, /activeTab === 'supplier_po_expenses'\s*&&\s*<FinanceSupplierPOExpensesView/g);
   for (const sidebar of [financeSidebar, adminSidebar, ceoSidebar]) {

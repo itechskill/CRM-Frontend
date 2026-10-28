@@ -10,11 +10,13 @@ const readSource = relativePath => readFile(path.join(projectRoot, relativePath)
 
 test('Supplier PO expenses expose separate add and edit/delete capabilities', async () => {
   const source = await readSource('src/components/SupplierPOExpenses.jsx');
-  assert.match(source, /canAdd:\s*canAddProp/);
-  assert.match(source, /canEditDelete:\s*canEditDeleteProp/);
-  assert.match(source, /\['support', 'finance', 'admin'\]\.includes\(role\)/);
-  assert.doesNotMatch(source, /\['support', 'finance', 'purchaser', 'admin'\]\.includes\(role\)/);
+  assert.match(source, /baseCanAdd = canAddProp/);
+  assert.match(source, /baseCanEditDelete = canEditDeleteProp/);
+  assert.doesNotMatch(source, /\['support', 'finance', 'admin'\]\.includes\(role\)/);
   assert.match(source, /\['finance', 'admin'\]\.includes\(role\)/);
+  assert.match(source, /costingStatus = record\?\.costingStatus \|\| 'Incomplete'/);
+  assert.match(source, /Costing is Completed and locked\. Admin must authorize a change\./);
+  assert.match(source, /expenses\/costing-status/);
   assert.match(source, /\{canEditDelete &&/);
   assert.match(source, /\{\(editingId \? canEditDelete : canAdd\) &&/);
   assert.doesNotMatch(source, /effectiveReadOnly/);
