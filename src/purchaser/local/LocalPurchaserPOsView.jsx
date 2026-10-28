@@ -1,37 +1,19 @@
 import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Search, Trash2, X, Eye, Edit3, CheckCircle2, AlertTriangle, Clock } from 'lucide-react';
+import { Plus, Search, Trash2, X, Eye, Edit3, CheckCircle2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
-import IssuingCompanySelect from '../../components/IssuingCompanySelect';
-import { DOCUMENT_TYPES, companyName } from '../../utils/companies';
+import { companyName } from '../../utils/companies';
 
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
 export default function LocalPurchaserPOsView({ searchQuery }) {
   const [pos, setPos] = useState([]);
-  const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
   const [viewPo, setViewPo] = useState(null);
   const [editPo, setEditPo] = useState(null);
-  const [submitting, setSubmitting] = useState(false);
   const [updating, setUpdating] = useState(false);
   const [deletingId, setDeletingId] = useState(null);
   const [filterText, setFilterText] = useState('');
   const [toast, setToast] = useState('');
-
-  // Create PO Form State
-  const [formData, setFormData] = useState({
-    issuingCompanyCode: '',
-    supplierId: '',
-    supplierName: '',
-    supplierContact: '',
-    poNumber: '',
-    expectedDeliveryDate: '',
-    items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
-    gstRate: 0,
-    paymentTerms: 'Net 30',
-    remarks: ''
-  });
 
   // Edit PO Form State
   const [editFormData, setEditFormData] = useState({
@@ -45,20 +27,13 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const [posRes, suppRes] = await Promise.all([
-        apiRequest('/api/purchaser/pos?subType=Local'),
-        apiRequest('/api/purchaser/suppliers?type=Local')
-      ]);
+      const posRes = await apiRequest('/api/purchaser/pos?subType=Local');
       if (posRes.success) {
         setPos(Array.isArray(posRes.pos) ? posRes.pos : (Array.isArray(posRes.data) ? posRes.data : []));
-      }
-      if (suppRes.success) {
-        setSuppliers(Array.isArray(suppRes.suppliers) ? suppRes.suppliers : (Array.isArray(suppRes.data) ? suppRes.data : []));
       }
     } catch (err) {
       console.error('Error fetching Local POs:', err);
       setPos([]);
-      setSuppliers([]);
     } finally {
       setLoading(false);
     }
@@ -67,123 +42,6 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
   useEffect(() => {
     fetchData();
   }, []);
-
-  const handleSupplierSelect = (e) => {
-    const id = e.target.value;
-    if (id === 'NEW') {
-      setFormData(prev => ({ ...prev, supplierId: 'NEW', supplierName: '', supplierContact: '' }));
-    } else {
-      const s = (Array.isArray(suppliers) ? suppliers : []).find(sup => sup._id === id);
-      if (s) {
-        setFormData(prev => ({
-          ...prev,
-          supplierId: s._id,
-          supplierName: s.name,
-          supplierContact: s.phone || s.email || ''
-        }));
-      }
-    }
-  };
-
-  const handleItemChange = (index, field, value) => {
-    const updated = [...formData.items];
-    updated[index][field] = value;
-    if (field === 'quantity' || field === 'unitPricePKR') {
-      const q = Number(updated[index].quantity || 0);
-      const p = Number(updated[index].unitPricePKR || 0);
-      updated[index].totalPricePKR = roundMoney(q * p);
-    }
-    setFormData(prev => ({ ...prev, items: updated }));
-  };
-
-  const addItem = () => {
-    setFormData(prev => ({
-      ...prev,
-      items: [...prev.items, { productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }]
-    }));
-  };
-
-  const removeItem = (index) => {
-    if (formData.items.length === 1) return;
-    setFormData(prev => ({
-      ...prev,
-      items: prev.items.filter((_, i) => i !== index)
-    }));
-  };
-
-  const calculateTotalPKR = () => {
-    return roundMoney(formData.items.reduce((sum, item) => sum + (Number(item.totalPricePKR) || 0), 0));
-  };
-
-  const calculateGST = (subtotal, rate) => roundMoney(subtotal * (Number(rate) || 0) / 100);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!formData.supplierId || (formData.supplierId === 'NEW' && !formData.supplierName.trim())) {
-      alert('Please enter or select a supplier.');
-      return;
-    }
-    setSubmitting(true);
-    try {
-      let supplierId = formData.supplierId;
-      if (supplierId === 'NEW') {
-        const supplierRes = await apiRequest('/api/purchaser/suppliers', 'POST', {
-          name: formData.supplierName.trim(),
-          supplierType: 'Local',
-          country: 'Pakistan',
-          phone: formData.supplierContact
-        });
-        if (!supplierRes.success) {
-          alert(supplierRes.message || 'Unable to add the Local supplier.');
-          return;
-        }
-        supplierId = supplierRes.data?.data?._id || supplierRes.data?.supplier?._id;
-      }
-      const payload = {
-        issuingCompanyCode: formData.issuingCompanyCode,
-        subType: 'Local',
-        poType: 'Local',
-        supplierId,
-        expectedDeliveryDate: formData.expectedDeliveryDate || undefined,
-        items: formData.items,
-        subtotal: calculateTotalPKR(),
-        gstRate: Number(formData.gstRate) || 0,
-        totalAmountPKR: roundMoney(calculateTotalPKR() + calculateGST(calculateTotalPKR(), formData.gstRate)),
-        totalAmount: roundMoney(calculateTotalPKR() + calculateGST(calculateTotalPKR(), formData.gstRate)),
-        paymentTerms: formData.paymentTerms,
-        remarks: formData.remarks,
-        notes: formData.remarks
-      };
-
-      const res = await apiRequest('/api/purchaser/pos', 'POST', payload);
-      if (res.success) {
-        const assignedPoNumber = res.data?.data?.poNumber || res.data?.po?.poNumber || 'assigned';
-        setToast(`Local Supplier PO #${assignedPoNumber} created successfully and added to list!`);
-        setShowModal(false);
-        setFormData({
-          issuingCompanyCode: '',
-          supplierId: '',
-          supplierName: '',
-          supplierContact: '',
-          poNumber: '',
-          expectedDeliveryDate: '',
-          items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }],
-          gstRate: 0,
-          paymentTerms: 'Net 30',
-          remarks: ''
-        });
-        fetchData();
-        setTimeout(() => setToast(''), 4500);
-      } else {
-        alert(res.message || 'Error creating PO');
-      }
-    } catch (err) {
-      console.error('Error creating local PO:', err);
-      alert('Failed to save Purchase Order.');
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   // Open Edit PO Modal
   const handleOpenEditModal = (po) => {
@@ -309,27 +167,8 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
         <div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: '#0F172A', margin: 0 }}>PO Issued to Supplier (Local)</h2>
-          <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>Issue, view, edit &amp; track purchase orders for local vendors</p>
+          <p style={{ margin: '4px 0 0 0', color: '#64748B', fontSize: '0.9rem' }}>View, edit and track Supplier POs issued from Pending Sales Orders</p>
         </div>
-        <button
-          onClick={() => setShowModal(true)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            backgroundColor: '#059669',
-            color: '#FFF',
-            border: 'none',
-            borderRadius: '8px',
-            padding: '10px 18px',
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 4px 12px rgba(5, 150, 105, 0.25)'
-          }}
-        >
-          <Plus size={18} />
-          <span>Create Local Supplier PO</span>
-        </button>
       </div>
 
       {toast && (
@@ -363,12 +202,14 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Items Count</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Total (PKR)</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Status</th>
+              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Supplier GRN Ref</th>
+              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Internal GRN</th>
               <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'center' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading POs...</td></tr>
+              <tr><td colSpan={11} style={{ padding: '32px', textAlign: 'center', color: '#64748B' }}>Loading POs...</td></tr>
             ) : filtered.length > 0 ? (
               filtered.map((po) => (
                 <tr key={po._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
@@ -404,6 +245,8 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                       {po.status || 'Issued'}
                     </span>
                   </td>
+                  <td style={{ padding: '14px 20px', color: '#475569' }}>{po.goodsReceiptReference || '-'}</td>
+                  <td style={{ padding: '14px 20px', color: '#475569' }}>{po.supportVerifiedGrn?.grnNumber || '-'}</td>
                   <td style={{ padding: '14px 20px', textAlign: 'center' }}>
                     <div style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap' }}>
                       <button
@@ -433,179 +276,11 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                 </tr>
               ))
             ) : (
-              <tr><td colSpan={9} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Local POs found.</td></tr>
+              <tr><td colSpan={11} style={{ padding: '32px', textAlign: 'center', color: '#94A3B8' }}>No Local POs found.</td></tr>
             )}
           </tbody>
         </table>
       </div>
-
-      {/* Create Modal Form */}
-      {showModal && (
-        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ backgroundColor: '#FFF', borderRadius: '16px', maxWidth: '750px', width: '100%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
-            <div style={{ padding: '20px 24px', borderBottom: '1px solid #E2E8F0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#F0FDF4' }}>
-              <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, color: '#065F46' }}>Create Local Supplier Purchase Order</h3>
-              <button onClick={() => setShowModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#64748B' }}><X size={20} /></button>
-            </div>
-
-            <form onSubmit={handleSubmit} style={{ padding: '24px' }}>
-              <div style={{ marginBottom: '14px' }}>
-                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Issuing Company *</label>
-                <IssuingCompanySelect
-                  documentType={DOCUMENT_TYPES.LOCAL_PO}
-                  value={formData.issuingCompanyCode}
-                  onChange={value => setFormData(prev => ({ ...prev, issuingCompanyCode: value }))}
-                  style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1' }}
-                />
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '20px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Select Supplier</label>
-                  <select
-                    value={formData.supplierId}
-                    onChange={handleSupplierSelect}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  >
-                    <option value="">-- Choose Existing Supplier --</option>
-                    {(Array.isArray(suppliers) ? suppliers : []).map(s => (
-                      <option key={s._id} value={s._id}>{s.name} ({s.phone || 'Local'})</option>
-                    ))}
-                    <option value="NEW">+ Add New Supplier</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>PO Number</label>
-                  <input
-                    type="text"
-                    value={formData.poNumber}
-                    readOnly
-                    placeholder="Assigned on issue"
-                    aria-label="PO number assigned on issue"
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', fontWeight: 700, color: '#059669' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Supplier Name *</label>
-                  <input
-                    type="text"
-                    value={formData.supplierName}
-                    onChange={(e) => setFormData(prev => ({ ...prev, supplierName: e.target.value }))}
-                    readOnly={formData.supplierId !== 'NEW'}
-                    placeholder="Company or Contact Person Name"
-                    required
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Supplier Phone / Contact</label>
-                  <input
-                    type="text"
-                    value={formData.supplierContact}
-                    onChange={(e) => setFormData(prev => ({ ...prev, supplierContact: e.target.value }))}
-                    readOnly={formData.supplierId !== 'NEW'}
-                    placeholder="Phone or Email"
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Expected Delivery Date</label>
-                  <input
-                    type="date"
-                    value={formData.expectedDeliveryDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, expectedDeliveryDate: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Payment Terms</label>
-                  <input
-                    type="text"
-                    value={formData.paymentTerms}
-                    onChange={(e) => setFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
-                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
-                  />
-                </div>
-              </div>
-
-              {/* Items Section */}
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <h4 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#0F172A' }}>Items &amp; Pricing</h4>
-                  <button type="button" onClick={addItem} style={{ background: '#ECFDF5', color: '#059669', border: 'none', borderRadius: '6px', padding: '6px 12px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Plus size={14} /> Add Item
-                  </button>
-                </div>
-
-                {formData.items.map((item, idx) => (
-                  <div key={idx} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 2fr 2fr 40px', gap: '10px', alignItems: 'center', marginBottom: '10px', backgroundColor: '#F8FAFC', padding: '10px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                    <input
-                      type="text"
-                      placeholder="Product Name / Description"
-                      value={item.productName}
-                      onChange={(e) => handleItemChange(idx, 'productName', e.target.value)}
-                      required
-                      style={{ padding: '7px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
-                    />
-                    <input
-                      type="number"
-                      placeholder="Qty"
-                      min="1"
-                      value={item.quantity}
-                      onChange={(e) => handleItemChange(idx, 'quantity', e.target.value)}
-                      required
-                      style={{ padding: '7px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', textAlign: 'center' }}
-                    />
-                    <input
-                      type="number"
-                      placeholder="Unit Price (PKR)"
-                      min="0"
-                      step="0.01"
-                      value={item.unitPricePKR}
-                      onChange={(e) => handleItemChange(idx, 'unitPricePKR', e.target.value)}
-                      required
-                      style={{ padding: '7px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', textAlign: 'right' }}
-                    />
-                    <div style={{ textAlign: 'right', fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>
-                      {formatPKR(item.totalPricePKR)}
-                    </div>
-                    {formData.items.length > 1 && (
-                      <button type="button" onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer' }}>
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>GST (%)</label>
-                  <input type="number" min="0" step="0.01" value={formData.gstRate} onChange={(e) => setFormData(prev => ({ ...prev, gstRate: e.target.value }))} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1' }} />
-                </div>
-                <div style={{ background: '#F0FDF4', borderRadius: '8px', padding: '10px 14px', fontSize: '0.86rem' }}>
-                  <div>Subtotal: <strong>{formatPKR(calculateTotalPKR())}</strong></div>
-                  <div>GST: <strong>{formatPKR(calculateGST(calculateTotalPKR(), formData.gstRate))}</strong></div>
-                  <div>Total including GST: <strong>{formatPKR(calculateTotalPKR() + calculateGST(calculateTotalPKR(), formData.gstRate))}</strong></div>
-                </div>
-              </div>
-              {/* Total & Submit */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <button type="button" onClick={() => setShowModal(false)} style={{ backgroundColor: '#F1F5F9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 18px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
-                  <button type="submit" disabled={submitting} style={{ backgroundColor: '#059669', color: '#FFF', border: 'none', borderRadius: '8px', padding: '10px 22px', fontWeight: 700, cursor: 'pointer' }}>
-                    {submitting ? 'Creating PO...' : 'Issue Local Supplier PO'}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Edit PO Modal */}
       {editPo && (
@@ -745,6 +420,8 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
               <div><strong>Issuing Company:</strong> {companyName(viewPo)}</div>
               <div><strong>Linked Sales Order:</strong> {viewPo.salesOrderNumber || 'None'}</div>
               <div><strong>Issued Date:</strong> {viewPo.createdAt ? new Date(viewPo.createdAt).toLocaleDateString() : '-'}</div>
+              <div><strong>Supplier GRN Reference:</strong> {viewPo.goodsReceiptReference || '-'}</div>
+              <div><strong>Internal GRN:</strong> {viewPo.supportVerifiedGrn?.grnNumber || '-'}</div>
               <div><strong>Expected Delivery:</strong> {viewPo.expectedDeliveryDate ? new Date(viewPo.expectedDeliveryDate).toLocaleDateString() : 'N/A'}</div>
               {viewPo.notes && <div style={{ gridColumn: 'span 2' }}><strong>Notes:</strong> {viewPo.notes}</div>}
             </div>

@@ -15,6 +15,7 @@
     "test:release-16": "node --test tests/release16.logistics-dashboard.test.mjs",
     "test:release-17": "node --test tests/release17.finance-dashboard.test.mjs",
     "test:release-18": "node --test tests/release18.quotation-expenses.test.mjs",
+    "test:release-19": "node --test tests/release19.local-workflow.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

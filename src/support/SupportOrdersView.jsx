@@ -55,6 +55,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
           const isAssignedToSupport = o.currentDepartment === 'Support' || o.departmentResponsible === 'Support';
           const isSupportStage = [
             'Pending Delivery Note',
+            'Goods Arrived / Awaiting Support Verification',
             'Goods Received in Office',
             'Shipment Received in Office',
             'Delivery Note Created',
@@ -117,7 +118,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
       setReceivingPreview(data.data);
       setReceivingForm({
         receiptId: createReceiptId(),
-        supplierName: o.supplierPO?.supplierName || shipment.supplierName || '-',
+        supplierName: data.data.supplierPO?.supplierName || o.supplierPO?.supplierName || shipment.supplierName || '-',
         remarks: '',
         expenses: [],
         items: lines
@@ -757,6 +758,18 @@ function ReceiveGoodsModal({ order, preview, form, loading, submitting, onClose,
           <div className="sv-loading" style={{ padding: '28px' }}>Loading order lines and inventory matches...</div>
         ) : (
           <form onSubmit={onSubmit} style={{ marginTop: '16px' }}>
+            {preview?.supplierPO && <div style={{ marginBottom: 16, padding: 14, border: '1px solid #BFDBFE', borderRadius: 10, background: '#EFF6FF' }}>
+              <div style={{ fontWeight: 800, color: '#1E3A8A', marginBottom: 6 }}>Check against Local Supplier PO</div>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 8, fontSize: '0.82rem', color: '#334155' }}>
+                <div><strong>Supplier PO:</strong> {preview.supplierPO.poNumber || '-'}</div>
+                <div><strong>Supplier:</strong> {preview.supplierPO.supplierName || '-'}</div>
+                <div><strong>Supplier GRN reference:</strong> {preview.supplierPO.goodsReceiptReference || '-'}</div>
+                <div><strong>Receipt date:</strong> {preview.supplierPO.goodsReceiptDate ? new Date(preview.supplierPO.goodsReceiptDate).toLocaleDateString() : '-'}</div>
+              </div>
+              <div style={{ marginTop: 10, fontSize: '0.8rem', color: '#334155' }}>
+                {(preview.supplierPO.items || []).map((item, index) => <div key={`${item.productName}-${index}`}><strong>{item.productName}</strong>{item.description ? ` — ${item.description}` : ''} × {item.orderedQty}</div>)}
+              </div>
+            </div>}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '16px' }}>
               {form.items.map((line, index) => {
                 const selectedInventory = (preview?.inventoryOptions || []).find(item => String(item._id) === String(line.inventoryItemId));
