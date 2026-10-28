@@ -17,6 +17,8 @@ import {
 import { apiRequest } from '../../utils/api';
 import IssuingCompanySelect from '../../components/IssuingCompanySelect';
 import { DOCUMENT_TYPES, companyName, defaultCompanyCode } from '../../utils/companies';
+import useExchangeRates from '../../hooks/useExchangeRates';
+import { SUPPORTED_CURRENCIES, exchangeRateFor } from '../../utils/exchangeRates';
 
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
@@ -43,9 +45,12 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
     expectedDeliveryDate: '',
     paymentTerms: 'Net 30',
     gstRate: 0,
+    currency: 'PKR',
     items: [],
     notes: ''
   });
+  const exchangeRates = useExchangeRates();
+  const selectedExchangeRate = exchangeRateFor(exchangeRates, poForm.currency);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -141,6 +146,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
       expectedDeliveryDate: '',
       paymentTerms: 'Net 30',
       gstRate: 0,
+      currency: 'PKR',
       items: orderItems,
       notes: `Local Supplier PO for Sales Order #${order.orderNumber || order.orderReference} (${order.clientName})`
     });
@@ -225,6 +231,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
         items: poForm.items,
         subtotal: calculateTotalPoValue(),
         gstRate: Number(poForm.gstRate) || 0,
+        currency: poForm.currency,
         totalAmount: roundMoney(calculateTotalPoValue() + calculateGST()),
         notes: poForm.notes
       };
@@ -722,6 +729,17 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                 </div>
 
                 <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Currency</label>
+                  <select value={poForm.currency} onChange={e => setPoForm(prev => ({ ...prev, currency: e.target.value }))} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
+                    {SUPPORTED_CURRENCIES.map(currency => <option key={currency}>{currency}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Admin rate to PKR</label>
+                  <input value={selectedExchangeRate ?? 'Not set'} readOnly style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F1F5F9' }} />
+                </div>
+
+                <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>
                     Supplier PO Number
                   </label>
@@ -797,14 +815,14 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                       type="number"
                       min="0"
                       step="0.01"
-                      placeholder="Unit Price (PKR)"
+                      placeholder={`Unit Price (${poForm.currency})`}
                       required
                       value={it.unitPrice}
                       onChange={(e) => handleItemChange(idx, 'unitPrice', e.target.value)}
                       style={{ padding: '7px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
                     />
                     <div style={{ fontWeight: 700, fontSize: '0.85rem', color: '#0F172A', textAlign: 'right', paddingRight: '4px' }}>
-                      {formatPKR(it.totalAmount)}
+                      {poForm.currency} {Number(it.totalAmount || 0).toLocaleString()}
                     </div>
                     <button
                       type="button"
@@ -823,9 +841,9 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
                   <input type="number" min="0" step="0.01" value={poForm.gstRate} onChange={(e) => setPoForm(prev => ({ ...prev, gstRate: e.target.value }))} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1' }} />
                 </div>
                 <div style={{ backgroundColor: '#ECFDF5', borderRadius: '10px', padding: '12px 16px', color: '#065F46' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><strong>{formatPKR(calculateTotalPoValue())}</strong></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST</span><strong>{formatPKR(calculateGST())}</strong></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontWeight: 800 }}><span>Total including GST</span><span>{formatPKR(calculateTotalPoValue() + calculateGST())}</span></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><strong>{poForm.currency} {calculateTotalPoValue().toLocaleString()}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST</span><strong>{poForm.currency} {calculateGST().toLocaleString()}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px', fontWeight: 800 }}><span>Total including GST</span><span>{poForm.currency} {roundMoney(calculateTotalPoValue() + calculateGST()).toLocaleString()}</span></div>
                 </div>
               </div>
 

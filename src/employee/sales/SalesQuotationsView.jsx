@@ -39,7 +39,6 @@ import { getUser } from '../../utils/authStorage';
 import { DOCUMENT_TYPES, companiesFor, companyName } from '../../utils/companies';
 import { drawSalesDocumentHeader, getClientContactLayout, getDocumentIssuerName } from '../../utils/salesDocumentPdfLayout';
 import { downloadQuotationPdf, DEFAULT_TERMS } from '../../utils/quotationPdf';
-import { initialsFromName, sanitizeQuotationCode } from '../../utils/quotationNumber';
 
 const STATUS_COLORS = {
   Quotation: '#2563EB',
@@ -55,7 +54,6 @@ const STATUS_COLORS = {
 
 const EMPTY_FORM = {
   issuingCompanyCode: '',
-  quotationCode: '',
   orderReference: '',
   clientName: '',
   clientAddress: '',
@@ -400,7 +398,6 @@ export default function SalesQuotationsView() {
     const today = new Date().toISOString().substring(0, 10);
     setForm({
       ...EMPTY_FORM,
-      quotationCode: initialsFromName(currentUser?.fullName),
       salePerson: currentUser?.fullName || '',
       creationDate: today,
       discount: 0,
@@ -462,7 +459,6 @@ export default function SalesQuotationsView() {
 
     setForm({
       issuingCompanyCode: q.issuingCompany?.code || '',
-      quotationCode: q.quotationCode || '',
       orderReference: q.orderReference || q.quotationNumber || '',
       clientName: q.clientName || q.customerName || '',
       clientAddress: q.clientAddress || '',
@@ -632,11 +628,6 @@ export default function SalesQuotationsView() {
       setError('Select an issuing company.');
       return;
     }
-    if (!editQ && !sanitizeQuotationCode(form.quotationCode)) {
-      setError('Enter at least one letter or number for the quotation code.');
-      return;
-    }
-
     // Validate items
     const invalidItem = form.items.find(it => !it.description || !it.description.trim());
     if (invalidItem) {
@@ -671,7 +662,6 @@ export default function SalesQuotationsView() {
     try {
       const payload = {
         ...form,
-        quotationCode: sanitizeQuotationCode(form.quotationCode),
         items: cleanedItems,
         totalAmount: calculated.totalAmount,
         discount: Number(calculated.discount) || 0,
@@ -1816,21 +1806,8 @@ export default function SalesQuotationsView() {
                 <div className="sv-form-section-title"><Building size={14} color="#2563EB" /> Customer & Identification</div>
                 <div className="sv-grid-2">
                   <div className="sv-field">
-                    <label>{editQ ? 'Quotation Number' : 'Quotation Code *'}</label>
-                    {editQ ? (
-                      <input value={form.orderReference} readOnly style={{ background: '#F1F5F9' }} />
-                    ) : (
-                      <>
-                        <input
-                          value={form.quotationCode}
-                          onChange={e => setForm(p => ({ ...p, quotationCode: sanitizeQuotationCode(e.target.value) }))}
-                          placeholder="e.g. KR"
-                          maxLength={12}
-                          required
-                        />
-                        <small style={{ color: '#64748B' }}>Preview: QO-####-{sanitizeQuotationCode(form.quotationCode) || 'CODE'} (number assigned on save)</small>
-                      </>
-                    )}
+                    <label>Quotation Number</label>
+                    <input value={editQ ? form.orderReference : ''} placeholder="Assigned on save (QO-000001)" readOnly style={{ background: '#F1F5F9' }} />
                   </div>
                   <div className="sv-field">
                     <label>Customer Name *</label>

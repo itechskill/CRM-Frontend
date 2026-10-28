@@ -34,6 +34,7 @@ import SettingsView from './admin/SettingsView';
 import RegistrationRequestsView from './admin/RegistrationRequestsView';
 import CreateCEOAccountView from './admin/CreateCEOAccountView';
 import AuditLogsView from './admin/AuditLogsView';
+import ExchangeRatesView from './admin/ExchangeRatesView';
 
 // 2. Project Manager Components (src/project_manager/)
 import ProjectSidebar from './project_manager/ProjectSidebar';
@@ -867,7 +868,7 @@ export default function App() {
             />
 
             <main className="content-area">
-              {(activeTab === 'dashboard' || (!['price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'supplier_po_expenses', 'settings', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && (
+              {(activeTab === 'dashboard' || (!['price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'supplier_po_expenses', 'exchange_rates', 'settings', 'profile'].includes(activeTab) && !activeTab.startsWith('org_'))) && (
                 <AdminDashboard onNavigateTab={(tab) => setActiveTab(tab)} currentUser={currentUser} />
               )}
 
@@ -885,6 +886,7 @@ export default function App() {
               )}
               {activeTab === 'target_performance' && <AdminTargetPerformanceView />}
               {activeTab === 'supplier_po_expenses' && <FinanceSupplierPOExpensesView searchQuery={portalSearch} />}
+              {activeTab === 'exchange_rates' && <ExchangeRatesView />}
 
               {activeTab.startsWith('org_') && <OrgOverview activeTab={activeTab} setActiveTab={handleSetActiveTab} />}
               {activeTab === 'settings' && <SettingsView />}

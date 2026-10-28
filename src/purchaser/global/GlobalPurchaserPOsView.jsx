@@ -4,8 +4,13 @@ import { apiRequest } from '../../utils/api';
 import IssuingCompanySelect from '../../components/IssuingCompanySelect';
 import { DOCUMENT_TYPES, companyName, defaultCompanyCode } from '../../utils/companies';
 import { downloadSupplierPoPdf } from '../../utils/supplierPoPdf';
+import { getUser } from '../../utils/authStorage';
+import useExchangeRates from '../../hooks/useExchangeRates';
+import { exchangeRateFor, SUPPORTED_CURRENCIES } from '../../utils/exchangeRates';
 
 export default function GlobalPurchaserPOsView({ searchQuery }) {
+  const currentUser = getUser();
+  const exchangeRates = useExchangeRates();
   const [pos, setPos] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [pendingOrders, setPendingOrders] = useState([]);
@@ -36,6 +41,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     supplierId: '',
     supplierName: '',
     supplierCountry: 'China',
+    currency: 'PKR',
     vatMode: 'none',
     vatRate: 0,
     paymentTerms: 'LC at Sight',
@@ -86,6 +92,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
       supplierId: '',
       supplierName: '',
       supplierCountry: 'China',
+      currency: 'PKR',
       vatMode: 'none',
       vatRate: 0,
       paymentTerms: 'LC at Sight',
@@ -167,6 +174,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
         supplierName: formData.supplierName,
         supplierCountry: formData.supplierCountry,
         paymentTerms: formData.paymentTerms,
+        currency: formData.currency,
         items: formData.items,
         subtotal: calculateSubtotalPKR(),
         vatRate: formData.vatMode === 'vat' ? Math.max(0, Number(formData.vatRate) || 0) : 0,
@@ -187,6 +195,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             supplierId: '',
             supplierName: '',
             supplierCountry: 'China',
+            currency: 'PKR',
             vatMode: 'none',
             vatRate: 0,
             paymentTerms: 'LC at Sight',
@@ -208,6 +217,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             supplierId: '',
             supplierName: '',
             supplierCountry: 'China',
+            currency: 'PKR',
             vatMode: 'none',
             vatRate: 0,
             paymentTerms: 'LC at Sight',
@@ -428,7 +438,29 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     }
   };
 
-  const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK')}`;
+  const formatMoney = (num, currency = 'PKR') => `${currency || 'PKR'} ${Number(num || 0).toLocaleString('en-PK')}`;
+
+  const handleCorrectExchangeRate = async (po) => {
+    const rawRate = window.prompt(`Correct ${po.currency} rate to PKR for ${po.poNumber}:`, po.exchangeRateToPKR || '');
+    if (rawRate === null) return;
+    const rate = Number(rawRate);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      alert('Enter a positive exchange rate to PKR.');
+      return;
+    }
+    const note = window.prompt('Reason / note (optional):', '') ?? '';
+    const response = await apiRequest(`/api/purchaser/pos/${po._id}/exchange-rate`, 'PATCH', {
+      exchangeRateToPKR: rate,
+      note
+    });
+    if (!response.success) {
+      alert(response.message || 'Unable to correct the exchange rate.');
+      return;
+    }
+    setViewPo(response.data?.data || null);
+    setToast(`Exchange rate corrected for ${po.poNumber}.`);
+    fetchData();
+  };
 
   const searchVal = (filterText || searchQuery || '').toLowerCase();
   const filtered = pos.filter(po =>
@@ -438,6 +470,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
     (po.salesOrderNumber || '').toLowerCase().includes(searchVal)
   );
   const ordersAwaitingPO = pendingOrders.filter(order => !order.supplierPO?.poNumber);
+  const selectedExchangeRate = exchangeRateFor(exchangeRates, formData.currency);
 
   return (
     <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
@@ -451,6 +484,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             setLinkedOrder(null);
             setFormData({
               issuingCompanyCode: '', supplierId: '', supplierName: '', supplierCountry: 'China',
+              currency: 'PKR',
               vatMode: 'none', vatRate: 0, paymentTerms: 'LC at Sight',
               items: [{ productName: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }], remarks: ''
             });
@@ -565,7 +599,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Issuing Company</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Country</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Linked Order</th>
-              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Total (PKR)</th>
+              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Total / Currency</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Procurement Checkpoints</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Status</th>
               <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'center' }}>Actions</th>
@@ -583,7 +617,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                   <td style={{ padding: '14px 20px', color: '#64748B' }}>{po.supplierCountry || 'Overseas'}</td>
                   <td style={{ padding: '14px 20px', color: '#475569' }}>{po.salesOrderNumber || (po.salesOrderId ? 'Linked SO' : '—')}</td>
                   <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
-                    {formatPKR(po.totalAmount || po.totalAmountPKR || 0)}
+                    {formatMoney(po.totalAmount || po.totalAmountPKR || 0, po.currency)}
+                    <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748B' }}>Rate to PKR: {po.exchangeRateToPKR || (po.currency === 'PKR' ? 1 : 'not set')}</span>
                   </td>
                   <td style={{ padding: '14px 20px' }}>{renderCheckpoints(po)}</td>
                   <td style={{ padding: '14px 20px' }}>
@@ -740,6 +775,25 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                 </div>
 
                 <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Currency *</label>
+                  <select
+                    value={formData.currency}
+                    onChange={(e) => setFormData(prev => ({ ...prev, currency: e.target.value }))}
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
+                  >
+                    {SUPPORTED_CURRENCIES.map(currency => <option key={currency} value={currency}>{currency}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Admin Rate to PKR</label>
+                  <input
+                    value={formData.currency === 'PKR' ? 1 : (selectedExchangeRate ?? 'Not set')}
+                    readOnly
+                    style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F1F5F9', fontSize: '0.9rem' }}
+                  />
+                </div>
+
+                <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>VAT</label>
                   <select value={formData.vatMode}
                     onChange={(e) => setFormData(prev => ({ ...prev, vatMode: e.target.value, vatRate: e.target.value === 'vat' ? prev.vatRate : 0 }))}
@@ -789,7 +843,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                     />
                     <input
                       type="number"
-                      placeholder="Unit Price (PKR)"
+                      placeholder={`Unit Price (${formData.currency})`}
                       min="0"
                       value={item.unitPricePKR}
                       onChange={(e) => handleItemChange(idx, 'unitPricePKR', e.target.value)}
@@ -797,7 +851,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                       style={{ padding: '7px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', textAlign: 'right' }}
                     />
                     <div style={{ textAlign: 'right', fontWeight: 700, color: '#2563EB', fontSize: '0.85rem' }}>
-                      {formatPKR(item.totalPricePKR)}
+                      {formatMoney(item.totalPricePKR, formData.currency)}
                     </div>
                     {formData.items.length > 1 && (
                       <button type="button" onClick={() => removeItem(idx)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer' }}>
@@ -811,8 +865,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
               {/* Total & Submit */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748B' }}>Subtotal {formatPKR(calculateSubtotalPKR())} · VAT {formatPKR(calculateVatPKR())}</div>
-                  Total PO Amount: <span style={{ color: '#2563EB' }}>{formatPKR(calculateTotalPKR())}</span>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748B' }}>Subtotal {formatMoney(calculateSubtotalPKR(), formData.currency)} · VAT {formatMoney(calculateVatPKR(), formData.currency)}</div>
+                  Total PO Amount: <span style={{ color: '#2563EB' }}>{formatMoney(calculateTotalPKR(), formData.currency)}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button type="button" onClick={() => setShowModal(false)} style={{ backgroundColor: '#F1F5F9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 18px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
@@ -870,6 +924,11 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                     onChange={(e) => setEditFormData(prev => ({ ...prev, paymentTerms: e.target.value }))}
                     style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem' }}
                   />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Currency / Rate to PKR</label>
+                  <input value={`${editPo.currency || 'PKR'} / ${editPo.exchangeRateToPKR || (editPo.currency === 'PKR' ? 1 : 'not set')}`} readOnly style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F1F5F9', fontSize: '0.9rem' }} />
                 </div>
 
                 <div>
@@ -939,7 +998,7 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                       style={{ padding: '7px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', textAlign: 'right' }}
                     />
                     <div style={{ textAlign: 'right', fontWeight: 700, color: '#2563EB', fontSize: '0.85rem' }}>
-                      {formatPKR(item.totalPricePKR)}
+                      {formatMoney(item.totalPricePKR, editPo.currency)}
                     </div>
                     {editFormData.items.length > 1 && (
                       <button type="button" onClick={() => removeEditItem(idx)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer' }}>
@@ -952,8 +1011,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
                 <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#0F172A' }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748B' }}>Subtotal {formatPKR(calculateEditSubtotalPKR())} · VAT {formatPKR(calculateEditVatPKR())}</div>
-                  Updated Total: <span style={{ color: '#2563EB' }}>{formatPKR(calculateEditSubtotalPKR() + calculateEditVatPKR())}</span>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: '#64748B' }}>Subtotal {formatMoney(calculateEditSubtotalPKR(), editPo.currency)} · VAT {formatMoney(calculateEditVatPKR(), editPo.currency)}</div>
+                  Updated Total: <span style={{ color: '#2563EB' }}>{formatMoney(calculateEditSubtotalPKR() + calculateEditVatPKR(), editPo.currency)}</span>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
                   <button type="button" onClick={() => setEditPo(null)} style={{ backgroundColor: '#F1F5F9', color: '#475569', border: 'none', borderRadius: '8px', padding: '10px 18px', fontWeight: 600, cursor: 'pointer' }}>Cancel</button>
@@ -984,6 +1043,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
               <div><strong>Issuing Company:</strong> {companyName(viewPo)}</div>
               <div><strong>Linked Sales Order:</strong> {viewPo.salesOrderNumber || 'None'}</div>
               <div><strong>Payment Terms:</strong> {viewPo.paymentTerms || 'LC at Sight'}</div>
+              <div><strong>Currency:</strong> {viewPo.currency || 'PKR'}</div>
+              <div><strong>Rate to PKR:</strong> {viewPo.exchangeRateToPKR || (viewPo.currency === 'PKR' ? 1 : 'not set')}</div>
               {viewPo.notes && <div style={{ gridColumn: 'span 2' }}><strong>Notes:</strong> {viewPo.notes}</div>}
             </div>
 
@@ -992,8 +1053,8 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                 <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
                   <th style={{ padding: '8px 12px', textAlign: 'left' }}>Item</th>
                   <th style={{ padding: '8px 12px', textAlign: 'center' }}>Qty</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Unit Price (PKR)</th>
-                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total (PKR)</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Unit Price ({viewPo.currency || 'PKR'})</th>
+                  <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total ({viewPo.currency || 'PKR'})</th>
                 </tr>
               </thead>
               <tbody>
@@ -1001,20 +1062,23 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                   <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
                     <td style={{ padding: '10px 12px', fontWeight: 600 }}>{item.productName}</td>
                     <td style={{ padding: '10px 12px', textAlign: 'center' }}>{item.quantity}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatPKR(item.unitPrice || item.unitPricePKR)}</td>
-                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>{formatPKR(item.totalAmount || item.totalPricePKR)}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatMoney(item.unitPrice || item.unitPricePKR, viewPo.currency)}</td>
+                    <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>{formatMoney(item.totalAmount || item.totalPricePKR, viewPo.currency)}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
 
             <div style={{ backgroundColor: '#EFF6FF', border: '1px solid #BFDBFE', padding: '12px 16px', borderRadius: '8px', color: '#0F172A', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '4px' }}><span>Subtotal</span><span>{formatPKR(viewPo.subtotal)}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '6px' }}><span>VAT ({Number(viewPo.vatRate || 0)}%)</span><span>{formatPKR(viewPo.vatAmount)}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}><span>Total Global PO Value:</span><span style={{ color: '#2563EB' }}>{formatPKR(viewPo.totalAmount || viewPo.totalAmountPKR)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '4px' }}><span>Subtotal</span><span>{formatMoney(viewPo.subtotal, viewPo.currency)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', color: '#475569', marginBottom: '6px' }}><span>VAT ({Number(viewPo.vatRate || 0)}%)</span><span>{formatMoney(viewPo.vatAmount, viewPo.currency)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800 }}><span>Total Global PO Value:</span><span style={{ color: '#2563EB' }}>{formatMoney(viewPo.totalAmount || viewPo.totalAmountPKR, viewPo.currency)}</span></div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              {currentUser?.role === 'admin' && viewPo.currency && viewPo.currency !== 'PKR' && (
+                <button onClick={() => handleCorrectExchangeRate(viewPo)} style={{ backgroundColor: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer' }}>Correct Rate</button>
+              )}
               <button
                 onClick={() => handleDownloadPDF(viewPo)}
                 style={{ backgroundColor: '#F8FAFC', color: '#0F172A', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
