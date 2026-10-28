@@ -12,7 +12,8 @@ test('Supplier PO expenses expose separate add and edit/delete capabilities', as
   const source = await readSource('src/components/SupplierPOExpenses.jsx');
   assert.match(source, /canAdd:\s*canAddProp/);
   assert.match(source, /canEditDelete:\s*canEditDeleteProp/);
-  assert.match(source, /\['support', 'finance', 'purchaser', 'admin'\]\.includes\(role\)/);
+  assert.match(source, /\['support', 'finance', 'admin'\]\.includes\(role\)/);
+  assert.doesNotMatch(source, /\['support', 'finance', 'purchaser', 'admin'\]\.includes\(role\)/);
   assert.match(source, /\['finance', 'admin'\]\.includes\(role\)/);
   assert.match(source, /\{canEditDelete &&/);
   assert.match(source, /\{\(editingId \? canEditDelete : canAdd\) &&/);

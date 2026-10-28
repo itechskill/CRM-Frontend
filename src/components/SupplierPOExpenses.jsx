@@ -64,7 +64,7 @@ export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddPro
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const role = getUser()?.role;
-  const canAdd = canAddProp ?? ['support', 'finance', 'purchaser', 'admin'].includes(role);
+  const canAdd = canAddProp ?? ['support', 'finance', 'admin'].includes(role);
   const canEditDelete = canEditDeleteProp ?? ['finance', 'admin'].includes(role);
 
   const load = async () => {

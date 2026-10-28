@@ -3,7 +3,6 @@ import { Globe, Plus, Search, Trash2, X, Eye, Edit3, Plane, CheckCircle2 } from 
 import { apiRequest } from '../../utils/api';
 import IssuingCompanySelect from '../../components/IssuingCompanySelect';
 import { DOCUMENT_TYPES, companyName, defaultCompanyCode } from '../../utils/companies';
-import SupplierPOExpensesModal from '../../components/SupplierPOExpenses';
 
 export default function GlobalPurchaserPOsView({ searchQuery }) {
   const [pos, setPos] = useState([]);
@@ -20,7 +19,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
   const [filterText, setFilterText] = useState('');
   const [linkedOrder, setLinkedOrder] = useState(null);
   const [toast, setToast] = useState('');
-  const [expensePo, setExpensePo] = useState(null);
 
   // Create PO Form State
   const [formData, setFormData] = useState({
@@ -601,7 +599,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                       >
                         <Eye size={13} /> View
                       </button>
-                      <button onClick={() => setExpensePo(po)} style={{ background: '#FAF5FF', border: '1px solid #DDD6FE', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, color: '#6D28D9', cursor: 'pointer' }}>Expenses</button>
                       {!hasMovedToLogistics(po) && (
                         <>
                           <button
@@ -1001,7 +998,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
-              <button onClick={() => { setExpensePo(viewPo); setViewPo(null); }} style={{ backgroundColor: '#FAF5FF', color: '#6D28D9', border: '1px solid #DDD6FE', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer' }}>Expenses</button>
               <button
                 onClick={() => {
                   const target = viewPo;
@@ -1018,7 +1014,6 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
         </div>
       )}
 
-      {expensePo && <SupplierPOExpensesModal po={expensePo} onClose={() => setExpensePo(null)} onChanged={fetchData} />}
 
     </div>
   );
