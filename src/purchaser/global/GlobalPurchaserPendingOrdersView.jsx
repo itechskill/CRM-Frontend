@@ -3,6 +3,8 @@ import { Globe, Plus, Search, Eye, RefreshCw, CheckCircle2, ShoppingBag, X, Arro
 import { apiRequest } from '../../utils/api';
 import IssuingCompanySelect from '../../components/IssuingCompanySelect';
 import { DOCUMENT_TYPES, companyName, defaultCompanyCode } from '../../utils/companies';
+import useExchangeRates from '../../hooks/useExchangeRates';
+import { SUPPORTED_CURRENCIES, exchangeRateFor } from '../../utils/exchangeRates';
 
 export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNavigateTab }) {
   const [orders, setOrders] = useState([]);
@@ -20,10 +22,13 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
     supplierCountry: 'China',
     vatMode: 'none',
     vatRate: 0,
+    currency: 'PKR',
     paymentTerms: 'LC at Sight',
     items: [],
     remarks: ''
   });
+  const exchangeRates = useExchangeRates();
+  const selectedExchangeRate = exchangeRateFor(exchangeRates, formData.currency);
 
   const fetchData = async () => {
     setLoading(true);
@@ -75,6 +80,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
       supplierCountry: 'China',
       vatMode: 'none',
       vatRate: 0,
+      currency: 'PKR',
       paymentTerms: 'LC at Sight',
       items: orderItems,
       remarks: `International PO for Sales Order ${order.orderNumber || order.orderReference}`
@@ -153,6 +159,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
         items: formData.items,
         subtotal: calculateSubtotal(),
         vatRate: formData.vatMode === 'vat' ? Math.max(0, Number(formData.vatRate) || 0) : 0,
+        currency: formData.currency,
         totalAmountPKR: calculateTotal(),
         notes: formData.remarks
       };
@@ -377,6 +384,17 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                 </div>
 
                 <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Currency</label>
+                  <select value={formData.currency} onChange={e => setFormData(prev => ({ ...prev, currency: e.target.value }))} style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1' }}>
+                    {SUPPORTED_CURRENCIES.map(currency => <option key={currency}>{currency}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>Admin rate to PKR</label>
+                  <input value={selectedExchangeRate ?? 'Not set'} readOnly style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', background: '#F1F5F9' }} />
+                </div>
+
+                <div>
                   <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                     Select Existing Overseas Vendor
                   </label>
@@ -456,7 +474,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
               <div style={{ marginBottom: '18px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                   <label style={{ fontSize: '0.85rem', fontWeight: 800, color: '#1E3A8A' }}>
-                    PO Items &amp; Cost Breakdown (PKR)
+                    PO Items &amp; Cost Breakdown ({formData.currency})
                   </label>
                   <button type="button" onClick={addItem} style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', color: '#2563EB', borderRadius: '6px', padding: '4px 10px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer' }}>
                     + Add Item
@@ -469,8 +487,8 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                       <tr>
                         <th style={{ padding: '8px 12px' }}>Product / Description</th>
                         <th style={{ padding: '8px 12px', width: '90px' }}>Qty</th>
-                        <th style={{ padding: '8px 12px', width: '130px' }}>Unit Price (PKR)</th>
-                        <th style={{ padding: '8px 12px', width: '140px' }}>Total (PKR)</th>
+                        <th style={{ padding: '8px 12px', width: '130px' }}>Unit Price ({formData.currency})</th>
+                        <th style={{ padding: '8px 12px', width: '140px' }}>Total ({formData.currency})</th>
                         <th style={{ padding: '8px 12px', width: '40px' }}></th>
                       </tr>
                     </thead>
@@ -505,7 +523,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                             />
                           </td>
                           <td style={{ padding: '6px 10px', fontWeight: 700, color: '#2563EB' }}>
-                            Rs. {Number(it.totalPricePKR || 0).toLocaleString()}
+                            {formData.currency} {Number(it.totalPricePKR || 0).toLocaleString()}
                           </td>
                           <td style={{ padding: '6px 10px', textAlign: 'center' }}>
                             {formData.items.length > 1 && (
@@ -521,9 +539,9 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
                 </div>
 
                 <div style={{ textAlign: 'right', marginTop: '10px', fontSize: '0.9rem', color: '#475569' }}>
-                  Subtotal: PKR {calculateSubtotal().toLocaleString()} &nbsp;|&nbsp; VAT: PKR {calculateVat().toLocaleString()}
+                  Subtotal: {formData.currency} {calculateSubtotal().toLocaleString()} &nbsp;|&nbsp; VAT: {formData.currency} {calculateVat().toLocaleString()}
                   <div style={{ fontSize: '0.98rem', fontWeight: 800, color: '#0F172A', marginTop: '3px' }}>
-                    Total PO Amount: <span style={{ color: '#2563EB' }}>PKR {calculateTotal().toLocaleString()}</span>
+                    Total PO Amount: <span style={{ color: '#2563EB' }}>{formData.currency} {calculateTotal().toLocaleString()}</span>
                   </div>
                 </div>
               </div>

@@ -3,10 +3,12 @@ import { Plus, Search, Trash2, X, Eye, Edit3, CheckCircle2, Download } from 'luc
 import { apiRequest } from '../../utils/api';
 import { companyName } from '../../utils/companies';
 import { downloadSupplierPoPdf } from '../../utils/supplierPoPdf';
+import { getUser } from '../../utils/authStorage';
 
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
 export default function LocalPurchaserPOsView({ searchQuery }) {
+  const currentUser = getUser();
   const [pos, setPos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [viewPo, setViewPo] = useState(null);
@@ -163,7 +165,20 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
     }
   };
 
-  const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  const formatMoney = (num, currency = 'PKR') => `${currency || 'PKR'} ${Number(num || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+  const handleCorrectExchangeRate = async (po) => {
+    const rawRate = window.prompt(`Correct ${po.currency} rate to PKR for ${po.poNumber}:`, po.exchangeRateToPKR || '');
+    if (rawRate === null) return;
+    const rate = Number(rawRate);
+    if (!Number.isFinite(rate) || rate <= 0) return alert('Enter a positive exchange rate to PKR.');
+    const note = window.prompt('Reason / note (optional):', '') ?? '';
+    const response = await apiRequest(`/api/purchaser/pos/${po._id}/exchange-rate`, 'PATCH', { exchangeRateToPKR: rate, note });
+    if (!response.success) return alert(response.message || 'Unable to correct the exchange rate.');
+    setViewPo(response.data?.data || null);
+    setToast(`Exchange rate corrected for ${po.poNumber}.`);
+    fetchData();
+  };
 
   const searchVal = (filterText || searchQuery || '').toLowerCase();
   const filtered = pos.filter(po =>
@@ -210,7 +225,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Linked Order</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Issued Date</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Items Count</th>
-              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Total (PKR)</th>
+              <th style={{ padding: '12px 20px', fontWeight: 600 }}>Total / Currency</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Status</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Supplier GRN Ref</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Internal GRN</th>
@@ -237,7 +252,8 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                   </td>
                   <td style={{ padding: '14px 20px', color: '#64748B' }}>{po.items ? po.items.length : 0} items</td>
                   <td style={{ padding: '14px 20px', fontWeight: 700, color: '#0F172A' }}>
-                    {formatPKR(po.totalAmount || po.totalAmountPKR || 0)}
+                    {formatMoney(po.totalAmount || po.totalAmountPKR || 0, po.currency)}
+                    <span style={{ display: 'block', fontSize: '0.7rem', color: '#64748B' }}>Rate to PKR: {po.exchangeRateToPKR || (po.currency === 'PKR' ? 1 : 'not set')}</span>
                   </td>
                   <td style={{ padding: '14px 20px' }}>
                     <span style={{
@@ -333,6 +349,11 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                   />
                 </div>
 
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Currency / Rate to PKR</label>
+                  <input value={`${editPo.currency || 'PKR'} / ${editPo.exchangeRateToPKR || (editPo.currency === 'PKR' ? 1 : 'not set')}`} readOnly style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', background: '#F8FAFC' }} />
+                </div>
+
                 <div style={{ gridColumn: 'span 2' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Notes / Remarks</label>
                   <input
@@ -383,7 +404,7 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                       style={{ padding: '7px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem', textAlign: 'right' }}
                     />
                     <div style={{ textAlign: 'right', fontWeight: 700, color: '#059669', fontSize: '0.85rem' }}>
-                      {formatPKR(item.totalPricePKR)}
+                      {formatMoney(item.totalPricePKR, editPo.currency)}
                     </div>
                     {editFormData.items.length > 1 && (
                       <button type="button" onClick={() => removeEditItem(idx)} style={{ background: 'none', border: 'none', color: '#EF4444', cursor: 'pointer' }}>
@@ -400,9 +421,9 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                   <input type="number" min="0" step="0.01" value={editFormData.gstRate} onChange={(e) => setEditFormData(prev => ({ ...prev, gstRate: e.target.value }))} style={{ width: '100%', padding: '9px', borderRadius: '8px', border: '1px solid #CBD5E1' }} />
                 </div>
                 <div style={{ background: '#EFF6FF', borderRadius: '8px', padding: '10px 14px', fontSize: '0.86rem' }}>
-                  <div>Subtotal: <strong>{formatPKR(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0))}</strong></div>
-                  <div>GST: <strong>{formatPKR(calculateGST(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0), editFormData.gstRate))}</strong></div>
-                  <div>Total including GST: <strong>{formatPKR(roundMoney(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0) + calculateGST(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0), editFormData.gstRate)))}</strong></div>
+                  <div>Subtotal: <strong>{formatMoney(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0), editPo.currency)}</strong></div>
+                  <div>GST: <strong>{formatMoney(calculateGST(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0), editFormData.gstRate), editPo.currency)}</strong></div>
+                  <div>Total including GST: <strong>{formatMoney(roundMoney(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0) + calculateGST(editFormData.items.reduce((s, it) => s + (Number(it.totalPricePKR) || 0), 0), editFormData.gstRate)), editPo.currency)}</strong></div>
                 </div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', borderTop: '1px solid #E2E8F0', paddingTop: '16px' }}>
@@ -440,6 +461,8 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
               <div><strong>Supplier GRN Reference:</strong> {viewPo.goodsReceiptReference || '-'}</div>
               <div><strong>Internal GRN:</strong> {viewPo.supportVerifiedGrn?.grnNumber || '-'}</div>
               <div><strong>Expected Delivery:</strong> {viewPo.expectedDeliveryDate ? new Date(viewPo.expectedDeliveryDate).toLocaleDateString() : 'N/A'}</div>
+              <div><strong>Currency:</strong> {viewPo.currency || 'PKR'}</div>
+              <div><strong>Rate to PKR:</strong> {viewPo.exchangeRateToPKR || (viewPo.currency === 'PKR' ? 1 : 'not set')}</div>
               {viewPo.notes && <div style={{ gridColumn: 'span 2' }}><strong>Notes:</strong> {viewPo.notes}</div>}
             </div>
 
@@ -449,8 +472,8 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                   <tr style={{ backgroundColor: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
                     <th style={{ padding: '8px 12px', textAlign: 'left' }}>Item</th>
                     <th style={{ padding: '8px 12px', textAlign: 'center' }}>Qty</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'right' }}>Unit Price (PKR)</th>
-                    <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total (PKR)</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'right' }}>Unit Price ({viewPo.currency || 'PKR'})</th>
+                    <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total ({viewPo.currency || 'PKR'})</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -458,8 +481,8 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                     <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
                       <td style={{ padding: '10px 12px', fontWeight: 600 }}>{item.productName}</td>
                       <td style={{ padding: '10px 12px', textAlign: 'center' }}>{item.quantity}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatPKR(item.unitPrice || item.unitPricePKR)}</td>
-                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>{formatPKR(item.totalAmount || item.totalPricePKR)}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right' }}>{formatMoney(item.unitPrice || item.unitPricePKR, viewPo.currency)}</td>
+                      <td style={{ padding: '10px 12px', textAlign: 'right', fontWeight: 700 }}>{formatMoney(item.totalAmount || item.totalPricePKR, viewPo.currency)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -467,12 +490,15 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
             </div>
 
             <div style={{ backgroundColor: '#F0FDF4', border: '1px solid #A7F3D0', padding: '12px 16px', borderRadius: '8px', color: '#0F172A', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal:</span><strong>{formatPKR(viewPo.subtotal || ((viewPo.gstRate || viewPo.gstAmount) ? 0 : viewPo.totalAmount))}</strong></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST ({Number(viewPo.gstRate || 0).toFixed(2)}%):</span><strong>{formatPKR(viewPo.gstAmount || 0)}</strong></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, marginTop: '4px' }}><span>Total including GST:</span><span style={{ color: '#059669' }}>{formatPKR(viewPo.total || viewPo.totalAmount || viewPo.totalAmountPKR)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal:</span><strong>{formatMoney(viewPo.subtotal || ((viewPo.gstRate || viewPo.gstAmount) ? 0 : viewPo.totalAmount), viewPo.currency)}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>GST ({Number(viewPo.gstRate || 0).toFixed(2)}%):</span><strong>{formatMoney(viewPo.gstAmount || 0, viewPo.currency)}</strong></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 800, marginTop: '4px' }}><span>Total including GST:</span><span style={{ color: '#059669' }}>{formatMoney(viewPo.total || viewPo.totalAmount || viewPo.totalAmountPKR, viewPo.currency)}</span></div>
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              {currentUser?.role === 'admin' && viewPo.currency && viewPo.currency !== 'PKR' && (
+                <button onClick={() => handleCorrectExchangeRate(viewPo)} style={{ backgroundColor: '#FFF7ED', color: '#C2410C', border: '1px solid #FED7AA', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer' }}>Correct Rate</button>
+              )}
               <button
                 onClick={() => handleDownloadPDF(viewPo)}
                 style={{ backgroundColor: '#F8FAFC', color: '#0F172A', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}

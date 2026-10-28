@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { DollarSign, Edit3, Trash2, X } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { getUser } from '../utils/authStorage';
+import useExchangeRates from '../hooks/useExchangeRates';
+import { exchangeRateFor, SUPPORTED_CURRENCIES } from '../utils/exchangeRates';
 
 const emptyExpense = () => ({
   category: 'Freight', description: '', calculationType: 'Fixed', amount: '', percentage: '',
@@ -24,6 +26,7 @@ async function filesToAttachments(fileList) {
 }
 
 export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddProp, canEditDelete: canEditDeleteProp, onChanged }) {
+  const exchangeRates = useExchangeRates();
   const [record, setRecord] = useState(null);
   const [categories, setCategories] = useState([]);
   const [form, setForm] = useState(emptyExpense());
@@ -38,6 +41,7 @@ export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddPro
   const baseCanEditDelete = canEditDeleteProp ?? ['finance', 'admin'].includes(role);
   const canAdd = baseCanAdd && (!costingCompleted || role === 'admin');
   const canEditDelete = baseCanEditDelete && (!costingCompleted || role === 'admin');
+  const selectedAdminRate = exchangeRateFor(exchangeRates, form.currency);
 
   const load = async () => {
     const [poResult, categoryResult] = await Promise.all([
@@ -67,6 +71,11 @@ export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddPro
   const edit = expense => {
     setEditingId(expense._id);
     setForm({ ...expense, amount: Number(expense.amountCents || 0) / 100, attachments: expense.attachments || [] });
+  };
+  const changeCurrency = currency => {
+    const normalized = String(currency || 'PKR').toUpperCase();
+    const rate = normalized === 'PKR' ? 1 : exchangeRateFor(exchangeRates, normalized);
+    setForm({ ...form, currency: normalized, exchangeRateToPKR: rate ?? '' });
   };
   const remove = async expense => {
     if (!window.confirm(`Remove ${expense.category}? The line and its history will be retained.`)) return;
@@ -140,8 +149,8 @@ export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddPro
           <label>Description<input style={inputStyle} value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></label>
           <label>Calculation<select style={inputStyle} value={form.calculationType} onChange={e => setForm({ ...form, calculationType: e.target.value })}><option>Fixed</option><option>Percentage</option></select></label>
           <label>{form.calculationType === 'Percentage' ? 'Percentage' : 'Amount'}<input required type="number" min="0" step="0.01" style={inputStyle} value={form.calculationType === 'Percentage' ? form.percentage : form.amount} onChange={e => setForm({ ...form, [form.calculationType === 'Percentage' ? 'percentage' : 'amount']: e.target.value })} /></label>
-          <label>Currency<input disabled={form.calculationType === 'Percentage'} style={inputStyle} value={form.currency} onChange={e => setForm({ ...form, currency: e.target.value.toUpperCase() })} /></label>
-          <label>Exchange rate to PKR<input disabled={form.currency === 'PKR' || form.calculationType === 'Percentage'} required type="number" min="0.000001" step="0.000001" style={inputStyle} value={form.exchangeRateToPKR} onChange={e => setForm({ ...form, exchangeRateToPKR: e.target.value })} /></label>
+          <label>Currency<select disabled={form.calculationType === 'Percentage'} style={inputStyle} value={form.currency} onChange={e => changeCurrency(e.target.value)}>{SUPPORTED_CURRENCIES.map(currency => <option key={currency} value={currency}>{currency}</option>)}</select></label>
+          <label>Exchange rate to PKR<input disabled={form.currency === 'PKR' || form.calculationType === 'Percentage' || role !== 'admin' || !editingId} required type="number" min="0.000001" step="0.000001" style={inputStyle} value={form.exchangeRateToPKR || (selectedAdminRate ?? '')} onChange={e => setForm({ ...form, exchangeRateToPKR: e.target.value })} /><small style={{ color: '#64748B' }}>{form.currency === 'PKR' ? 'Fixed at 1' : editingId && role === 'admin' ? 'Admin correction is recorded in history.' : selectedAdminRate ? 'Copied from the current Admin rate when added.' : `Exchange rate for ${form.currency} is not set by Admin.`}</small></label>
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 22 }}><input type="checkbox" checked={form.taxable} onChange={e => setForm({ ...form, taxable: e.target.checked })} /> Taxable</label>
           <label>Remarks<input style={inputStyle} value={form.remarks} onChange={e => setForm({ ...form, remarks: e.target.value })} /></label>
           <label style={{ gridColumn: 'span 2' }}>Attachments (max 3 files, 3 MB each)<input type="file" multiple style={inputStyle} onChange={async e => { try { setForm({ ...form, attachments: await filesToAttachments(e.target.files) }); } catch (error) { alert(error.message); e.target.value = ''; } }} />{form.attachments?.length > 0 && <button type="button" onClick={() => setForm({ ...form, attachments: [] })}>Clear {form.attachments.length} attachment(s)</button>}</label>

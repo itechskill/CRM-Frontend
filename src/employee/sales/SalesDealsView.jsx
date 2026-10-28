@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { apiRequest } from '../../utils/api';
 import {
   Plus,
@@ -18,8 +18,6 @@ import {
   CheckCircle2,
   LayoutGrid,
   List,
-  Building,
-  User,
   ArrowUpRight,
   Download,
   FileSpreadsheet
@@ -29,8 +27,6 @@ import autoTable from 'jspdf-autotable';
 import './SalesViews.css';
 import IssuingCompanySelect from '../../components/IssuingCompanySelect';
 import { DOCUMENT_TYPES } from '../../utils/companies';
-import { getUser } from '../../utils/authStorage';
-import { initialsFromName, sanitizeQuotationCode } from '../../utils/quotationNumber';
 import { DEFAULT_TERMS } from '../../utils/quotationPdf';
 
 const STAGE_COLORS = {
@@ -70,7 +66,6 @@ const EMPTY_DEAL = {
 };
 
 export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotations }) {
-  const currentUser = getUser();
   const [deals, setDeals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stageFilter, setStageFilter] = useState('all');
@@ -90,7 +85,6 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const [quoteTarget, setQuoteTarget] = useState(null);
   const [quoteCompanyCode, setQuoteCompanyCode] = useState('');
   const [quoteDetails, setQuoteDetails] = useState({
-    quotationCode: initialsFromName(currentUser?.fullName),
     sku: '',
     description: '',
     taxPercentage: 18,
@@ -106,7 +100,6 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
     setQuoteTarget(deal);
     setQuoteCompanyCode('');
     setQuoteDetails({
-      quotationCode: initialsFromName(currentUser?.fullName),
       sku: '',
       description: deal.requirements || deal.title || 'Quotation per Customer Requirement',
       taxPercentage: 18,
@@ -204,7 +197,6 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
     try {
       const quotePayload = {
         issuingCompanyCode,
-        quotationCode: sanitizeQuotationCode(quoteDetails.quotationCode),
         clientName: deal.clientName,
         dealId: deal._id,
         productSummary: quoteDetails.description,
@@ -928,9 +920,8 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
               </div>
               <div className="sv-grid-2">
                 <div className="sv-field">
-                  <label>Quotation Code *</label>
-                  <input value={quoteDetails.quotationCode} onChange={e => setQuoteDetails(p => ({ ...p, quotationCode: sanitizeQuotationCode(e.target.value) }))} maxLength={12} required />
-                  <small style={{ color: '#64748B' }}>QO-####-{sanitizeQuotationCode(quoteDetails.quotationCode) || 'CODE'}; number assigned on save</small>
+                  <label>Quotation Number</label>
+                  <input value="" placeholder="Assigned on save (QO-000001)" readOnly />
                 </div>
                 <div className="sv-field">
                   <label>GST (%)</label>
