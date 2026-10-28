@@ -409,6 +409,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
     if (inv.dueDate) {
       doc.text(`Due Date: ${new Date(inv.dueDate).toLocaleDateString('en-GB')}`, 130, 48);
     }
+    if (inv.poReference) doc.text(`PO Reference: ${inv.poReference}`, 14, 54, { maxWidth: 180 });
 
     const itemsList = inv.items && inv.items.length > 0
       ? inv.items
@@ -431,7 +432,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
     }
 
     autoTable(doc, {
-      startY: 55,
+      startY: inv.poReference ? 61 : 55,
       head: [['Description', 'Qty', 'Unit Price (PKR)', 'Total (PKR)']],
       body: rows,
       theme: 'grid',
@@ -1564,6 +1565,10 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                     <div>
                       <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem' }}>Delivery Note #:</span>
                       <strong style={{ color: '#0284C7' }}>{viewInvoice.deliveryNoteNumber || '—'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem' }}>PO Reference:</span>
+                      <strong style={{ color: '#0F172A' }}>{viewInvoice.poReference || '—'}</strong>
                     </div>
                     <div>
                       <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem' }}>Issue Date:</span>

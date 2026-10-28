@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { User, ShieldCheck, UserX, Search, Plus, MoreHorizontal, Trash2, Pencil, Eye, KeyRound, X, EyeOff, Check, AlertCircle } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import EmployeeDirectoryModal from '../components/EmployeeDirectoryModal';
+import { canEditPriceRequestLabelForRole, normalizeUserRole } from './priceRequestLabelRoles';
 import './UsersView.css';
 
 const roleOptions = [
@@ -10,6 +11,8 @@ const roleOptions = [
   { label: 'Administration', value: 'administration' },
   { label: 'HR Manager', value: 'hr_manager' },
   { label: 'Sales Manager', value: 'sales_manager' },
+  { label: 'Sales Member', value: 'sales_member' },
+  { label: 'Sales Rep', value: 'sales_rep' },
   { label: 'Project Manager', value: 'project_manager' },
   { label: 'Accountant', value: 'accountant' },
   { label: 'Support', value: 'support' },
@@ -38,7 +41,7 @@ const departmentOptions = [
 
 function EditUserModal({ user, onClose, onSave }) {
   const [email, setEmail] = useState(user.email || '');
-  const [role, setRole] = useState(user.role || 'employee');
+  const [role, setRole] = useState(normalizeUserRole(user.role || 'employee'));
   const [purchaserSubDept, setPurchaserSubDept] = useState(user.purchaserSubDept || 'Local');
   const [department, setDepartment] = useState(user.department || '');
   const [status, setStatus] = useState(user.status === 'Active' || user.status === 'active' ? 'active' : 'suspended');
@@ -81,7 +84,7 @@ function EditUserModal({ user, onClose, onSave }) {
       }
 
       // 2. Role & Sub-Department Update
-      if (role !== user.role || (role === 'purchaser' && purchaserSubDept !== user.purchaserSubDept)) {
+      if (role !== normalizeUserRole(user.role) || (role === 'purchaser' && purchaserSubDept !== user.purchaserSubDept)) {
         const rRes = await apiRequest(`/api/admin/users/${targetId}/role`, {
           method: 'PATCH',
           body: JSON.stringify({ role, purchaserSubDept: role === 'purchaser' ? purchaserSubDept : undefined })
@@ -123,7 +126,7 @@ function EditUserModal({ user, onClose, onSave }) {
       }
 
       const normalizedPriceRequestLabel = priceRequestLabel.trim();
-      if (normalizedPriceRequestLabel !== (user.priceRequestLabel || '')) {
+      if (canEditPriceRequestLabelForRole(role) && normalizedPriceRequestLabel !== (user.priceRequestLabel || '')) {
         const labelRes = await apiRequest(`/api/admin/users/${targetId}/price-request-label`, {
           method: 'PATCH',
           body: JSON.stringify({ priceRequestLabel: normalizedPriceRequestLabel })
@@ -238,20 +241,22 @@ function EditUserModal({ user, onClose, onSave }) {
               </select>
             </div>
 
-            <div className="form-group">
-              <label>Price Request label (optional)</label>
-              <input
-                className="form-input"
-                value={priceRequestLabel}
-                onChange={(e) => setPriceRequestLabel(e.target.value)}
-                maxLength={80}
-                placeholder="e.g. DELL Configurator"
-                style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '10px 12px', fontSize: '0.88rem' }}
-              />
-              <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
-                Only labelled active users appear in Price Request person selectors.
-              </span>
-            </div>
+            {canEditPriceRequestLabelForRole(role) && (
+              <div className="form-group" data-testid="price-request-label-field">
+                <label>Price Request label (optional)</label>
+                <input
+                  className="form-input"
+                  value={priceRequestLabel}
+                  onChange={(e) => setPriceRequestLabel(e.target.value)}
+                  maxLength={80}
+                  placeholder="e.g. DELL Configurator"
+                  style={{ border: '1px solid #CBD5E1', borderRadius: '8px', padding: '10px 12px', fontSize: '0.88rem' }}
+                />
+                <span style={{ fontSize: '0.72rem', color: '#64748B' }}>
+                  Only labelled active users appear in Price Request person selectors.
+                </span>
+              </div>
+            )}
 
             {['employee', 'sales_member', 'sales_rep', 'sales_person', 'sales_manager'].includes(role) && (
               <label style={{ display: 'flex', alignItems: 'flex-start', gap: '10px', padding: '12px', border: '1px solid #CBD5E1', borderRadius: '8px', cursor: 'pointer' }}>

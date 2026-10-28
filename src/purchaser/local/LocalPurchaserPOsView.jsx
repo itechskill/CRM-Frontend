@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Trash2, X, Eye, Edit3, CheckCircle2 } from 'lucide-react';
+import { Plus, Search, Trash2, X, Eye, Edit3, CheckCircle2, Download } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import { companyName } from '../../utils/companies';
+import { downloadSupplierPoPdf } from '../../utils/supplierPoPdf';
 
 const roundMoney = (value) => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
@@ -14,6 +15,15 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
   const [deletingId, setDeletingId] = useState(null);
   const [filterText, setFilterText] = useState('');
   const [toast, setToast] = useState('');
+
+  const handleDownloadPDF = async po => {
+    try {
+      await downloadSupplierPoPdf(po);
+    } catch (error) {
+      console.error('Local Supplier PO PDF error:', error);
+      alert('Unable to generate the Supplier PO PDF.');
+    }
+  };
 
   // Edit PO Form State
   const [editFormData, setEditFormData] = useState({
@@ -257,6 +267,13 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
                         <Eye size={13} /> View
                       </button>
                       <button
+                        onClick={() => handleDownloadPDF(po)}
+                        style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, color: '#0F172A', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        title="Download Supplier PO PDF"
+                      >
+                        <Download size={13} /> PDF
+                      </button>
+                      <button
                         onClick={() => handleOpenEditModal(po)}
                         style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, color: '#1D4ED8', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
                         title="Edit Supplier PO"
@@ -456,6 +473,12 @@ export default function LocalPurchaserPOsView({ searchQuery }) {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                onClick={() => handleDownloadPDF(viewPo)}
+                style={{ backgroundColor: '#F8FAFC', color: '#0F172A', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Download size={14} /> Download PDF
+              </button>
               <button
                 onClick={() => {
                   const target = viewPo;
