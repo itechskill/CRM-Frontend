@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, Plus, Search, Trash2, X, Eye, Edit3, Plane, CheckCircle2 } from 'lucide-react';
+import { Globe, Plus, Search, Trash2, X, Eye, Edit3, Plane, CheckCircle2, Download } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import IssuingCompanySelect from '../../components/IssuingCompanySelect';
 import { DOCUMENT_TYPES, companyName, defaultCompanyCode } from '../../utils/companies';
+import { downloadSupplierPoPdf } from '../../utils/supplierPoPdf';
 
 export default function GlobalPurchaserPOsView({ searchQuery }) {
   const [pos, setPos] = useState([]);
@@ -19,6 +20,15 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
   const [filterText, setFilterText] = useState('');
   const [linkedOrder, setLinkedOrder] = useState(null);
   const [toast, setToast] = useState('');
+
+  const handleDownloadPDF = async po => {
+    try {
+      await downloadSupplierPoPdf(po);
+    } catch (error) {
+      console.error('Global Supplier PO PDF error:', error);
+      alert('Unable to generate the Supplier PO PDF.');
+    }
+  };
 
   // Create PO Form State
   const [formData, setFormData] = useState({
@@ -599,6 +609,13 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
                       >
                         <Eye size={13} /> View
                       </button>
+                      <button
+                        onClick={() => handleDownloadPDF(po)}
+                        style={{ background: '#F8FAFC', border: '1px solid #CBD5E1', padding: '6px 10px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 600, color: '#0F172A', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
+                        title="Download Supplier PO PDF"
+                      >
+                        <Download size={13} /> PDF
+                      </button>
                       {!hasMovedToLogistics(po) && (
                         <>
                           <button
@@ -998,6 +1015,12 @@ export default function GlobalPurchaserPOsView({ searchQuery }) {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '8px' }}>
+              <button
+                onClick={() => handleDownloadPDF(viewPo)}
+                style={{ backgroundColor: '#F8FAFC', color: '#0F172A', border: '1px solid #CBD5E1', borderRadius: '8px', padding: '8px 16px', fontWeight: 700, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <Download size={14} /> Download PDF
+              </button>
               <button
                 onClick={() => {
                   const target = viewPo;

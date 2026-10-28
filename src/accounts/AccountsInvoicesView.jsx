@@ -86,6 +86,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
   const [form, setForm] = useState({
     salesOrderId: '',
     salesOrderNumber: '',
+    poReference: '',
     deliveryNoteId: '',
     deliveryNoteNumber: '',
     clientName: '',
@@ -220,6 +221,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
       deliveryNoteNumber: dnNumber,
       salesOrderId: so?._id || linkedSoId || '',
       salesOrderNumber: soNumber,
+      poReference: so?.customerPONumber || so?.customerPOId?.poNumber || '',
       clientName: dn.clientName || so?.clientName || '',
       customerEmail: so?.clientEmail || '',
       customerPhone: dn.recipientPhone || so?.clientPhone || '',
@@ -266,6 +268,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
       ...prev,
       salesOrderId: so._id,
       salesOrderNumber: so.orderReference || so.orderNumber || '',
+      poReference: so.customerPONumber || so.customerPOId?.poNumber || '',
       deliveryNoteId: '',
       deliveryNoteNumber: '',
       clientName: so.clientName || '',
@@ -356,6 +359,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     setForm({
       salesOrderId: '',
       salesOrderNumber: '',
+      poReference: '',
       deliveryNoteId: '',
       deliveryNoteNumber: '',
       clientName: '',
@@ -386,6 +390,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     setForm({
       salesOrderId: inv.salesOrderId || '',
       salesOrderNumber: inv.salesOrderNumber || '',
+      poReference: inv.poReference || '',
       deliveryNoteId: inv.deliveryNoteId || '',
       deliveryNoteNumber: inv.deliveryNoteNumber || '',
       clientName: inv.clientName || '',
@@ -525,13 +530,14 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     doc.text(`Phone: ${inv.customerPhone || '—'}`, 120, 50);
     doc.text(`Delivery Note: ${inv.deliveryNoteNumber || '—'}`, 120, 56);
     doc.text(`Sales Order: ${inv.salesOrderNumber || '—'}`, 120, 62);
+    if (inv.poReference) doc.text(`PO Reference: ${inv.poReference}`, 14, 62, { maxWidth: 95 });
 
     const tableRows = (inv.items && inv.items.length > 0)
       ? inv.items.map((it, idx) => [idx + 1, it.description, it.quantity, `Rs. ${Number(it.unitPrice).toLocaleString()}`, `Rs. ${Number(it.total).toLocaleString()}`])
       : [[1, inv.description || 'Deliverables', 1, `Rs. ${Number(inv.amount).toLocaleString()}`, `Rs. ${Number(inv.amount).toLocaleString()}`]];
 
     autoTable(doc, {
-      startY: 68,
+      startY: 72,
       head: [['#', 'Item Description', 'Qty', 'Unit Price', 'Total (PKR)']],
       body: tableRows,
       theme: 'grid',
@@ -1237,6 +1243,17 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                       </select>
                     </div>
                   </div>
+                  <div className="ip-field-group" style={{ marginTop: '14px' }}>
+                    <label className="ip-label">PO Reference</label>
+                    <input
+                      type="text"
+                      className="ip-input"
+                      value={form.poReference}
+                      onChange={(e) => setForm({ ...form, poReference: e.target.value })}
+                      maxLength={60}
+                      placeholder="Customer PO number (optional)"
+                    />
+                  </div>
                 </div>
 
                 {/* 4. LINE ITEMS TABLE */}
@@ -1519,6 +1536,10 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                     <div>
                       <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem' }}>Delivery Note #:</span>
                       <strong style={{ color: '#0284C7' }}>{viewInvoice.deliveryNoteNumber || '—'}</strong>
+                    </div>
+                    <div>
+                      <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem' }}>PO Reference:</span>
+                      <strong style={{ color: '#0F172A' }}>{viewInvoice.poReference || '—'}</strong>
                     </div>
                     <div>
                       <span style={{ color: '#64748B', display: 'block', fontSize: '0.75rem' }}>Issue Date:</span>

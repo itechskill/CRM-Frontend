@@ -5,7 +5,15 @@ export const DOCUMENT_TYPES = Object.freeze({
 });
 
 export const COMPANY_OPTIONS = Object.freeze([
-  { code: 'FORTLINE_ENTERPRISES', legalName: 'Fortline Enterprises', letterhead: null, allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO] },
+  {
+    code: 'FORTLINE_ENTERPRISES',
+    legalName: 'Fortline Enterprises',
+    letterhead: {
+      header: '/letterheads/fortline-enterprises-header.png',
+      footer: '/letterheads/fortline-enterprises-footer.png'
+    },
+    allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO]
+  },
   {
     code: 'FORTLINE_PRIVATE_LIMITED',
     legalName: 'Fortline Private Limited',
@@ -15,8 +23,24 @@ export const COMPANY_OPTIONS = Object.freeze([
     },
     allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO]
   },
-  { code: 'HIGH_CLOUD_TRADING_LLC', legalName: 'High Cloud Trading LLC', letterhead: null, allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.GLOBAL_PO] },
-  { code: 'WWTS', legalName: 'Worldwide Techsolutions (WWTS)', letterhead: null, allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO] }
+  {
+    code: 'HIGH_CLOUD_TRADING_LLC',
+    legalName: 'High Cloud Trading LLC',
+    letterhead: {
+      header: '/letterheads/high-cloud-trading-llc-header.png',
+      footer: '/letterheads/high-cloud-trading-llc-footer.png'
+    },
+    allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO]
+  },
+  {
+    code: 'WWTS',
+    legalName: 'Worldwide Techsolutions (WWTS)',
+    letterhead: {
+      header: '/letterheads/wwts-header.png',
+      footer: '/letterheads/wwts-footer.png'
+    },
+    allowedDocumentTypes: [DOCUMENT_TYPES.QUOTATION, DOCUMENT_TYPES.LOCAL_PO, DOCUMENT_TYPES.GLOBAL_PO]
+  }
 ]);
 
 export const companiesFor = (documentType) => COMPANY_OPTIONS.filter(company => company.allowedDocumentTypes.includes(documentType));
