@@ -14,8 +14,10 @@ import {
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import './LogisticsPortal.css';
+import { canViewFullMonetaryData } from '../utils/monetaryVisibility';
 
-export default function LogisticsIncomingOrdersView({ onNavigateTab }) {
+export default function LogisticsIncomingOrdersView({ onNavigateTab, currentUser }) {
+  const showMoney = canViewFullMonetaryData(currentUser);
   const [incomingOrders, setIncomingOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -224,7 +226,7 @@ export default function LogisticsIncomingOrdersView({ onNavigateTab }) {
                   <th style={{ padding: '12px 16px', minWidth: '160px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Issuing Company</th>
                   <th style={{ padding: '12px 16px', minWidth: '150px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Int'l Supplier</th>
                   <th style={{ padding: '12px 16px', minWidth: '130px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Supplier PO #</th>
-                  <th style={{ padding: '12px 16px', minWidth: '120px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Order Amount</th>
+                  {showMoney && <th style={{ padding: '12px 16px', minWidth: '120px', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Order Amount</th>}
                   <th style={{ padding: '12px 16px', minWidth: '140px', textAlign: 'right', color: '#64748B', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Action</th>
                 </tr>
               </thead>
@@ -271,9 +273,9 @@ export default function LogisticsIncomingOrdersView({ onNavigateTab }) {
                         {ord.supplierPO?.poNumber || 'IPO-Pending'}
                       </span>
                     </td>
-                    <td style={{ padding: '14px 16px', fontWeight: 700, color: '#059669' }}>
+                    {showMoney && <td style={{ padding: '14px 16px', fontWeight: 700, color: '#059669' }}>
                       Rs. {Number(ord.netAmount || ord.totalAmount || 0).toLocaleString()}
-                    </td>
+                    </td>}
                     <td style={{ padding: '14px 16px', textAlign: 'right' }}>
                       <button
                         className="sv-btn-primary"

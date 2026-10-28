@@ -972,15 +972,17 @@ export default function App() {
               {activeTab === 'leave' && <SupportLeaveView />}
               {activeTab === 'support_orders' && (
                 <SupportOrdersView
+                  currentUser={currentUser}
                   onNavigateDeliveryNotes={(order) => {
                     setSupportOrderForDN(order);
                     setActiveTab('delivery_notes');
                   }}
                 />
               )}
-              {activeTab === 'inventory' && <SupportInventoryView />}
+              {activeTab === 'inventory' && <SupportInventoryView currentUser={currentUser} />}
               {activeTab === 'delivery_notes' && (
                 <SupportDeliveryNotesView
+                  currentUser={currentUser}
                   initialSelectedOrder={supportOrderForDN}
                   onClearSelectedOrder={() => setSupportOrderForDN(null)}
                 />
@@ -1201,6 +1203,7 @@ export default function App() {
               )}
               {(activeTab === 'incoming' || activeTab === 'incoming_shipments') && (
                 <LogisticsIncomingOrdersView
+                  currentUser={currentUser}
                   onNavigateTab={(tab) => handleSetActiveTab(tab)}
                 />
               )}

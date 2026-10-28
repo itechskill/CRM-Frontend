@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   X,
   Edit2,
-  DollarSign,
   MapPin,
   Truck,
   FileText,
@@ -18,8 +17,10 @@ import {
 import { apiRequest } from '../utils/api';
 import '../employee/sales/SalesViews.css';
 import './LogisticsPortal.css';
+import { canViewFullMonetaryData } from '../utils/monetaryVisibility';
 
-export default function LogisticsImportInventoryView({ searchQuery }) {
+export default function LogisticsImportInventoryView({ searchQuery, currentUser }) {
+  const showMoney = canViewFullMonetaryData(currentUser);
   const [items, setItems] = useState([]);
   const [stats, setStats] = useState({
     totalItems: 0,
@@ -125,9 +126,11 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
       const url = editItem ? `/api/logistics/import-inventory/${editItem._id}` : '/api/logistics/import-inventory';
       const method = editItem ? 'PATCH' : 'POST';
 
+      const payload = { ...formData };
+      if (!showMoney) delete payload.unitPrice;
       const { response, data } = await apiRequest(url, {
         method,
-        body: JSON.stringify(formData)
+        body: JSON.stringify(payload)
       });
 
       if (response.ok && data.success) {
@@ -242,11 +245,11 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
           <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>Total physical units in warehouse</div>
         </div>
 
-        <div style={{ background: '#FFFFFF', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0', borderTop: '4px solid #16A34A' }}>
+        {showMoney && <div style={{ background: '#FFFFFF', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0', borderTop: '4px solid #16A34A' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Estimated Valuation</div>
           <div style={{ fontSize: '1.7rem', fontWeight: 800, color: '#16A34A', marginTop: '6px' }}>Rs. {(stats.totalInventoryValue || 0).toLocaleString()}</div>
           <div style={{ fontSize: '0.75rem', color: '#64748B', marginTop: '2px' }}>Total value of imported stock</div>
-        </div>
+        </div>}
 
         <div style={{ background: '#FFFFFF', padding: '18px 20px', borderRadius: '14px', border: '1px solid #E2E8F0', borderTop: '4px solid #D97706' }}>
           <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#64748B', textTransform: 'uppercase' }}>Low / Out of Stock</div>
@@ -329,7 +332,7 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
                 <tr style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0', color: '#64748B' }}>
                   <th style={{ padding: '12px 16px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Product Name &amp; SKU</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Quantity On Hand</th>
-                  <th style={{ padding: '12px 16px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Unit Price / Total</th>
+                  {showMoney && <th style={{ padding: '12px 16px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Unit Price / Total</th>}
                   <th style={{ padding: '12px 16px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Supplier &amp; PO #</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Order Ref</th>
                   <th style={{ padding: '12px 16px', fontWeight: 700, textTransform: 'uppercase', fontSize: '0.75rem' }}>Location</th>
@@ -340,7 +343,7 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
               <tbody>
                 {items.map((item) => {
                   const badge = getStockBadge(item.status);
-                  const itemValue = (item.quantityOnHand || 0) * (item.unitPrice || 0);
+                  const itemValue = showMoney ? (item.quantityOnHand || 0) * (item.unitPrice || 0) : 0;
                   return (
                     <tr key={item._id} style={{ borderBottom: '1px solid #F1F5F9' }}>
                       <td style={{ padding: '13px 16px' }}>
@@ -359,7 +362,7 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
                         )}
                       </td>
 
-                      <td style={{ padding: '13px 16px' }}>
+                      {showMoney && <td style={{ padding: '13px 16px' }}>
                         <div style={{ fontWeight: 600, color: '#334155' }}>
                           Rs. {(item.unitPrice || 0).toLocaleString()} <span style={{ fontSize: '0.72rem', color: '#64748B' }}>/ {item.unit || 'pc'}</span>
                         </div>
@@ -368,7 +371,7 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
                             Total: Rs. {itemValue.toLocaleString()}
                           </div>
                         )}
-                      </td>
+                      </td>}
 
                       <td style={{ padding: '13px 16px' }}>
                         <div style={{ fontWeight: 600, color: '#0F172A' }}>{item.supplierName || 'Global Supplier'}</div>
@@ -513,7 +516,7 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
                   />
                 </div>
 
-                <div>
+                {showMoney && <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Unit Price (PKR)</label>
                   <input
                     type="number"
@@ -523,7 +526,7 @@ export default function LogisticsImportInventoryView({ searchQuery }) {
                     placeholder="e.g. 5000"
                     style={{ width: '100%', padding: '9px 12px', borderRadius: '8px', border: '1px solid #CBD5E1', fontSize: '0.9rem', boxSizing: 'border-box' }}
                   />
-                </div>
+                </div>}
 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, color: '#334155', marginBottom: '6px' }}>Global Supplier Name</label>

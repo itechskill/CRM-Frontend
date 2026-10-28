@@ -22,8 +22,10 @@ import {
 import '../employee/sales/SalesViews.css';
 import './SupportPortal.css';
 import { companyName } from '../utils/companies';
+import { canViewFullMonetaryData } from '../utils/monetaryVisibility';
 
-export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
+export default function SupportOrdersView({ onNavigateDeliveryNotes, currentUser }) {
+  const showMoney = canViewFullMonetaryData(currentUser);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -292,7 +294,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 <th>Sales Person</th>
                 <th style={{ textAlign: 'center' }}>File Type</th>
                 <th>Product Summary</th>
-                <th>Net Amount</th>
+                {showMoney && <th>Net Amount</th>}
                 <th>Workflow Status</th>
                 <th style={{ textAlign: 'center' }}>Receive Goods / Inventory IN</th>
                 <th style={{ textAlign: 'center' }}>Actions</th>
@@ -346,9 +348,9 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                     ) : <span style={{ color: '#64748B', fontWeight: 700 }}>Unassigned</span>}
                   </td>
                   <td style={{ maxWidth: '180px', fontSize: '0.82rem' }}>{o.productSummary || '—'}</td>
-                  <td style={{ fontWeight: 800, color: '#059669' }}>
+                  {showMoney && <td style={{ fontWeight: 800, color: '#059669' }}>
                     Rs. {Number(o.netAmount || o.totalAmount || 0).toLocaleString()}
-                  </td>
+                  </td>}
                   <td>
                     <span className="sv-badge" style={{ background: '#EEF2FF', color: '#4F46E5', border: '1px solid #C7D2FE' }}>
                       {o.workflowStatus || 'Sent to Support'}
@@ -483,10 +485,10 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                 </div>
 
                 <div style={{ background: '#F8FAFC', padding: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}>
-                  <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 700 }}>Financial Value</div>
-                  <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
+                  <div style={{ fontSize: '0.72rem', textTransform: 'uppercase', color: '#94A3B8', fontWeight: 700 }}>{showMoney ? 'Financial Value' : 'Order Status'}</div>
+                  {showMoney && <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#059669', marginTop: '2px' }}>
                     Rs. {Number(viewOrder.netAmount || viewOrder.totalAmount || 0).toLocaleString()}
-                  </div>
+                  </div>}
                   <div style={{ fontSize: '0.8rem', color: '#475569', marginTop: '2px' }}>
                     Workflow: <span style={{ color: '#4F46E5', fontWeight: 700 }}>{viewOrder.workflowStatus || 'Sent to Support'}</span>
                   </div>
@@ -533,8 +535,8 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                         <th style={{ padding: '8px 12px' }}>#</th>
                         <th style={{ padding: '8px 12px' }}>Item Description</th>
                         <th style={{ padding: '8px 12px', textAlign: 'center' }}>Ordered Qty</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Unit Price (PKR)</th>
-                        <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total (PKR)</th>
+                        {showMoney && <th style={{ padding: '8px 12px', textAlign: 'right' }}>Unit Price (PKR)</th>}
+                        {showMoney && <th style={{ padding: '8px 12px', textAlign: 'right' }}>Total (PKR)</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -548,12 +550,12 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                             <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700 }}>
                               {it.quantity || 1}
                             </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', color: '#475569' }}>
+                            {showMoney && <td style={{ padding: '8px 12px', textAlign: 'right', color: '#475569' }}>
                               {Number(it.unitPrice || 0).toLocaleString()}
-                            </td>
-                            <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                            </td>}
+                            {showMoney && <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
                               {Number(it.total || 0).toLocaleString()}
-                            </td>
+                            </td>}
                           </tr>
                         ))
                       ) : (
@@ -563,12 +565,12 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes }) {
                             {viewOrder.productSummary || 'General Delivery Scope'}
                           </td>
                           <td style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700 }}>1</td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', color: '#475569' }}>
+                          {showMoney && <td style={{ padding: '8px 12px', textAlign: 'right', color: '#475569' }}>
                             {Number(viewOrder.netAmount || viewOrder.totalAmount || 0).toLocaleString()}
-                          </td>
-                          <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
+                          </td>}
+                          {showMoney && <td style={{ padding: '8px 12px', textAlign: 'right', fontWeight: 700, color: '#059669' }}>
                             {Number(viewOrder.netAmount || viewOrder.totalAmount || 0).toLocaleString()}
-                          </td>
+                          </td>}
                         </tr>
                       )}
                     </tbody>
