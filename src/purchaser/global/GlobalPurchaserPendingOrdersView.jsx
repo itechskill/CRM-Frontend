@@ -60,6 +60,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
     const orderItems = order.items && order.items.length > 0
       ? order.items.map(i => ({
           productName: i.description || i.productName || 'Imported Machine',
+          partNumber: i.partNumber || i.sku || i.productCode || '',
           description: i.description || '',
           quantity: Number(i.quantity) || 1,
           unitPricePKR: Number(i.unitPrice) || 0,
@@ -67,6 +68,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
         }))
       : [{
           productName: order.productSummary || 'Global Imported Scope',
+          partNumber: '',
           description: order.productSummary || '',
           quantity: 1,
           unitPricePKR: Number(order.netAmount || order.totalAmount || 0),
@@ -118,7 +120,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
   const addItem = () => {
     setFormData(prev => ({
       ...prev,
-      items: [...prev.items, { productName: '', description: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }]
+      items: [...prev.items, { productName: '', partNumber: '', description: '', quantity: 1, unitPricePKR: 0, totalPricePKR: 0 }]
     }));
   };
 

@@ -17,12 +17,14 @@ import {
   FileText,
   Calendar,
   AlertTriangle,
-  ArrowRight
+  ArrowRight,
+  Download
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import './SupportPortal.css';
 import { companyName } from '../utils/companies';
 import { canViewFullMonetaryData } from '../utils/monetaryVisibility';
+import { downloadGrnPdf } from '../utils/grnPdf';
 
 export default function SupportOrdersView({ onNavigateDeliveryNotes, currentUser }) {
   const showMoney = canViewFullMonetaryData(currentUser);
@@ -31,6 +33,24 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes, currentUser
   const [searchTerm, setSearchTerm] = useState('');
   const [viewOrder, setViewOrder] = useState(null);
   const [tabFilter, setTabFilter] = useState('pending'); // 'pending' | 'completed' | 'all'
+
+  const downloadInventoryReceipt = (order, receipt) => downloadGrnPdf({
+    ...receipt,
+    grnDate: receipt.receivedAt,
+    supplierPO: {
+      ...(order.supplierPO || {}),
+      poNumber: order.supplierPoNumber || order.supplierPO?.poNumber,
+      goodsReceiptReference: order.goodsReceiptReference || order.supplierPO?.goodsReceiptReference,
+      goodsReceiptDate: order.goodsReceiptDate || order.supplierPO?.goodsReceiptDate
+    },
+    salesOrder: order,
+    salesOrderNumber: order.orderNumber || order.orderReference,
+    poNumber: order.supplierPoNumber || order.supplierPO?.poNumber,
+    supplierBillNumber: order.goodsReceiptReference || order.supplierPO?.goodsReceiptReference,
+    supplierBillDate: order.goodsReceiptDate || order.supplierPO?.goodsReceiptDate,
+    createdByName: receipt.receivedByName,
+    items: receipt.items || []
+  });
 
   // Stock check state
   const [checkingStock, setCheckingStock] = useState(false);
@@ -399,9 +419,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes, currentUser
                       </button>
                     )}
                     {(o.inventoryGrnNumbers || []).length > 0 && (
-                      <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#2563EB' }}>
-                        GRN: {o.inventoryGrnNumbers.join(', ')}
-                      </span>
+                      <>{(o.inventoryReceipts || []).map(receipt => <button key={receipt.grnNumber} onClick={() => downloadInventoryReceipt(o, receipt)} style={{ border: 0, background: 'transparent', fontSize: '0.7rem', fontWeight: 700, color: '#2563EB', cursor: 'pointer' }}><Download size={11} /> {receipt.grnNumber}</button>)}</>
                     )}
                     </div>
                   </td>
@@ -519,7 +537,7 @@ export default function SupportOrdersView({ onNavigateDeliveryNotes, currentUser
 
               {(viewOrder.inventoryGrnNumbers || []).length > 0 && (
                 <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: '10px', padding: '12px 14px', marginBottom: '16px', color: '#1E3A8A', fontSize: '0.82rem' }}>
-                  <strong>Inventory IN GRN:</strong> {viewOrder.inventoryGrnNumbers.join(', ')}
+                  <strong>Inventory IN GRN:</strong> {(viewOrder.inventoryReceipts || []).map(receipt => <button key={receipt.grnNumber} onClick={() => downloadInventoryReceipt(viewOrder, receipt)} style={{ marginLeft: 8, border: '1px solid #BFDBFE', borderRadius: 6, background: '#FFF', color: '#1D4ED8', padding: '5px 8px', cursor: 'pointer' }}><Download size={12} /> {receipt.grnNumber}</button>)}
                 </div>
               )}
 

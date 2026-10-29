@@ -159,14 +159,14 @@ export const createQuotationPdf = async (quotation, { assetLoader = defaultAsset
     const quantity = Math.max(1, Number(item.quantity) || 1);
     const unitPrice = Number(item.unitPrice) || 0;
     const amount = item.total !== undefined ? Number(item.total) : quantity * unitPrice;
-    return [index + 1, item.sku || '', item.description || '', quantity, money(unitPrice), money(amount)];
+    return [index + 1, item.partNumber || item.sku || '', item.description || '', quantity, money(unitPrice), money(amount)];
   });
 
   autoTable(doc, {
     startY: 87,
     margin: { left: 14, right: 14, top: 51, bottom: 43 },
     tableWidth: 182,
-    head: [['S.no', 'SKU', 'Description', 'QTY', 'Unit Price', 'Amount']],
+    head: [['S.no', 'Part Number', 'Description', 'QTY', 'Unit Price', 'Amount']],
     body: tableRows,
     theme: 'grid',
     headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold', halign: 'center', lineColor: [0, 0, 0], lineWidth: 0.35 },

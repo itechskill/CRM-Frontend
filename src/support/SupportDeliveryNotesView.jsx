@@ -454,6 +454,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
     // Line Items Table
     const tableRows = (dn.items && dn.items.length > 0) ? dn.items.map((it, idx) => [
       idx + 1,
+      it.partNumber || '',
       it.product || it.description || 'Delivered Item',
       it.description && it.description !== it.product ? it.description : 'Standard Scope',
       `${it.demand || it.quantity || 1} ${it.unit || 'pcs'}`,
@@ -464,6 +465,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
       ] : [])
     ]) : [[
       '1',
+      '',
       'Standard Package Goods',
       'Delivered as per order specification',
       '1 pcs',
@@ -476,7 +478,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
       margin: { left: 14, right: 14 },
       tableWidth: 182,
       head: [[
-        '#', 'Product Item', 'Description / Scope', 'Ordered', 'Delivered',
+        '#', 'Part Number', 'Product Item', 'Description / Scope', 'Ordered', 'Delivered',
         ...(showMoney ? ['Unit Price', 'Line Total'] : [])
       ]],
       body: tableRows,
@@ -1190,6 +1192,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                     <thead>
                       <tr style={{ background: '#F1F5F9', color: '#475569', textAlign: 'left', borderBottom: '1px solid #E2E8F0' }}>
                         <th style={{ padding: '10px 14px', width: '40px' }}>#</th>
+                        <th style={{ padding: '10px 14px' }}>Part Number</th>
                         <th style={{ padding: '10px 14px' }}>Product Name</th>
                         <th style={{ padding: '10px 14px' }}>Description / Scope</th>
                         <th style={{ padding: '10px 14px', textAlign: 'center', width: '100px' }}>Ordered Demand</th>
@@ -1202,6 +1205,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                         viewDN.items.map((item, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', background: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
                             <td style={{ padding: '10px 14px', color: '#64748B', fontWeight: 600 }}>{idx + 1}</td>
+                            <td style={{ padding: '10px 14px' }}>{item.partNumber || '—'}</td>
                             <td style={{ padding: '10px 14px', fontWeight: 700, color: '#0F172A' }}>{item.product || item.description || 'Item'}</td>
                             <td style={{ padding: '10px 14px', color: '#475569' }}>{item.description || '—'}</td>
                             <td style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 700 }}>
@@ -1216,6 +1220,7 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
                       ) : (
                         <tr>
                           <td style={{ padding: '10px 14px' }}>1</td>
+                          <td style={{ padding: '10px 14px' }}>—</td>
                           <td style={{ padding: '10px 14px', fontWeight: 700 }}>Delivered Goods / Equipment</td>
                           <td style={{ padding: '10px 14px' }}>General Order Scope</td>
                           <td style={{ padding: '10px 14px', textAlign: 'center' }}>1 pcs</td>

@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
 import { generateCombinedDocumentPackagePDF } from '../utils/combinedPdfGenerator';
+import { calculateInvoiceTotals, linePartNumber } from '../utils/documentFinancials';
 import {
   FileText,
   Plus,
@@ -47,6 +48,7 @@ const getSalesOrderInvoiceItems = (salesOrder) => {
       : storedUnitPrice;
 
     return {
+      partNumber: linePartNumber(item),
       description: item.description || item.product || 'Item',
       quantity,
       unitPrice,
@@ -95,7 +97,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     customerAddress: '',
     fileNumber: '',
     fileType: '',
-    items: [{ description: '', quantity: 1, unitPrice: 0, total: 0 }],
+    items: [{ partNumber: '', description: '', quantity: 1, unitPrice: 0, total: 0 }],
     subtotal: 0,
     tax: 0,
     taxRate: 0,
@@ -193,6 +195,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
         const qty = Number(it.quantity) || Number(it.demand) || 1;
         const up = Number(it.unitPrice) || (Number(so?.netAmount || 0) / (dn.items.length || 1)) || 0;
         return {
+          partNumber: linePartNumber(it),
           description: it.description || it.product || 'Item',
           quantity: qty,
           unitPrice: up,
@@ -202,6 +205,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     } else {
       const amountVal = Number(so?.netAmount || so?.totalAmount) || 0;
       items = [{
+        partNumber: '',
         description: so?.productSummary || `Goods delivered as per ${dnNumber}`,
         quantity: 1,
         unitPrice: amountVal,
@@ -211,9 +215,9 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
 
     const subtotal = Number(so?.totalAmount) || items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
     const disc = Number(so?.discount) || 0;
-    const taxRate = Number(so?.taxRate) || 0;
-    const tax = Number(so?.tax) || (taxRate > 0 ? (subtotal - disc) * (taxRate / 100) : 0);
-    const net = Number(so?.netAmount) || Math.max(0, subtotal - disc + tax);
+    const taxable = Math.max(0, subtotal - disc);
+    const taxRate = Number(so?.taxRate) || (taxable > 0 && Number(so?.tax) > 0 ? (Number(so.tax) / taxable) * 100 : 0);
+    const totals = calculateInvoiceTotals({ items, discount: disc, taxRate });
 
     setForm(prev => ({
       ...prev,
@@ -228,12 +232,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
       customerAddress: dn.deliveryAddress || so?.clientAddress || '',
       fileNumber: so?.fileNo || '',
       fileType: so?.fileType || '',
-      items: items,
-      subtotal: subtotal,
-      discount: disc,
-      taxRate: taxRate,
-      tax: tax,
-      amount: net,
+      ...totals,
       notes: `Final Invoice generated from Delivery Note ${dnNumber}${soNumber ? ` (Sales Order ${soNumber})` : ''}.`
     }));
   };
@@ -256,12 +255,13 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
 
     const items = (so.items && so.items.length > 0)
       ? getSalesOrderInvoiceItems(so)
-      : [{ description: so.productSummary || 'General Service / Products', quantity: 1, unitPrice: Number(so.netAmount || so.totalAmount) || 0, total: Number(so.netAmount || so.totalAmount) || 0 }];
+      : [{ partNumber: '', description: so.productSummary || 'General Service / Products', quantity: 1, unitPrice: Number(so.netAmount || so.totalAmount) || 0, total: Number(so.netAmount || so.totalAmount) || 0 }];
 
     const subtotal = Number(so.totalAmount) || items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
     const disc = Number(so.discount) || 0;
-    const tax = Number(so.tax) || 0;
-    const net = Number(so.netAmount) || Math.max(0, subtotal - disc + tax);
+    const taxable = Math.max(0, subtotal - disc);
+    const taxRate = Number(so.taxRate) || (taxable > 0 && Number(so.tax) > 0 ? (Number(so.tax) / taxable) * 100 : 0);
+    const totals = calculateInvoiceTotals({ items, discount: disc, taxRate });
 
     setSelectedDN(null);
     setForm(prev => ({
@@ -277,11 +277,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
       customerAddress: so.clientAddress || '',
       fileNumber: so.fileNo || '',
       fileType: so.fileType || '',
-      items: items,
-      subtotal: subtotal,
-      discount: disc,
-      tax: tax,
-      amount: net,
+      ...totals,
       notes: `Final Invoice generated from Sales Order ${so.orderReference || so.orderNumber}`
     }));
   };
@@ -296,61 +292,37 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
       updated[index].total = q * p;
     }
 
-    const subtotal = updated.reduce((s, it) => s + (Number(it.total) || 0), 0);
-    const tax = form.taxRate > 0 ? (subtotal - (Number(form.discount) || 0)) * (form.taxRate / 100) : (Number(form.tax) || 0);
-    const net = Math.max(0, subtotal - (Number(form.discount) || 0) + tax);
+    const totals = calculateInvoiceTotals({ items: updated, discount: form.discount, taxRate: form.taxRate });
 
     setForm(prev => ({
       ...prev,
-      items: updated,
-      subtotal,
-      tax,
-      amount: net
+      ...totals
     }));
   };
 
   const handleAddItem = () => {
     setForm(prev => ({
       ...prev,
-      items: [...prev.items, { description: '', quantity: 1, unitPrice: 0, total: 0 }]
+      items: [...prev.items, { partNumber: '', description: '', quantity: 1, unitPrice: 0, total: 0 }]
     }));
   };
 
   const handleRemoveItem = (index) => {
     if (form.items.length <= 1) return;
     const updated = form.items.filter((_, i) => i !== index);
-    const subtotal = updated.reduce((s, it) => s + (Number(it.total) || 0), 0);
-    const tax = form.taxRate > 0 ? (subtotal - (Number(form.discount) || 0)) * (form.taxRate / 100) : (Number(form.tax) || 0);
-    const net = Math.max(0, subtotal - (Number(form.discount) || 0) + tax);
+    const totals = calculateInvoiceTotals({ items: updated, discount: form.discount, taxRate: form.taxRate });
 
     setForm(prev => ({
       ...prev,
-      items: updated,
-      subtotal,
-      tax,
-      amount: net
+      ...totals
     }));
   };
 
   const handleFinancialFieldChange = (field, value) => {
     const numVal = Math.max(0, Number(value) || 0);
-    const newForm = { ...form, [field]: numVal };
-
-    const subtotal = Number(newForm.subtotal) || 0;
-    const disc = field === 'discount' ? numVal : (Number(newForm.discount) || 0);
-    const taxRate = field === 'taxRate' ? numVal : (Number(newForm.taxRate) || 0);
-
-    let tax = Number(newForm.tax) || 0;
-    if (field === 'taxRate') {
-      tax = taxRate > 0 ? (subtotal - disc) * (taxRate / 100) : 0;
-      newForm.tax = tax;
-    } else if (field === 'tax') {
-      tax = numVal;
-    }
-
-    const net = Math.max(0, subtotal - disc + tax);
-    newForm.amount = net;
-    setForm(newForm);
+    const discount = field === 'discount' ? numVal : form.discount;
+    const taxRate = field === 'taxRate' ? numVal : form.taxRate;
+    setForm(current => ({ ...current, ...calculateInvoiceTotals({ items: current.items, discount, taxRate }) }));
   };
 
   const openCreateModal = () => {
@@ -368,7 +340,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
       customerAddress: '',
       fileNumber: '',
       fileType: '',
-      items: [{ description: '', quantity: 1, unitPrice: 0, total: 0 }],
+      items: [{ partNumber: '', description: '', quantity: 1, unitPrice: 0, total: 0 }],
       subtotal: 0,
       tax: 0,
       taxRate: 0,
@@ -399,7 +371,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
       customerAddress: inv.customerAddress || '',
       fileNumber: inv.fileNumber || '',
       fileType: inv.fileType || '',
-      items: inv.items && inv.items.length > 0 ? inv.items : [{ description: 'Item', quantity: 1, unitPrice: inv.amount, total: inv.amount }],
+      items: inv.items && inv.items.length > 0 ? inv.items.map(item => ({ ...item, partNumber: linePartNumber(item) })) : [{ partNumber: '', description: 'Item', quantity: 1, unitPrice: inv.amount, total: inv.amount }],
       subtotal: inv.subtotal || inv.amount || 0,
       tax: inv.tax || 0,
       taxRate: inv.taxRate || 0,
@@ -533,12 +505,12 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     if (inv.poReference) doc.text(`PO Reference: ${inv.poReference}`, 14, 62, { maxWidth: 95 });
 
     const tableRows = (inv.items && inv.items.length > 0)
-      ? inv.items.map((it, idx) => [idx + 1, it.description, it.quantity, `Rs. ${Number(it.unitPrice).toLocaleString()}`, `Rs. ${Number(it.total).toLocaleString()}`])
-      : [[1, inv.description || 'Deliverables', 1, `Rs. ${Number(inv.amount).toLocaleString()}`, `Rs. ${Number(inv.amount).toLocaleString()}`]];
+      ? inv.items.map((it, idx) => [idx + 1, linePartNumber(it), it.description, it.quantity, `Rs. ${Number(it.unitPrice).toLocaleString()}`, `Rs. ${Number(it.total).toLocaleString()}`])
+      : [[1, '', inv.description || 'Deliverables', 1, `Rs. ${Number(inv.amount).toLocaleString()}`, `Rs. ${Number(inv.amount).toLocaleString()}`]];
 
     autoTable(doc, {
       startY: 72,
-      head: [['#', 'Item Description', 'Qty', 'Unit Price', 'Total (PKR)']],
+      head: [['#', 'Part Number', 'Item Description', 'Qty', 'Unit Price', 'Total (PKR)']],
       body: tableRows,
       theme: 'grid',
       headStyles: { fillColor: [37, 99, 235] }
@@ -549,7 +521,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     doc.setTextColor(15, 23, 42);
     doc.text(`Subtotal: Rs. ${Number(inv.subtotal || inv.amount).toLocaleString()}`, 130, finalY);
     if (inv.discount > 0) doc.text(`Discount: -Rs. ${Number(inv.discount).toLocaleString()}`, 130, finalY + 6);
-    if (inv.tax > 0) doc.text(`Tax: +Rs. ${Number(inv.tax).toLocaleString()}`, 130, finalY + 12);
+    if (inv.tax > 0) doc.text(`Tax / GST (${Number(inv.taxRate || 0)}%): +Rs. ${Number(inv.tax).toLocaleString()}`, 130, finalY + 12);
     doc.setFont(undefined, 'bold');
     doc.text(`Total Amount: Rs. ${Number(inv.amount).toLocaleString()}`, 130, finalY + 20);
 
@@ -1288,6 +1260,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                     <table className="ip-line-items-table">
                       <thead>
                         <tr>
+                          <th style={{ width: '140px' }}>Part Number</th>
                           <th>Item Description</th>
                           <th style={{ width: '90px' }}>Qty</th>
                           <th style={{ width: '140px' }}>Unit Price (PKR)</th>
@@ -1298,6 +1271,16 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                       <tbody>
                         {form.items.map((item, idx) => (
                           <tr key={idx}>
+                            <td>
+                              <input
+                                type="text"
+                                value={item.partNumber || ''}
+                                onChange={(e) => handleItemChange(idx, 'partNumber', e.target.value)}
+                                placeholder="Part number"
+                                className="ip-input"
+                                style={{ padding: '8px 10px', fontSize: '0.85rem' }}
+                              />
+                            </td>
                             <td>
                               <input
                                 type="text"
@@ -1388,8 +1371,9 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                     </div>
 
                     <div className="ip-summary-row">
-                      <span>Tax Rate (%):</span>
+                      <span>Tax / GST Rate (%):</span>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <button type="button" onClick={() => handleFinancialFieldChange('taxRate', Math.max(0, Number(form.taxRate || 0) - 1))} aria-label="Decrease tax rate">−</button>
                         <input
                           type="number"
                           min="0"
@@ -1399,8 +1383,12 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                           className="ip-input"
                           style={{ width: '65px', padding: '6px 8px', fontSize: '0.85rem', textAlign: 'center' }}
                         />
-                        <span style={{ fontSize: '0.82rem', color: '#64748B', fontWeight: 600 }}>= Rs. {Math.round(form.tax).toLocaleString()}</span>
+                        <button type="button" onClick={() => handleFinancialFieldChange('taxRate', Math.min(100, Number(form.taxRate || 0) + 1))} aria-label="Increase tax rate">+</button>
                       </div>
+                    </div>
+                    <div className="ip-summary-row">
+                      <span>Tax Amount (PKR):</span>
+                      <input readOnly value={Number(form.tax || 0).toFixed(2)} aria-label="Tax Amount (PKR)" className="ip-input" style={{ width: '130px', padding: '6px 10px', textAlign: 'right', background: '#F1F5F9' }} />
                     </div>
 
                     <div className="ip-summary-row net-payable">
@@ -1567,6 +1555,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                     <thead>
                       <tr style={{ background: '#F1F5F9', color: '#475569', textAlign: 'left', borderBottom: '1px solid #E2E8F0' }}>
                         <th style={{ padding: '10px 14px', width: '40px' }}>#</th>
+                        <th style={{ padding: '10px 14px' }}>Part Number</th>
                         <th style={{ padding: '10px 14px' }}>Item Description</th>
                         <th style={{ padding: '10px 14px', textAlign: 'center', width: '80px' }}>Qty</th>
                         <th style={{ padding: '10px 14px', textAlign: 'right', width: '140px' }}>Unit Price (PKR)</th>
@@ -1578,6 +1567,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                         viewInvoice.items.map((item, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', background: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
                             <td style={{ padding: '10px 14px', color: '#64748B', fontWeight: 600 }}>{idx + 1}</td>
+                            <td style={{ padding: '10px 14px' }}>{linePartNumber(item) || '—'}</td>
                             <td style={{ padding: '10px 14px', fontWeight: 600, color: '#0F172A' }}>{item.description || 'Item'}</td>
                             <td style={{ padding: '10px 14px', textAlign: 'center' }}>{item.quantity || 1}</td>
                             <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>
@@ -1591,6 +1581,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                       ) : (
                         <tr>
                           <td style={{ padding: '10px 14px' }}>1</td>
+                          <td style={{ padding: '10px 14px' }}>—</td>
                           <td style={{ padding: '10px 14px', fontWeight: 600 }}>General Invoiced Services / Deliverables</td>
                           <td style={{ padding: '10px 14px', textAlign: 'center' }}>1</td>
                           <td style={{ padding: '10px 14px', textAlign: 'right' }}>Rs. {Number(viewInvoice.amount || 0).toLocaleString()}</td>

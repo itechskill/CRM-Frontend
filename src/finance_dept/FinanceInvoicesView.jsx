@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
+import { linePartNumber } from '../utils/documentFinancials';
 import {
   FileText,
   Search,
@@ -416,6 +417,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
       : [{ description: inv.description || 'Professional CRM Services', quantity: 1, unitPrice: amount, total: amount }];
 
     const rows = itemsList.map(it => [
+      linePartNumber(it),
       it.description || 'Item',
       it.quantity || 1,
       `PKR ${formatMoney(it.unitPrice)}`,
@@ -424,6 +426,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
 
     if (isOverdue) {
       rows.push([
+        '',
         'Overdue Financial Charge (3% Late Fee applied past due date)',
         '1',
         `PKR ${formatMoney(lateCharge)}`,
@@ -433,7 +436,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
 
     autoTable(doc, {
       startY: inv.poReference ? 61 : 55,
-      head: [['Description', 'Qty', 'Unit Price (PKR)', 'Total (PKR)']],
+      head: [['Part Number', 'Description', 'Qty', 'Unit Price (PKR)', 'Total (PKR)']],
       body: rows,
       theme: 'grid',
       headStyles: { fillColor: [5, 150, 105] }
@@ -442,15 +445,27 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
     const finalY = doc.lastAutoTable.finalY + 10;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Invoice Subtotal: PKR ${formatMoney(amount)}`, 196, finalY, { align: 'right' });
+    const subtotal = Number(inv.subtotal || 0) || itemsList.reduce((sum, item) => sum + Number(item.total || 0), 0);
+    let summaryY = finalY;
+    doc.text(`Subtotal: PKR ${formatMoney(subtotal)}`, 196, summaryY, { align: 'right' });
+    if (Number(inv.discount) > 0) {
+      summaryY += 6;
+      doc.text(`Discount: -PKR ${formatMoney(inv.discount)}`, 196, summaryY, { align: 'right' });
+    }
+    if (Number(inv.tax) > 0 || Number(inv.taxRate) > 0) {
+      summaryY += 6;
+      doc.text(`Tax / GST (${formatMoney(inv.taxRate)}%): PKR ${formatMoney(inv.tax)}`, 196, summaryY, { align: 'right' });
+    }
+    summaryY += 6;
+    doc.text(`Invoice Total: PKR ${formatMoney(amount)}`, 196, summaryY, { align: 'right' });
     if (isOverdue) {
       doc.setTextColor(220, 38, 38);
-      doc.text(`Overdue 3% Charge: PKR ${formatMoney(lateCharge)}`, 196, finalY + 6, { align: 'right' });
+      doc.text(`Overdue 3% Charge: PKR ${formatMoney(lateCharge)}`, 196, summaryY + 6, { align: 'right' });
       doc.setTextColor(15, 23, 42);
-      doc.text(`Total Payable with Charges: PKR ${formatMoney(totalWithCharge)}`, 196, finalY + 12, { align: 'right' });
-      doc.text(`Amount Paid: PKR ${formatMoney(inv.paidAmount)}`, 196, finalY + 18, { align: 'right' });
+      doc.text(`Total Payable with Charges: PKR ${formatMoney(totalWithCharge)}`, 196, summaryY + 12, { align: 'right' });
+      doc.text(`Amount Paid: PKR ${formatMoney(inv.paidAmount)}`, 196, summaryY + 18, { align: 'right' });
     } else {
-      doc.text(`Amount Paid: PKR ${formatMoney(inv.paidAmount)}`, 196, finalY + 6, { align: 'right' });
+      doc.text(`Amount Paid: PKR ${formatMoney(inv.paidAmount)}`, 196, summaryY + 6, { align: 'right' });
     }
 
     doc.save(`${inv.invoiceType ? inv.invoiceType.replace(' ', '_') : 'Invoice'}_${inv.invoiceNumber}.pdf`);
@@ -1596,6 +1611,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                     <thead>
                       <tr style={{ background: '#F1F5F9', color: '#475569', textAlign: 'left', borderBottom: '1px solid #E2E8F0' }}>
                         <th style={{ padding: '10px 14px', width: '40px' }}>#</th>
+                        <th style={{ padding: '10px 14px' }}>Part Number</th>
                         <th style={{ padding: '10px 14px' }}>Item Description</th>
                         <th style={{ padding: '10px 14px', textAlign: 'center', width: '80px' }}>Qty</th>
                         <th style={{ padding: '10px 14px', textAlign: 'right', width: '140px' }}>Unit Price (PKR)</th>
@@ -1607,6 +1623,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                         viewInvoice.items.map((item, idx) => (
                           <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9', background: idx % 2 === 0 ? '#FFFFFF' : '#FAFAFA' }}>
                             <td style={{ padding: '10px 14px', color: '#64748B', fontWeight: 600 }}>{idx + 1}</td>
+                            <td style={{ padding: '10px 14px' }}>{linePartNumber(item) || '—'}</td>
                             <td style={{ padding: '10px 14px', fontWeight: 600, color: '#0F172A' }}>{item.description || 'Item'}</td>
                             <td style={{ padding: '10px 14px', textAlign: 'center' }}>{item.quantity || 1}</td>
                             <td style={{ padding: '10px 14px', textAlign: 'right', color: '#475569' }}>
@@ -1620,6 +1637,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                       ) : (
                         <tr>
                           <td style={{ padding: '10px 14px' }}>1</td>
+                          <td style={{ padding: '10px 14px' }}>—</td>
                           <td style={{ padding: '10px 14px', fontWeight: 600 }}>General Invoiced Services / Deliverables</td>
                           <td style={{ padding: '10px 14px', textAlign: 'center' }}>1</td>
                           <td style={{ padding: '10px 14px', textAlign: 'right' }}>PKR {formatMoney(viewInvoice.amount)}</td>

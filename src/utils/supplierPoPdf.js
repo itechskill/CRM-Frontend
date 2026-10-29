@@ -117,25 +117,26 @@ export const createSupplierPoPdf = async (supplierPO, { assetLoader = defaultAss
     const quantity = Number(item.quantity) || 0;
     const unitPrice = Number(item.unitPrice) || 0;
     const total = item.totalAmount !== undefined ? Number(item.totalAmount) : quantity * unitPrice;
-    return [index + 1, item.productName || item.description || '', item.description || '', quantity, money(unitPrice), money(total)];
+    return [index + 1, item.partNumber || '', item.productName || item.description || '', item.description || '', quantity, money(unitPrice), money(total)];
   });
 
   autoTable(doc, {
     startY: 84,
     margin: { left: 14, right: 14, top: 52, bottom: 47 },
     tableWidth: 182,
-    head: [['#', 'Item', 'Description', 'QTY', `Unit Price (${currency})`, `Amount (${currency})`]],
+    head: [['#', 'Part Number', 'Item', 'Description', 'QTY', `Unit Price (${currency})`, `Amount (${currency})`]],
     body: rows,
     theme: 'grid',
     headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold', lineColor: [0, 0, 0], lineWidth: 0.3 },
     styles: { fontSize: 8.5, cellPadding: 2.2, valign: 'middle', lineColor: [100, 116, 139], lineWidth: 0.2, overflow: 'linebreak' },
     columnStyles: {
       0: { cellWidth: 10, halign: 'center' },
-      1: { cellWidth: 45 },
-      2: { cellWidth: 53 },
-      3: { cellWidth: 14, halign: 'center' },
-      4: { cellWidth: 30, halign: 'right' },
-      5: { cellWidth: 30, halign: 'right' }
+      1: { cellWidth: 25 },
+      2: { cellWidth: 34 },
+      3: { cellWidth: 39 },
+      4: { cellWidth: 14, halign: 'center' },
+      5: { cellWidth: 30, halign: 'right' },
+      6: { cellWidth: 30, halign: 'right' }
     },
     didDrawPage: data => {
       if (data.pageNumber > 1) drawHeader();

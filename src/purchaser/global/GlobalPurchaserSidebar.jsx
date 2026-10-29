@@ -18,7 +18,8 @@ import {
   FolderKanban,
   Heart,
   Megaphone,
-  ShoppingBag
+  ShoppingBag,
+  PackageCheck
 } from 'lucide-react';
 import '../../employee/EmployeeSidebar.css';
 
@@ -45,7 +46,8 @@ export default function GlobalPurchaserSidebar({
     { id: 'dashboard', label: 'Dashboard', icon: LayoutGrid },
     { id: 'price_requests', label: 'Price Requests', icon: ShoppingBag },
     { id: 'pending_orders', label: 'Pending Sales Orders', icon: ShoppingBag },
-    { id: 'supplier_pos', label: 'Supplier POs', icon: FileText }
+    { id: 'supplier_pos', label: 'Supplier POs', icon: FileText },
+    { id: 'grn', label: 'GRN (Goods Received)', icon: PackageCheck }
   ];
 
   const accountNav = [

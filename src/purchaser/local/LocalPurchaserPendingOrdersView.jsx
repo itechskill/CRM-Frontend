@@ -121,6 +121,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
       if (shortageQuantity <= 0) return null;
       return {
         productName: orderItem.description || orderItem.productName || analysis.productName || 'Stock Item',
+        partNumber: orderItem.partNumber || orderItem.sku || orderItem.productCode || '',
         quantity: shortageQuantity,
         unitPrice: Number(orderItem.unitPrice) || 0,
         totalAmount: shortageQuantity * (Number(orderItem.unitPrice) || 0)
@@ -128,11 +129,13 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
     }).filter(Boolean);
     const orderItems = customItems || (shortageItems.length ? shortageItems : (order.items && order.items.length > 0 ? order.items.map(i => ({
       productName: i.description || i.productName || 'Stock Item',
+      partNumber: i.partNumber || i.sku || i.productCode || '',
       quantity: Number(i.quantity) || 1,
       unitPrice: Number(i.unitPrice) || 0,
       totalAmount: Number(i.total) || ((Number(i.quantity) || 1) * (Number(i.unitPrice) || 0))
     })) : [{
       productName: order.productSummary || 'Local Item',
+      partNumber: '',
       quantity: 1,
       unitPrice: Number(order.netAmount || 0),
       totalAmount: Number(order.netAmount || 0)
@@ -181,7 +184,7 @@ export default function LocalPurchaserPendingOrdersView({ searchQuery, onNavigat
   const addItemRow = () => {
     setPoForm(prev => ({
       ...prev,
-      items: [...prev.items, { productName: '', quantity: 1, unitPrice: 0, totalAmount: 0 }]
+      items: [...prev.items, { productName: '', partNumber: '', quantity: 1, unitPrice: 0, totalAmount: 0 }]
     }));
   };
 

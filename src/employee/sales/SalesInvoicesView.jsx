@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../../utils/api';
+import { calculateInvoiceTotals, linePartNumber } from '../../utils/documentFinancials';
 import { 
   Plus, 
   Search, 
@@ -44,7 +45,7 @@ const INVOICE_STATUS_STYLES = {
   'Cancelled': { bg: '#F8FAFC', color: '#94A3B8', border: '#E2E8F0' }
 };
 
-const EMPTY_ITEM = { description: '', quantity: 1, unitPrice: 0, total: 0 };
+const EMPTY_ITEM = { partNumber: '', description: '', quantity: 1, unitPrice: 0, total: 0 };
 
 const EMPTY_FORM = {
   dealId: '',
@@ -61,7 +62,7 @@ const EMPTY_FORM = {
   paymentTerms: 'Net 30',
   issueDate: new Date().toISOString().split('T')[0],
   dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-  items: [{ description: 'Sales Deal Services / Deliverable', quantity: 1, unitPrice: 0, total: 0 }],
+  items: [{ partNumber: '', description: 'Sales Deal Services / Deliverable', quantity: 1, unitPrice: 0, total: 0 }],
   subtotal: 0,
   taxRate: 0,
   tax: 0,
@@ -135,11 +136,7 @@ export default function SalesInvoicesView() {
 
   // Recalculate invoice totals when items, tax, or discount changes
   const recalculateTotals = (itemsList, taxRatePct, discountVal) => {
-    const subtotal = itemsList.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
-    const tax = Number(((subtotal * (Number(taxRatePct) || 0)) / 100).toFixed(2));
-    const discount = Number(Number(discountVal) || 0);
-    const amount = Math.max(0, Number((subtotal + tax - discount).toFixed(2)));
-    return { subtotal, tax, amount };
+    return calculateInvoiceTotals({ items: itemsList, taxRate: taxRatePct, discount: discountVal });
   };
 
   const handleSelectDeliveryNote = (dnId) => {
@@ -168,6 +165,7 @@ export default function SalesInvoicesView() {
         const qty = Number(it.quantity) || 1;
         const up = Number(it.unitPrice) || 0;
         return {
+          partNumber: linePartNumber(it),
           description: it.description || it.product || 'Item',
           quantity: qty,
           unitPrice: up,
@@ -179,6 +177,7 @@ export default function SalesInvoicesView() {
         const qty = Number(it.quantity) || Number(it.demand) || 1;
         const up = Number(it.unitPrice) || (Number(so?.netAmount || 0) / (dn.items.length || 1)) || 0;
         return {
+          partNumber: linePartNumber(it),
           description: it.description || it.product || 'Item',
           quantity: qty,
           unitPrice: up,
@@ -238,7 +237,7 @@ export default function SalesInvoicesView() {
 
   const openEdit = (inv) => {
     const items = inv.items && inv.items.length > 0 ? inv.items : [
-      { description: inv.dealTitle || 'Commercial Sales Services', quantity: 1, unitPrice: inv.amount, total: inv.amount }
+      { partNumber: '', description: inv.dealTitle || 'Commercial Sales Services', quantity: 1, unitPrice: inv.amount, total: inv.amount }
     ];
     setForm({
       dealId: inv.dealId?._id || inv.dealId || '',
@@ -252,6 +251,7 @@ export default function SalesInvoicesView() {
       issueDate: inv.issueDate ? new Date(inv.issueDate).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
       dueDate: inv.dueDate ? new Date(inv.dueDate).toISOString().split('T')[0] : '',
       items: items.map(it => ({
+        partNumber: linePartNumber(it),
         description: it.description || '',
         quantity: it.quantity || 1,
         unitPrice: it.unitPrice || 0,
@@ -535,6 +535,7 @@ export default function SalesInvoicesView() {
     <table>
       <thead>
         <tr>
+          <th>Part Number</th>
           <th>Description</th>
           <th>Qty</th>
           <th>Unit Price</th>
@@ -544,6 +545,7 @@ export default function SalesInvoicesView() {
       <tbody>
         ${items.map(item => `
           <tr>
+            <td>${linePartNumber(item) || '&mdash;'}</td>
             <td>${item.description || '—'}</td>
             <td>${item.quantity}</td>
             <td>Rs. ${Number(item.unitPrice || 0).toLocaleString()}</td>
@@ -1087,7 +1089,13 @@ export default function SalesInvoicesView() {
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                   {form.items.map((item, idx) => (
-                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '3fr 1fr 1.5fr 1.5fr 36px', gap: '8px', alignItems: 'center' }}>
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1.4fr 3fr 1fr 1.5fr 1.5fr 36px', gap: '8px', alignItems: 'center' }}>
+                      <input
+                        placeholder="Part Number"
+                        value={item.partNumber || ''}
+                        onChange={e => handleItemChange(idx, 'partNumber', e.target.value)}
+                        style={{ padding: '8px 10px', fontSize: '0.825rem', border: '1px solid #CBD5E1', borderRadius: '6px' }}
+                      />
                       <input
                         placeholder="Item Description"
                         value={item.description}
@@ -1137,15 +1145,13 @@ export default function SalesInvoicesView() {
                     </div>
                   </div>
                   <div>
-                    <label style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '4px' }}>Tax Rate (%)</label>
-                    <input
-                      type="number"
-                      min="0"
-                      max="100"
-                      value={form.taxRate}
-                      onChange={e => handleTaxRateChange(e.target.value)}
-                      style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem' }}
-                    />
+                    <label style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '4px' }}>Tax / GST Rate (%)</label>
+                    <div style={{ display: 'flex', gap: 5 }}>
+                      <button type="button" onClick={() => handleTaxRateChange(Math.max(0, Number(form.taxRate || 0) - 1))}>−</button>
+                      <input type="number" min="0" max="100" step="any" value={form.taxRate} onChange={e => handleTaxRateChange(e.target.value)} style={{ width: '100%', padding: '6px 8px', borderRadius: '6px', border: '1px solid #CBD5E1', fontSize: '0.85rem' }} />
+                      <button type="button" onClick={() => handleTaxRateChange(Math.min(100, Number(form.taxRate || 0) + 1))}>+</button>
+                    </div>
+                    <div style={{ fontSize: '0.72rem', color: '#64748B', marginTop: 4 }}>Tax Amount (PKR): {Number(form.tax || 0).toLocaleString()}</div>
                   </div>
                   <div>
                     <label style={{ fontSize: '0.75rem', color: '#64748B', display: 'block', marginBottom: '4px' }}>Discount (PKR)</label>
@@ -1380,6 +1386,7 @@ export default function SalesInvoicesView() {
                 <table className="sv-inv-items-table">
                   <thead>
                     <tr>
+                      <th>Part Number</th>
                       <th>Description</th>
                       <th style={{ textAlign: 'center', width: '60px' }}>Qty</th>
                       <th style={{ textAlign: 'right', width: '120px' }}>Unit Price</th>
@@ -1391,6 +1398,7 @@ export default function SalesInvoicesView() {
                       { description: selectedInvoice.dealTitle || 'Commercial Sales Services', quantity: 1, unitPrice: selectedInvoice.amount, total: selectedInvoice.amount }
                     ]).map((item, i) => (
                       <tr key={i}>
+                        <td>{linePartNumber(item) || '—'}</td>
                         <td style={{ fontWeight: 500 }}>{item.description}</td>
                         <td style={{ textAlign: 'center' }}>{item.quantity}</td>
                         <td style={{ textAlign: 'right' }}>Rs. {Number(item.unitPrice || 0).toLocaleString()}</td>

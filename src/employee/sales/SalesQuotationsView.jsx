@@ -63,7 +63,7 @@ const EMPTY_FORM = {
   clientEmail: '',
   clientPhone: '',
   items: [
-    { inventoryItem: null, inventorySearch: '', sku: '', description: '', quantity: 1, unitPrice: 0, total: 0 }
+    { inventoryItem: null, inventorySearch: '', sku: '', partNumber: '', description: '', quantity: 1, unitPrice: 0, total: 0 }
   ],
   totalAmount: 0,
   discount: 0,
@@ -406,7 +406,7 @@ export default function SalesQuotationsView() {
       taxPercentage: 18,
       totalAmount: 0,
       netAmount: 0,
-      items: [{ inventoryItem: null, inventorySearch: '', sku: '', description: '', quantity: 1, unitPrice: 0, total: 0 }]
+      items: [{ inventoryItem: null, inventorySearch: '', sku: '', partNumber: '', description: '', quantity: 1, unitPrice: 0, total: 0 }]
     });
     setEditQ(null);
     setError('');
@@ -424,6 +424,7 @@ export default function SalesQuotationsView() {
           inventoryItem: it.inventoryItem?._id || it.inventoryItem || null,
           inventorySearch: '',
           sku: it.sku || '',
+          partNumber: it.partNumber || it.sku || '',
           description: it.description || '',
           quantity: qty,
           unitPrice: unitP,
@@ -435,7 +436,7 @@ export default function SalesQuotationsView() {
       rawItems = [{
         inventoryItem: null,
         inventorySearch: '',
-        sku: '',
+        sku: '', partNumber: '',
         description: q.productSummary || '',
         quantity: 1,
         unitPrice: initialTotal,
@@ -545,6 +546,7 @@ export default function SalesQuotationsView() {
         inventorySearch: value,
         inventoryItem: match?._id || null,
         sku: match ? (match.sku || '') : item.sku,
+        partNumber: match ? (match.partNumber || match.sku || '') : item.partNumber,
         description: match ? (match.description || match.name || '') : item.description
       } : item)
     }));
@@ -592,7 +594,7 @@ export default function SalesQuotationsView() {
 
   const handleAddItem = () => {
     setForm(prev => {
-      const newItems = [...prev.items, { inventoryItem: null, inventorySearch: '', sku: '', description: '', quantity: 1, unitPrice: 0, total: 0 }];
+      const newItems = [...prev.items, { inventoryItem: null, inventorySearch: '', sku: '', partNumber: '', description: '', quantity: 1, unitPrice: 0, total: 0 }];
       const financials = recalculateForm(newItems, prev.discountPercentage, prev.discount, prev.taxPercentage, prev.tax, 'items');
       return {
         ...prev,
@@ -641,6 +643,7 @@ export default function SalesQuotationsView() {
       return {
         inventoryItem: it.inventoryItem || null,
         sku: String(it.sku || '').trim(),
+        partNumber: String(it.partNumber || it.sku || '').trim(),
         description: it.description.trim(),
         quantity: qty,
         unitPrice: unitP,
@@ -1671,6 +1674,7 @@ export default function SalesQuotationsView() {
                     <tr style={{ borderBottom: '1px solid #CBD5E1', color: '#475569', textAlign: 'left' }}>
                       <th style={{ padding: '6px 8px', width: '30px' }}>#</th>
                       <th style={{ padding: '6px 8px' }}>SKU</th>
+                      <th style={{ padding: '6px 8px' }}>Part Number</th>
                       <th style={{ padding: '6px 8px' }}>Description / Product</th>
                       <th style={{ padding: '6px 8px', textAlign: 'right' }}>Unit Price (PKR)</th>
                       <th style={{ padding: '6px 8px', textAlign: 'center' }}>Qty</th>
@@ -1686,6 +1690,7 @@ export default function SalesQuotationsView() {
                         <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
                           <td style={{ padding: '6px 8px', color: '#94A3B8' }}>{idx + 1}</td>
                           <td style={{ padding: '6px 8px', color: '#475569' }}>{it.sku || '—'}</td>
+                          <td style={{ padding: '6px 8px', color: '#475569' }}>{it.partNumber || it.sku || '—'}</td>
                           <td style={{ padding: '6px 8px', fontWeight: 600, color: '#1E293B', whiteSpace: 'pre-wrap' }}>{it.description || 'Product Item'}</td>
                           <td style={{ padding: '6px 8px', textAlign: 'right', color: '#475569' }}>Rs. {unitP.toLocaleString()}</td>
                           <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 700, color: '#2563EB' }}>{qty}</td>
@@ -1696,14 +1701,14 @@ export default function SalesQuotationsView() {
                   </tbody>
                   <tfoot>
                     <tr style={{ borderTop: '2px solid #CBD5E1' }}>
-                      <td colSpan={5} style={{ padding: '6px 8px', textAlign: 'right', color: '#64748B', fontWeight: 600 }}>Subtotal (Sum of Products):</td>
+                      <td colSpan={6} style={{ padding: '6px 8px', textAlign: 'right', color: '#64748B', fontWeight: 600 }}>Subtotal (Sum of Products):</td>
                       <td style={{ padding: '6px 8px', textAlign: 'right', color: '#1E293B', fontWeight: 700 }}>
                         Rs. {Number(viewQ.totalAmount || 0).toLocaleString()}
                       </td>
                     </tr>
                     {Number(viewQ.discount || 0) > 0 && (
                       <tr>
-                        <td colSpan={5} style={{ padding: '4px 8px', textAlign: 'right', color: '#DC2626', fontWeight: 600 }}>
+                        <td colSpan={6} style={{ padding: '4px 8px', textAlign: 'right', color: '#DC2626', fontWeight: 600 }}>
                           Discount (- {Number(viewQ.discountPercentage !== undefined && viewQ.discountPercentage !== null && Number(viewQ.discountPercentage) > 0 ? viewQ.discountPercentage : ((Number(viewQ.discount) / Math.max(1, Number(viewQ.totalAmount || 0))) * 100)).toFixed(1)}%):
                         </td>
                         <td style={{ padding: '4px 8px', textAlign: 'right', color: '#DC2626', fontWeight: 700 }}>
@@ -1713,7 +1718,7 @@ export default function SalesQuotationsView() {
                     )}
                     {Number(viewQ.tax || 0) > 0 && (
                       <tr>
-                        <td colSpan={5} style={{ padding: '4px 8px', textAlign: 'right', color: '#475569', fontWeight: 600 }}>
+                        <td colSpan={6} style={{ padding: '4px 8px', textAlign: 'right', color: '#475569', fontWeight: 600 }}>
                           Tax / GST (+ {Number(viewQ.taxPercentage !== undefined && viewQ.taxPercentage !== null && Number(viewQ.taxPercentage) > 0 ? viewQ.taxPercentage : ((Number(viewQ.tax) / Math.max(1, Number(viewQ.totalAmount || 0) - Number(viewQ.discount || 0))) * 100)).toFixed(1)}%):
                         </td>
                         <td style={{ padding: '4px 8px', textAlign: 'right', color: '#475569', fontWeight: 700 }}>
@@ -1722,7 +1727,7 @@ export default function SalesQuotationsView() {
                       </tr>
                     )}
                     <tr style={{ borderTop: '1px solid #CBD5E1', fontWeight: 800 }}>
-                      <td colSpan={5} style={{ padding: '8px', textAlign: 'right', color: '#0F172A', fontSize: '0.9rem' }}>Complete Grand Total ({viewQ.currency || 'PKR'}):</td>
+                      <td colSpan={6} style={{ padding: '8px', textAlign: 'right', color: '#0F172A', fontSize: '0.9rem' }}>Complete Grand Total ({viewQ.currency || 'PKR'}):</td>
                       <td style={{ padding: '8px', textAlign: 'right', color: '#059669', fontSize: '1.05rem' }}>
                         Rs. {Number(viewQ.netAmount !== undefined ? viewQ.netAmount : (viewQ.totalAmount || 0)).toLocaleString()}
                       </td>
@@ -1874,6 +1879,7 @@ export default function SalesQuotationsView() {
                         <th style={{ padding: '8px', width: '30px' }}>#</th>
                         <th style={{ padding: '8px', minWidth: '190px' }}>Inventory Product (optional)</th>
                         <th style={{ padding: '8px', minWidth: '110px' }}>SKU</th>
+                        <th style={{ padding: '8px', minWidth: '130px' }}>Part Number</th>
                         <th style={{ padding: '8px', minWidth: '260px' }}>Description / Specifications *</th>
                         <th style={{ padding: '8px', width: '140px' }}>Unit Price (PKR) *</th>
                         <th style={{ padding: '8px', width: '90px', textAlign: 'center' }}>Quantity *</th>
@@ -1908,6 +1914,14 @@ export default function SalesQuotationsView() {
                                 value={it.sku || ''}
                                 onChange={e => handleItemChange(idx, 'sku', e.target.value)}
                                 placeholder="SKU"
+                                style={{ width: '100%', padding: '7px 10px', fontSize: '0.82rem', border: '1px solid #CBD5E1', borderRadius: '6px', background: '#FFFFFF' }}
+                              />
+                            </td>
+                            <td style={{ padding: '6px 8px' }}>
+                              <input
+                                value={it.partNumber || ''}
+                                onChange={e => handleItemChange(idx, 'partNumber', e.target.value)}
+                                placeholder="Part Number"
                                 style={{ width: '100%', padding: '7px 10px', fontSize: '0.82rem', border: '1px solid #CBD5E1', borderRadius: '6px', background: '#FFFFFF' }}
                               />
                             </td>
