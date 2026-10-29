@@ -212,6 +212,7 @@ import GlobalPurchaserSidebar from './purchaser/global/GlobalPurchaserSidebar';
 import GlobalPurchaserDashboard from './purchaser/global/GlobalPurchaserDashboard';
 import GlobalPurchaserPendingOrdersView from './purchaser/global/GlobalPurchaserPendingOrdersView';
 import GlobalPurchaserPOsView from './purchaser/global/GlobalPurchaserPOsView';
+import GlobalPurchaserGRNsView from './purchaser/global/GlobalPurchaserGRNsView';
 import PriceRequestsView from './price_requests/PriceRequestsView';
 
 import { Users, ShieldCheck, UserX } from 'lucide-react';
@@ -550,7 +551,7 @@ export default function App() {
       purchaser: ['dashboard', 'price_requests', 'pending_orders', 'inventory', 'supplier_pos', 'grn', 'grn_creation', 'grns', 'local_payables', 'leave', 'profile'],
       sales_manager: ['dashboard', 'price_requests', 'leads', 'deals', 'pipeline', 'my_quotations', 'customer_pos', 'product_files', 'orders', 'proforma_invoices', 'deliveries', 'payments', 'activities', 'invoices', 'contacts', 'clients', 'target_performance', 'settings', 'notifications', 'profile'],
       project_manager: ['dashboard', 'projects', 'teams', 'tasks', 'timeline', 'deliveries', 'reports', 'settings', 'profile'],
-      admin: ['dashboard', 'price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'supplier_po_expenses', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
+      admin: ['dashboard', 'price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'supplier_po_expenses', 'exchange_rates', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
       accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'local_payables', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
       finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'target_performance_overdue', 'finance_reports', 'reports', 'profile'],
@@ -1298,7 +1299,7 @@ export default function App() {
             <main className="content-area">
               {currentUser?.purchaserSubDept === 'Global' ? (
                 <>
-                  {(activeTab === 'dashboard' || !['price_requests', 'pending_orders', 'supplier_pos', 'leave', 'profile'].includes(activeTab)) && (
+                  {(activeTab === 'dashboard' || !['price_requests', 'pending_orders', 'supplier_pos', 'grn', 'leave', 'profile'].includes(activeTab)) && (
                     <GlobalPurchaserDashboard
                       currentUser={currentUser}
                       onNavigateTab={(tab) => handleSetActiveTab(tab)}
@@ -1311,6 +1312,7 @@ export default function App() {
                   {activeTab === 'supplier_pos' && (
                     <GlobalPurchaserPOsView searchQuery={portalSearch} />
                   )}
+                  {activeTab === 'grn' && <GlobalPurchaserGRNsView searchQuery={portalSearch} />}
                 </>
               ) : (
                 <>

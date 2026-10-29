@@ -35,7 +35,7 @@ const STATUS_COLORS = {
   Cancelled: '#EF4444'
 };
 
-const EMPTY_PRODUCT = { name: '', quantity: 1, unit: 'pcs', description: '' };
+const EMPTY_PRODUCT = { name: '', partNumber: '', sku: '', quantity: 1, unit: 'pcs', description: '', unitPrice: 0, total: 0 };
 
 const EMPTY_FORM = {
   fileNumber: '',
@@ -153,16 +153,17 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       pf.customerPONumber || '—',
       pf.quotationNumber || '—',
       pf.salesOrderNumber || '—',
+      (pf.products || []).map(product => product.partNumber || product.sku).filter(Boolean).join(', ') || '—',
       `${pf.products?.length || 0} items`,
       pf.status || 'Active'
     ]);
 
     try {
       autoTable(doc, {
-        head: [['File #', 'Type', 'Customer Name', 'Customer PO #', 'Quotation Ref', 'Sales Order #', 'Items Count', 'Status']],
+        head: [['File #', 'Type', 'Customer Name', 'Customer PO #', 'Quotation Ref', 'Sales Order #', 'Part Numbers', 'Items Count', 'Status']],
         body: tableData,
         foot: [[
-          { content: 'GRAND TOTAL / SUMMARY', colSpan: 6, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 7, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
           { content: `${totalFilteredItems} Items`, styles: { halign: 'center', fontStyle: 'bold', textColor: [5, 150, 105], fillColor: [241, 245, 249] } },
           { content: `${records.length} Files`, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
         ]],
@@ -247,7 +248,11 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       salesOrderNumber: pf.salesOrderNumber || '',
       products: pf.products && pf.products.length ? pf.products.map(p => ({
         name: p.name || '',
+        partNumber: p.partNumber || p.sku || '',
+        sku: p.sku || '',
         quantity: p.quantity || 1,
+        unitPrice: Number(p.unitPrice) || 0,
+        total: Number(p.total) || 0,
         unit: p.unit || 'pcs',
         description: p.description || ''
       })) : [{ ...EMPTY_PRODUCT }],
@@ -282,7 +287,11 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
     if (selected) {
       const qProducts = selected.items && selected.items.length ? selected.items.map(item => ({
         name: item.description || '',
+        partNumber: item.partNumber || item.sku || '',
+        sku: item.sku || '',
         quantity: item.quantity || 1,
+        unitPrice: Number(item.unitPrice) || 0,
+        total: Number(item.total) || 0,
         unit: 'pcs',
         description: item.description || ''
       })) : [{ ...EMPTY_PRODUCT }];
@@ -381,10 +390,12 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
         }))
       : (pf.products && pf.products.length
           ? pf.products.map(p => ({
+              partNumber: p.partNumber || p.sku || '',
+              sku: p.sku || '',
               description: p.name + (p.description ? ` (${p.description})` : ''),
               quantity: Number(p.quantity) || 1,
-              unitPrice: 0,
-              total: 0
+              unitPrice: Number(p.unitPrice) || 0,
+              total: Number(p.total) || 0
             }))
           : [{ description: 'Product Items', quantity: 1, unitPrice: 0, total: 0 }]);
 
@@ -402,6 +413,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       subtotal: Number(linkedQuote?.totalAmount) || Number(defaultAmount) || 0,
       discount: Number(linkedQuote?.discount) || 0,
       tax: Number(linkedQuote?.tax) || 0,
+      taxRate: Number(linkedQuote?.taxPercentage) || 0,
       items: items
     });
   };
@@ -424,6 +436,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
         totalAmount: subtotal,
         discount: Number(soPreFillModal.discount) || 0,
         tax: Number(soPreFillModal.tax) || 0,
+        taxRate: Number(soPreFillModal.taxRate) || 0,
         netAmount: net,
         items: soPreFillModal.items.map(item => ({
           ...item,
@@ -787,6 +800,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                 <div className="sv-product-table-wrap">
                   <div className="sv-product-grid-header">
                     <div>Product / Item Name *</div>
+                    <div>Part Number</div>
                     <div>Qty *</div>
                     <div>Unit</div>
                     <div>Specifications / Details</div>
@@ -800,6 +814,11 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                         value={item.name} 
                         onChange={e => updateProductRow(idx, 'name', e.target.value)} 
                         required 
+                      />
+                      <input
+                        placeholder="Part number"
+                        value={item.partNumber || ''}
+                        onChange={e => updateProductRow(idx, 'partNumber', e.target.value)}
                       />
                       <input 
                         type="number" 
@@ -971,6 +990,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                     <thead style={{ background: '#F8FAFC', borderBottom: '1px solid #E2E8F0' }}>
                       <tr>
                         <th style={{ padding: '8px 12px', textAlign: 'left' }}>Item Name</th>
+                        <th style={{ padding: '8px 12px', textAlign: 'left' }}>Part Number</th>
                         <th style={{ padding: '8px 12px', textAlign: 'center', width: '80px' }}>Qty</th>
                         <th style={{ padding: '8px 12px', textAlign: 'left', width: '80px' }}>Unit</th>
                         <th style={{ padding: '8px 12px', textAlign: 'left' }}>Description</th>
@@ -981,13 +1001,14 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                         viewFile.products.map((p, i) => (
                           <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
                             <td style={{ padding: '8px 12px', fontWeight: 600 }}>{p.name || '—'}</td>
+                            <td style={{ padding: '8px 12px' }}>{p.partNumber || p.sku || '—'}</td>
                             <td style={{ padding: '8px 12px', textAlign: 'center' }}>{p.quantity}</td>
                             <td style={{ padding: '8px 12px' }}>{p.unit || 'pcs'}</td>
                             <td style={{ padding: '8px 12px', color: '#64748B' }}>{p.description || '—'}</td>
                           </tr>
                         ))
                       ) : (
-                        <tr><td colSpan={4} style={{ padding: '12px', textAlign: 'center', color: '#94A3B8' }}>No product items specified.</td></tr>
+                        <tr><td colSpan={5} style={{ padding: '12px', textAlign: 'center', color: '#94A3B8' }}>No product items specified.</td></tr>
                       )}
                     </tbody>
                   </table>

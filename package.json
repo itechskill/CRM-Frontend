@@ -20,6 +20,7 @@
     "test:release-21": "node --test tests/release21.monetary-visibility.test.mjs",
     "test:release-22": "node --test tests/release22.documents.test.mjs",
     "test:release-23": "node --test tests/release23.quotation-rates.test.mjs",
+    "test:release-24": "node --test tests/release24.navigation-documents.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

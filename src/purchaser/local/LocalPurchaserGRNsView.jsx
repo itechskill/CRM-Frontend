@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Download, Search, X } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import { getUser } from '../../utils/authStorage';
+import { downloadGrnPdf } from '../../utils/grnPdf';
 
 const dateText = value => value ? new Date(value).toLocaleDateString() : '-';
 
@@ -32,7 +33,7 @@ export default function LocalPurchaserGRNsView({ searchQuery }) {
   useEffect(() => { load(); }, []);
 
   const internalGrnByPO = useMemo(() => new Map(grns.map(grn => [
-    String(grn.supplierPO?._id || grn.supplierPO || grn.supplierPOId || ''), grn.grnNumber
+    String(grn.supplierPO?._id || grn.supplierPO || grn.supplierPOId || ''), grn
   ])), [grns]);
   const rows = useMemo(() => {
     const q = String(searchQuery || filterText).trim().toLowerCase();
@@ -70,13 +71,14 @@ export default function LocalPurchaserGRNsView({ searchQuery }) {
       <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 900 }}>
         <thead><tr style={{ background: '#F8FAFC', color: '#475569', textAlign: 'left' }}>{['Supplier PO', 'Sales Order', 'Supplier', 'Supplier GRN Reference', 'Receipt Date', 'Internal GRN', 'Status', 'Action'].map(label => <th key={label} style={{ padding: 13 }}>{label}</th>)}</tr></thead>
         <tbody>{loading ? <tr><td colSpan="8" style={{ padding: 34, textAlign: 'center' }}>Loading...</td></tr> : rows.length === 0 ? <tr><td colSpan="8" style={{ padding: 34, textAlign: 'center', color: '#94A3B8' }}>No Local Supplier POs found.</td></tr> : rows.map(po => {
-          const internalGrn = po.supportVerifiedGrn?.grnNumber || internalGrnByPO.get(String(po._id)) || '-';
+          const internalGrnRecord = internalGrnByPO.get(String(po._id));
+          const internalGrn = po.supportVerifiedGrn?.grnNumber || internalGrnRecord?.grnNumber || '-';
           const recorded = Boolean(po.goodsReceiptReference);
           return <tr key={po._id} style={{ borderTop: '1px solid #E2E8F0' }}>
             <td style={{ padding: 13, fontWeight: 700 }}>{po.poNumber}</td><td style={{ padding: 13 }}>{po.salesOrderNumber || '-'}</td><td style={{ padding: 13 }}>{po.supplierName || '-'}</td>
             <td style={{ padding: 13 }}>{po.goodsReceiptReference || '-'}</td><td style={{ padding: 13 }}>{dateText(po.goodsReceiptDate)}</td><td style={{ padding: 13 }}>{internalGrn}</td>
             <td style={{ padding: 13 }}>{internalGrn !== '-' ? 'Support Verified' : recorded ? 'Awaiting Support Verification' : 'Awaiting Supplier Goods'}</td>
-            <td style={{ padding: 13 }}>{!recorded && canRecord ? <button onClick={() => openRecord(po)} style={{ border: 0, borderRadius: 7, padding: '8px 12px', background: '#2563EB', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}>Record Goods Received</button> : '-'}</td>
+            <td style={{ padding: 13 }}>{!recorded && canRecord ? <button onClick={() => openRecord(po)} style={{ border: 0, borderRadius: 7, padding: '8px 12px', background: '#2563EB', color: '#FFF', fontWeight: 700, cursor: 'pointer' }}>Record Goods Received</button> : internalGrnRecord ? <button onClick={() => downloadGrnPdf(internalGrnRecord)} style={{ border: '1px solid #A7F3D0', borderRadius: 7, padding: '8px 12px', background: '#ECFDF5', color: '#047857', fontWeight: 700, cursor: 'pointer' }}><Download size={14} /> Download PDF</button> : '-'}</td>
           </tr>;
         })}</tbody>
       </table>

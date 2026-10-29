@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ClipboardCheck, Plus, Search, Trash2, X, Eye, CheckCircle2, ArrowRight, PackageCheck, Truck } from 'lucide-react';
+import { ClipboardCheck, Plus, Search, Trash2, X, Eye, CheckCircle2, ArrowRight, PackageCheck, Truck, Download } from 'lucide-react';
 import { apiRequest } from '../utils/api';
+import { downloadGrnPdf } from '../utils/grnPdf';
 
 export default function LogisticsGRNView({ searchQuery, onNavigateTab }) {
   const [grns, setGrns] = useState([]);
@@ -368,6 +369,9 @@ export default function LogisticsGRNView({ searchQuery, onNavigateTab }) {
                     >
                       <Eye size={14} /> View Details
                     </button>
+                    <button onClick={() => downloadGrnPdf(grn)} style={{ marginLeft: 6, background: '#EFF6FF', border: '1px solid #BFDBFE', padding: '6px 12px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 600, color: '#1D4ED8', cursor: 'pointer' }}>
+                      <Download size={14} /> Download PDF
+                    </button>
                   </td>
                 </tr>
               ))
@@ -679,6 +683,7 @@ export default function LogisticsGRNView({ searchQuery, onNavigateTab }) {
               )}
 
               <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => downloadGrnPdf(viewGrn)} style={{ marginRight: 8, padding: '9px 20px', borderRadius: '8px', border: '1px solid #BFDBFE', background: '#EFF6FF', color: '#1D4ED8', fontWeight: 600, cursor: 'pointer' }}><Download size={14} /> Download PDF</button>
                 <button
                   type="button"
                   onClick={() => setViewGrn(null)}

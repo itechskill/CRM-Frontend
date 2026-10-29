@@ -39,7 +39,7 @@ import {
 import './SalesViews.css';
 import { hasCustomerPOAttachment } from './customerPOAttachment';
 import { companyName } from '../../utils/companies';
-import { downloadSalesOrderPdf } from '../../utils/salesDocumentPdfLayout';
+import { downloadSalesOrderPdf, getSalesOrderPdfFinancials } from '../../utils/salesDocumentPdfLayout';
 import { fileTypeTheme, formatFileClassification } from '../../utils/fileClassification';
 
 const DELIVERY_COLORS = {
@@ -910,7 +910,7 @@ export default function SalesOrdersView() {
                 </div>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '1.3rem', fontWeight: 800, color: '#059669' }}>
-                    Rs. {Number(viewOrder.totalAmount || viewOrder.netAmount || 0).toLocaleString()}
+                    Rs. {Number(viewOrder.netAmount ?? viewOrder.totalAmount ?? 0).toLocaleString()}
                   </div>
                 </div>
               </div>
@@ -979,6 +979,16 @@ export default function SalesOrdersView() {
                   <div style={{ fontSize: '0.88rem', color: '#334155', lineHeight: 1.5, fontWeight: 500 }}>{viewOrder.productSummary}</div>
                 </div>
               )}
+
+              {(() => {
+                const totals = getSalesOrderPdfFinancials(viewOrder);
+                return <div style={{ marginBottom: 16, marginLeft: 'auto', maxWidth: 360, background: '#F8FAFC', border: '1px solid #E2E8F0', borderRadius: 8, padding: 12 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}><span>Subtotal</span><strong>Rs. {totals.subtotal.toLocaleString()}</strong></div>
+                  {totals.discount > 0 && <div style={{ display: 'flex', justifyContent: 'space-between', color: '#DC2626', marginTop: 6 }}><span>Discount</span><strong>- Rs. {totals.discount.toLocaleString()}</strong></div>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}><span>Tax / GST ({totals.gstPercentage}%)</span><strong>Rs. {totals.gstAmount.toLocaleString()}</strong></div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #CBD5E1', paddingTop: 8, marginTop: 8 }}><strong>Grand Total</strong><strong>Rs. {totals.total.toLocaleString()}</strong></div>
+                </div>;
+              })()}
 
               {/* Rejection Alert Banner */}
               {(viewOrder.status === 'Rejected' || viewOrder.status === 'Sales Order Rejected due to overdue amount' || viewOrder.workflowStatus === 'Finance Rejected') && (

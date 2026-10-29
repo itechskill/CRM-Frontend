@@ -129,6 +129,7 @@ export default function SalesCustomerPOsView() {
       p.customerName || '—',
       p.quotationNumber || '—',
       p.poDate ? new Date(p.poDate).toLocaleDateString() : '—',
+      (p.items || []).map(item => item.partNumber || item.sku).filter(Boolean).join(', ') || '—',
       `Rs. ${Number(p.amount || 0).toLocaleString()}`,
       p.status || 'Received',
       p.notes ? (p.notes.length > 30 ? p.notes.substring(0, 30) + '...' : p.notes) : '—'
@@ -136,10 +137,10 @@ export default function SalesCustomerPOsView() {
 
     try {
       autoTable(doc, {
-        head: [['PO Number', 'Customer Name', 'Linked Quotation', 'PO Date', 'Amount (PKR)', 'Status', 'Notes']],
+        head: [['PO Number', 'Customer Name', 'Linked Quotation', 'PO Date', 'Part Numbers', 'Amount (PKR)', 'Status', 'Notes']],
         body: tableData,
         foot: [[
-          { content: 'GRAND TOTAL / SUMMARY', colSpan: 4, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
+          { content: 'GRAND TOTAL / SUMMARY', colSpan: 5, styles: { halign: 'right', fontStyle: 'bold', fillColor: [241, 245, 249] } },
           { content: `Rs. ${totalFilteredAmount.toLocaleString()}`, styles: { halign: 'right', fontStyle: 'bold', textColor: [5, 150, 105], fillColor: [241, 245, 249] } },
           { content: `${records.length} POs`, colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', fillColor: [241, 245, 249] } }
         ]],

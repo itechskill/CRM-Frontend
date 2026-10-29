@@ -551,6 +551,7 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, onClearIniti
 
     const tableRows = (note.items || []).map((it, idx) => [
       idx + 1,
+      it.partNumber || '',
       it.product || it.description || 'Delivered Item',
       it.demand || it.quantity || 1,
       it.quantity || it.demand || 1,
@@ -562,8 +563,8 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, onClearIniti
       startY: 88,
       margin: { left: 14, right: 14 },
       tableWidth: 182,
-      head: [['#', 'Item Description & Scope', 'Ordered Qty', 'Delivered Qty', 'Unit', 'Stock Status']],
-      body: tableRows.length ? tableRows : [['1', 'Standard Package Items', '1', '1', 'pcs', 'In Stock']],
+      head: [['#', 'Part Number', 'Item Description & Scope', 'Ordered Qty', 'Delivered Qty', 'Unit', 'Stock Status']],
+      body: tableRows.length ? tableRows : [['1', '', 'Standard Package Items', '1', '1', 'pcs', 'In Stock']],
       theme: 'grid',
       headStyles: {
         fillColor: [30, 58, 138],
