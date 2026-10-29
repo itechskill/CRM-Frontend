@@ -291,6 +291,7 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
   // ══════════════════════════════════════════════════════════════
   const tiles = salesStats?.dashboardTiles || {};
   const targetIsSet = Boolean(targetPerformance?.visible && Number(targetPerformance?.salaryCents || 0) > 0);
+  const targetUnavailableText = targetPerformance?.visible === false ? 'Hidden by Admin' : 'Target not set';
   const targetAmount = targetIsSet ? Number(targetPerformance.targetCents || 0) / 100 : null;
   const achievedGP = targetIsSet ? Number(targetPerformance.achievedGrossProfitCents || 0) / 100 : null;
   const remainingTarget = targetIsSet ? Math.max(0, targetAmount - achievedGP) : null;
@@ -303,10 +304,10 @@ export default function EmployeeDashboard({ currentUser, onNavigateTab, onOpenNe
     { label: 'Invoiced', ...tiles.invoiced, amount: money(tiles.invoiced?.amount), icon: FileText, tone: '#7C3AED', onClick: go('my_invoices') },
     { label: 'Safe Receivable', ...tiles.safeReceivable, amount: money(tiles.safeReceivable?.amount), note: '1-30 days', icon: DollarSign, tone: '#0284C7', onClick: go('my_invoices') },
     { label: 'Due Receivable', ...tiles.dueReceivable, amount: money(tiles.dueReceivable?.amount), note: '31-45 days, grace period', icon: AlertTriangle, tone: '#D97706', onClick: go('my_invoices') },
-    { label: 'GP Target', count: null, amount: targetIsSet ? money(targetAmount) : 'Target not set', note: targetIsSet ? 'Salary × 5 for selected month' : '', icon: Target, tone: '#D97706', onClick: go('target_performance') },
-    { label: 'Remaining Target', count: null, amount: targetIsSet ? money(remainingTarget) : 'Target not set', icon: Target, tone: '#EA580C', onClick: go('target_performance') },
+    { label: 'GP Target', count: null, amount: targetIsSet ? money(targetAmount) : targetUnavailableText, note: targetIsSet ? 'Salary × 5 for selected month' : '', icon: Target, tone: '#D97706', onClick: go('target_performance') },
+    { label: 'Remaining Target', count: null, amount: targetIsSet ? money(remainingTarget) : targetUnavailableText, icon: Target, tone: '#EA580C', onClick: go('target_performance') },
     { label: 'Above 45 days', ...tiles.above45Days, amount: money(tiles.above45Days?.amount), icon: AlertTriangle, tone: '#DC2626', onClick: go('my_invoices') },
-    { label: 'GP Achieved', count: null, amount: targetIsSet ? money(achievedGP) : 'Target not set', icon: CheckCircle, tone: '#059669', onClick: go('target_performance') }
+    { label: 'GP Achieved', count: null, amount: targetIsSet ? money(achievedGP) : targetUnavailableText, icon: CheckCircle, tone: '#059669', onClick: go('target_performance') }
   ];
 
   return (

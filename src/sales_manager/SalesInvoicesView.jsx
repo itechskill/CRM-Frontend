@@ -4,6 +4,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
+import { downloadInvoicePdf } from '../utils/invoicePdf';
 import {
   FileText,
   Search,
@@ -116,7 +117,13 @@ export default function SalesInvoicesView() {
   };
 
   // PDF Download — opens formatted invoice in printable popup and triggers print
-  const handleDownloadPDF = (inv) => {
+  const handleDownloadPDF = async (inv) => {
+    try {
+      await downloadInvoicePdf(inv);
+      return;
+    } catch (error) {
+      console.error('Letterhead invoice PDF failed; using the printable legacy layout.', error);
+    }
     const items = inv.items && inv.items.length > 0 ? inv.items : [
       { description: inv.dealTitle || 'Commercial Sales Services', quantity: 1, unitPrice: inv.amount, total: inv.amount }
     ];

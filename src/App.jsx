@@ -276,6 +276,7 @@ export default function App() {
   const [supportOrderForDN, setSupportOrderForDN] = useState(null);
   const [dnOrderForInvoice, setDnOrderForInvoice] = useState(null);
   const [financeInvoiceForPayment, setFinanceInvoiceForPayment] = useState(null);
+  const [financeReceivePaymentSignal, setFinanceReceivePaymentSignal] = useState(0);
 
   const [currentUser, setCurrentUser] = useState(cachedUser);
   const [backendVerifiedRole, setBackendVerifiedRole] = useState(initialVerifiedRole);
@@ -964,6 +965,11 @@ export default function App() {
               searchQuery={portalSearch}
               onSearchChange={setPortalSearch}
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
+              onReceivePayment={() => {
+                setFinanceInvoiceForPayment(null);
+                setFinanceReceivePaymentSignal(value => value + 1);
+                handleSetActiveTab('customer_payments');
+              }}
             />
             <main className="content-area">
               {(activeTab === 'dashboard' || !['leave', 'support_orders', 'inventory', 'delivery_notes', 'tickets', 'profile'].includes(activeTab)) && (
@@ -1142,6 +1148,7 @@ export default function App() {
                 <FinancePaymentsView
                   searchQuery={portalSearch}
                   initialInvoice={financeInvoiceForPayment}
+                  openCreateSignal={financeReceivePaymentSignal}
                   onClearInitialInvoice={() => setFinanceInvoiceForPayment(null)}
                 />
               )}

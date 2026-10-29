@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { downloadInvoicePdf } from '../utils/invoicePdf';
 import { apiRequest } from '../utils/api';
 import { linePartNumber } from '../utils/documentFinancials';
 import {
@@ -382,7 +383,13 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
     }
   };
 
-  const handleDownloadPDF = (inv) => {
+  const handleDownloadPDF = async (inv) => {
+    try {
+      await downloadInvoicePdf(inv, { includeLateCharge: true });
+      return;
+    } catch (error) {
+      console.error('Letterhead invoice PDF failed; using the legacy layout.', error);
+    }
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const now = new Date();
     const isOverdue = inv.isOverdue || (inv.dueDate && new Date(inv.dueDate) < now && inv.status !== 'Paid' && inv.status !== 'Cancelled');

@@ -10,7 +10,8 @@ export default function FinanceHeader({
   searchQuery,
   onSearchChange,
   currentUser,
-  onNavigateTab
+  onNavigateTab,
+  onReceivePayment
 }) {
   const getTabLabel = () => {
     switch (activeTab) {
@@ -74,7 +75,7 @@ export default function FinanceHeader({
         {/* Quick Action Header Buttons */}
         <div className="finance-header-actions-group" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <button
-            onClick={() => onNavigateTab && onNavigateTab('customer_payments')}
+            onClick={() => onReceivePayment ? onReceivePayment() : (onNavigateTab && onNavigateTab('customer_payments'))}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -91,10 +92,10 @@ export default function FinanceHeader({
               whiteSpace: 'nowrap',
               transition: 'all 0.2s ease'
             }}
-            title="Record Customer Payment"
+            title="Receive Customer Payment"
           >
             <CreditCard size={14} />
-            <span>+ Record Payment</span>
+            <span>+ Receive Payment</span>
           </button>
 
           <button
