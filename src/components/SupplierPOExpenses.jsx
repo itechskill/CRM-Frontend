@@ -33,6 +33,7 @@ export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddPro
   const [editingId, setEditingId] = useState('');
   const [busy, setBusy] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
+  const [confirmComplete, setConfirmComplete] = useState(false);
   const [message, setMessage] = useState('');
   const role = getUser()?.role;
   const costingStatus = record?.costingStatus || 'Incomplete';
@@ -53,6 +54,14 @@ export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddPro
     if (categoryResult.success) setCategories(categoryResult.data?.data || []);
   };
   useEffect(() => { load().catch(error => setMessage(error.message)); }, [po._id]);
+  useEffect(() => {
+    if (!confirmComplete) return undefined;
+    const onKeyDown = event => {
+      if (event.key === 'Escape') setConfirmComplete(false);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [confirmComplete]);
   const active = useMemo(() => (record?.expenses || []).filter(item => !item.isDeleted), [record]);
   const history = useMemo(() => [
     ...(record?.expenses || []).flatMap(item => (item.editHistory || []).map(entry => ({ ...entry, category: item.category, historyType: 'expense' }))),
@@ -83,15 +92,19 @@ export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddPro
     if (result.success) { setRecord(result.data?.data); setMessage('Expense removed; Admin notified.'); onChanged?.(); }
     else setMessage(result.message || 'Could not remove expense.');
   };
-  const setCostingStatus = async status => {
+  const setCostingStatus = async (status, confirmed = false) => {
     if (!['finance', 'admin'].includes(role) || status === costingStatus) return;
+    if (status === 'Completed' && !confirmed) {
+      setConfirmComplete(true);
+      return;
+    }
     let reason = '';
     if (status === 'Incomplete') {
       if (role !== 'admin') return setMessage('Costing is Completed and locked. Admin must authorize a change.');
       reason = window.prompt('Reason for re-opening costing')?.trim() || '';
       if (!reason) return setMessage('A short reason is required to re-open costing.');
     }
-    setStatusBusy(true); setMessage('');
+    setConfirmComplete(false); setStatusBusy(true); setMessage('');
     try {
       const result = await apiRequest(`/api/purchaser/pos/${po._id}/expenses/costing-status`, 'PATCH', { status, reason });
       if (!result.success) throw new Error(result.message || 'Could not update costing status.');
@@ -158,6 +171,20 @@ export default function SupplierPOExpensesModal({ po, onClose, canAdd: canAddPro
         {role === 'admin' && <details style={{ marginTop: 14 }}><summary style={{ cursor: 'pointer', fontWeight: 700 }}>Admin: manage expense categories</summary><div style={{ display: 'flex', flexWrap: 'wrap', gap: 7, marginTop: 9 }}>{categories.map(category => <div key={category.key} style={{ border: '1px solid #E2E8F0', padding: 7, borderRadius: 7, opacity: category.isActive ? 1 : .55 }}><strong>{category.name}</strong> <button type="button" onClick={() => { const name = window.prompt('New category name', category.name); if (name?.trim()) updateCategory(category, { name: name.trim() }); }}>Rename</button> <button type="button" onClick={() => updateCategory(category, { isActive: !category.isActive })}>{category.isActive ? 'Deactivate' : 'Activate'}</button></div>)}</div></details>}
         <details style={{ marginTop: 14 }}><summary style={{ cursor: 'pointer', fontWeight: 700 }}>Expense and costing history ({history.length})</summary>{history.map((entry, index) => <div key={index} style={{ padding: 8, borderBottom: '1px solid #E2E8F0', fontSize: 12 }}><strong>{new Date(entry.changedAt).toLocaleString()} · {entry.changedByName || 'User'} · {entry.action}</strong>{entry.historyType === 'costing' ? <div>{entry.previousStatus} → {entry.newStatus}{entry.reason ? ` · ${entry.reason}` : ''}</div> : <div>{historyValue(entry.oldValues)} → {historyValue(entry.newValues)}</div>}</div>)}</details>
       </div>
+      {confirmComplete && <div
+        role="presentation"
+        onClick={event => { event.stopPropagation(); setConfirmComplete(false); }}
+        style={{ position: 'fixed', inset: 0, zIndex: 1200, background: 'rgba(15, 23, 42, .55)', display: 'grid', placeItems: 'center', padding: 20 }}
+      >
+        <div role="dialog" aria-modal="true" aria-labelledby="costing-confirm-title" onClick={event => event.stopPropagation()} style={{ width: 'min(520px, 100%)', background: '#fff', borderRadius: 14, padding: 22, boxShadow: '0 24px 60px rgba(15, 23, 42, .25)' }}>
+          <h3 id="costing-confirm-title" style={{ margin: '0 0 10px' }}>Complete costing</h3>
+          <p style={{ margin: 0, color: '#334155', lineHeight: 1.55 }}>Are you sure you want to mark this GRN as Completed? Once completed, it will be locked against further changes.</p>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 9, marginTop: 20 }}>
+            <button type="button" onClick={() => setConfirmComplete(false)} disabled={statusBusy}>Cancel</button>
+            <button type="button" onClick={() => setCostingStatus('Completed', true)} disabled={statusBusy} style={{ border: 0, borderRadius: 7, padding: '8px 14px', background: '#059669', color: '#fff', fontWeight: 700 }}>{statusBusy ? 'Completingâ€¦' : 'Confirm'}</button>
+          </div>
+        </div>
+      </div>}
     </div>
   );
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Search, X, CheckCircle2 } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 
-export default function LocalPurchaserPayablesView({ searchQuery, readOnly = false, canRecordPayments = !readOnly }) {
+export default function LocalPurchaserPayablesView({ searchQuery, readOnly = false, canRecordPayments = !readOnly, showCostingStatus = false }) {
   const [payables, setPayables] = useState([]);
   const [supplierPOs, setSupplierPOs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -281,6 +281,7 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Amounts (PKR)</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Due / PDC Date</th>
               <th style={{ padding: '12px 20px', fontWeight: 600 }}>Status</th>
+              {showCostingStatus && <th style={{ padding: '12px 20px', fontWeight: 600 }}>Costing status</th>}
               <th style={{ padding: '12px 20px', fontWeight: 600, textAlign: 'center' }}>Action</th>
             </tr>
           </thead>
@@ -331,6 +332,7 @@ export default function LocalPurchaserPayablesView({ searchQuery, readOnly = fal
                       {pay.status || 'Pending'}
                     </span>
                   </td>
+                  {showCostingStatus && <td style={{ padding: '14px 20px' }}><span style={{ padding: '4px 10px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 700, background: pay.supplierPO?.costingStatus === 'Completed' ? '#DCFCE7' : '#FEF3C7', color: pay.supplierPO?.costingStatus === 'Completed' ? '#166534' : '#92400E' }}>{pay.supplierPO?.costingStatus === 'Completed' ? 'Completed' : 'Incomplete'}</span></td>}
                   <td style={{ padding: '14px 20px', textAlign: 'center' }}>
                     <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap', gap: '6px' }}>
                       {canRecordPayments && payableOutstanding(pay) > 0 && !pay.isBlockedByAdvance && (

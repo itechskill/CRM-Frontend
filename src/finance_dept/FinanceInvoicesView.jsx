@@ -40,6 +40,14 @@ const toMoneyCents = (value) => Math.round(((Number(value) || 0) + Number.EPSILO
 const fromMoneyCents = (cents) => cents / 100;
 const formatMoney = (value) => Number(value || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const getRemainingAmount = (total, paid) => fromMoneyCents(Math.max(0, toMoneyCents(total) - toMoneyCents(paid)));
+const costingBadge = costing => {
+  const completed = costing?.costingStatus === 'Completed';
+  return <span className="sv-badge" style={{ background: completed ? '#DCFCE7' : '#FEF3C7', color: completed ? '#166534' : '#92400E', border: `1px solid ${completed ? '#86EFAC' : '#FDE68A'}`, fontWeight: 700 }}>{completed ? 'Completed' : 'Incomplete'}</span>;
+};
+const costingMoney = (costing, field) => {
+  if (!costing || costing.issue) return <span style={{ color: '#B45309', fontWeight: 700 }}>{costing?.issue || 'Cost not recorded'}</span>;
+  return <span style={{ fontWeight: 800, color: field === 'grossProfitCents' ? '#047857' : '#0F172A' }}>PKR {formatMoney(fromMoneyCents(costing[field]))}<small style={{ display: 'block', color: costing.provisional ? '#B45309' : '#64748B', fontWeight: 700 }}>{costing.provisional ? 'Provisional' : 'Final'}</small></span>;
+};
 
 export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, initialTab }) {
   const [invoices, setInvoices] = useState([]);
@@ -1143,7 +1151,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                       <div>{o.orderNumber || o.orderReference || 'SO'}</div>
                       {o.supplierPO?.poNumber && (
                         <div style={{ fontSize: '0.72rem', color: o.fileType === 'Blue' ? '#2563EB' : '#059669', fontWeight: 600 }}>
-                          PO: {o.supplierPO.poNumber}
+                          PO: {o.supplierPO.poNumber} {costingBadge({ costingStatus: o.supplierPOCostingStatus })}
                         </div>
                       )}
                     </td>
@@ -1231,6 +1239,9 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                   <th>Invoice Total</th>
                   <th>Paid Amount</th>
                   <th>Remaining</th>
+                  <th>COGS</th>
+                  <th>Gross Profit</th>
+                  <th>Costing</th>
                   <th>Status</th>
                   <th style={{ textAlign: 'center' }}>Actions</th>
                 </tr>
@@ -1281,6 +1292,9 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                       <td style={{ fontWeight: 800, color: isPaid ? '#059669' : '#DC2626' }}>
                         PKR {formatMoney(remaining)}
                       </td>
+                      <td>{costingMoney(inv.financeCosting, 'cogsCents')}{inv.financeCosting?.review && <small title={inv.financeCosting.reviewReason} style={{ display: 'block', color: '#B45309', fontWeight: 800 }}>Review</small>}</td>
+                      <td>{costingMoney(inv.financeCosting, 'grossProfitCents')}</td>
+                      <td>{costingBadge(inv.financeCosting)}</td>
                       <td>
                         {isPendingFinalization ? (
                           <span className="sv-badge" style={{ background: '#FEF3C7', color: '#B45309', border: '1px solid #FDE68A', fontWeight: 700 }}>
@@ -1686,6 +1700,23 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                       <span style={{ fontWeight: 600, color: '#0F172A' }}>+ PKR {formatMoney(viewInvoice.tax)}</span>
                     </div>
                   )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8, fontSize: '0.85rem' }}>
+                    <span style={{ color: '#64748B' }}>Invoice amount (excl. tax):</span>
+                    <span style={{ fontWeight: 700 }}>PKR {formatMoney(fromMoneyCents(viewInvoice.financeCosting?.invoiceAmountExcludingTaxCents || 0))}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 12, marginBottom: 8, fontSize: '0.85rem' }}>
+                    <span style={{ color: '#64748B' }}>COGS:</span>
+                    <span style={{ textAlign: 'right' }}>{costingMoney(viewInvoice.financeCosting, 'cogsCents')}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', gap: 12, marginBottom: 8, fontSize: '0.85rem' }}>
+                    <span style={{ color: '#64748B' }}>Gross Profit:</span>
+                    <span style={{ textAlign: 'right' }}>{costingMoney(viewInvoice.financeCosting, 'grossProfitCents')}</span>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, fontSize: '0.85rem' }}>
+                    <span style={{ color: '#64748B' }}>Costing:</span>
+                    {costingBadge(viewInvoice.financeCosting)}
+                  </div>
+                  {viewInvoice.financeCosting?.review && <div title={viewInvoice.financeCosting.reviewReason} style={{ marginBottom: 8, padding: '7px 9px', borderRadius: 7, background: '#FFFBEB', color: '#92400E', fontSize: '0.78rem', fontWeight: 700 }}>Review — {viewInvoice.financeCosting.reviewReason}</div>}
                   <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderTop: '1.5px solid #CBD5E1', borderBottom: '1.5px solid #CBD5E1', marginTop: '6px', marginBottom: '8px' }}>
                     <span style={{ fontWeight: 800, color: '#0F172A', fontSize: '1rem' }}>Total Invoice Amount:</span>
                     <span style={{ fontWeight: 800, color: '#059669', fontSize: '1.15rem' }}>PKR {formatMoney(viewInvoice.amount)}</span>
@@ -2190,7 +2221,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                   </div>
                   {viewOrder.supplierPO?.poNumber && (
                     <div style={{ fontSize: '0.82rem', color: '#475569', marginTop: '4px' }}>
-                      <strong>Supplier PO:</strong> {viewOrder.supplierPO.poNumber} ({viewOrder.supplierPO.supplierName || 'Supplier'})
+                      <strong>Supplier PO:</strong> {viewOrder.supplierPO.poNumber} ({viewOrder.supplierPO.supplierName || 'Supplier'}) {costingBadge({ costingStatus: viewOrder.supplierPOCostingStatus })}
                     </div>
                   )}
                   {viewOrder.overdueBlockReason && (
