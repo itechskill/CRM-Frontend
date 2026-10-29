@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
 import { generateCombinedDocumentPackagePDF } from '../utils/combinedPdfGenerator';
+import { downloadInvoicePdf } from '../utils/invoicePdf';
 import { calculateInvoiceTotals, linePartNumber } from '../utils/documentFinancials';
 import {
   FileText,
@@ -477,7 +478,13 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
     }
   };
 
-  const handleDownloadPDF = (inv) => {
+  const handleDownloadPDF = async (inv) => {
+    try {
+      await downloadInvoicePdf(inv);
+      return;
+    } catch (error) {
+      console.error('Letterhead invoice PDF failed; using the legacy layout.', error);
+    }
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.setTextColor(15, 23, 42);
@@ -544,7 +551,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
           return;
         }
 
-        generateCombinedDocumentPackagePDF(res.data);
+        await generateCombinedDocumentPackagePDF(res.data);
       } else {
         alert(res.message || 'Error fetching document package details.');
       }

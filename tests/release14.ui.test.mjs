@@ -35,7 +35,8 @@ test('salesperson and manager dashboards render the same eleven always-visible o
     assert.match(source, /targetPerformance\?\.visible/);
     assert.match(source, /salaryCents \|\| 0/);
     assert.match(source, /Target not set/);
-    assert.match(source, /label: 'GP Achieved'.*amount: targetIsSet \? money\(achievedGP\) : 'Target not set'/);
+    assert.match(source, /Hidden by Admin/);
+    assert.match(source, /label: 'GP Achieved'.*amount: targetIsSet \? money\(achievedGP\) : targetUnavailableText/);
     assert.doesNotMatch(source, /Achieved GP:/);
     assert.doesNotMatch(source, /label: 'Receivable'/);
     assert.doesNotMatch(source, /label: 'Overdue'/);

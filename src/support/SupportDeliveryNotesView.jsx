@@ -28,6 +28,7 @@ import {
 import '../employee/sales/SalesViews.css';
 import './SupportPortal.css';
 import { canViewFullMonetaryData } from '../utils/monetaryVisibility';
+import { downloadDeliveryNotePdf } from '../utils/deliveryNotePdf';
 
 const SIGNED_DN_ACCEPT = '.pdf,.png,.jpg,.jpeg,.webp,.gif,.bmp';
 const SIGNED_DN_EXTENSIONS = /\.(pdf|png|jpe?g|webp|gif|bmp)$/i;
@@ -351,7 +352,13 @@ export default function SupportDeliveryNotesView({ initialSelectedOrder, onClear
     }
   };
 
-  const handleDownloadPDF = (dn) => {
+  const handleDownloadPDF = async (dn) => {
+    try {
+      await downloadDeliveryNotePdf(dn, { showPrices: false });
+      return;
+    } catch (error) {
+      console.error('Letterhead Delivery Note PDF failed; using the legacy layout.', error);
+    }
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const dnRef = dn.deliveryNumber || dn.deliveryNoteNumber || 'DN-0001';
 

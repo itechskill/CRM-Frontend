@@ -31,6 +31,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import './SalesViews.css';
+import { downloadDeliveryNotePdf } from '../../utils/deliveryNotePdf';
 
 const getFutureDateStr = (days = 3, baseDateStr = null) => {
   const d = baseDateStr ? new Date(baseDateStr) : new Date();
@@ -456,7 +457,13 @@ export default function SalesDeliveryNotesView({ initialSalesOrder, onClearIniti
   };
 
   // ── 8. DOWNLOAD DELIVERY SLIP (PDF) ──
-  const handleDownloadPDF = (note) => {
+  const handleDownloadPDF = async (note) => {
+    try {
+      await downloadDeliveryNotePdf(note, { showPrices: false });
+      return;
+    } catch (error) {
+      console.error('Letterhead Delivery Note PDF failed; using the legacy layout.', error);
+    }
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const ref = note.deliveryNumber || note.deliveryNoteNumber || 'DN-0001';
 

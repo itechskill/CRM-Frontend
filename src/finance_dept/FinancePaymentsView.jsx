@@ -19,16 +19,19 @@ import {
   Clock,
   ArrowRight,
   Receipt,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Eye
 } from 'lucide-react';
 import '../employee/sales/SalesViews.css';
 import '../accounts/InvoicePaymentForms.css';
+import { downloadReceiptVoucherPdf } from '../utils/receiptVoucherPdf';
 
 const toMoneyCents = (value) => Math.round(((Number(value) || 0) + Number.EPSILON) * 100);
 const fromMoneyCents = (cents) => cents / 100;
 const formatMoney = (value) => Number(value || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const newReceiptRequestId = () => globalThis.crypto?.randomUUID?.() || `rv-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
-export default function FinancePaymentsView({ initialPreFillInvoice, initialInvoice, onClearInitialInvoice, searchQuery }) {
+export default function FinancePaymentsView({ initialPreFillInvoice, initialInvoice, onClearInitialInvoice, searchQuery, openCreateSignal = 0 }) {
   const [payments, setPayments] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -37,6 +40,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
   const [saving, setSaving] = useState(false);
   const [feedback, setFeedback] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [viewPayment, setViewPayment] = useState(null);
 
   const [form, setForm] = useState({
     invoiceId: '',
@@ -48,8 +52,10 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     paymentType: 'Partial',
     paymentMethod: 'Bank Transfer',
     paymentDate: new Date().toISOString().split('T')[0],
+    reference: '',
     notes: '',
-    allocations: []
+    allocations: [],
+    receiptRequestId: newReceiptRequestId()
   });
 
   const fetchPayments = useCallback(async () => {
@@ -123,6 +129,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
   useEffect(() => {
     const targetInv = initialInvoice || initialPreFillInvoice;
     if (targetInv) {
+      setForm(previous => ({ ...previous, receiptRequestId: newReceiptRequestId() }));
       handleSelectInvoice(targetInv);
       setShowModal(true);
       if (onClearInitialInvoice) onClearInitialInvoice();
@@ -166,11 +173,17 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
       paymentType: 'Full',
       paymentMethod: 'Bank Transfer',
       paymentDate: new Date().toISOString().split('T')[0],
+      reference: '',
       notes: '',
-      allocations: []
+      allocations: [],
+      receiptRequestId: newReceiptRequestId()
     });
     setShowModal(true);
   };
+
+  useEffect(() => {
+    if (openCreateSignal > 0) openCreateModal();
+  }, [openCreateSignal]);
 
   const addInvoiceAllocation = () => {
     setForm(prev => ({
@@ -237,7 +250,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
       });
 
       if (response.ok && data.success) {
-        setFeedback(`Payment ${data.data?.paymentRefNumber || ''} of PKR ${formatMoney(form.amount)} recorded successfully!`);
+        setFeedback(`Payment ${data.data?.paymentRefNumber || ''} received successfully. Receipt Voucher ${data.data?.receiptVoucherNumber || '—'} created for PKR ${formatMoney(form.amount)}.`);
         setShowModal(false);
         fetchPayments();
         fetchInvoices();
@@ -252,7 +265,19 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     }
   };
 
-  const handleDownloadReceipt = (pay) => {
+  const handleDownloadReceipt = async (pay) => {
+    if (!pay.receiptVoucherNumber) {
+      alert('This legacy payment does not have a Receipt Voucher.');
+      return;
+    }
+    try {
+      const { response, data } = await apiRequest(`/api/sales-employee/payments/${pay._id}/receipt-voucher`);
+      if (!response.ok || !data.success) throw new Error(data.message || 'Could not load Receipt Voucher.');
+      await downloadReceiptVoucherPdf(data.data);
+      return;
+    } catch (error) {
+      alert(error.message || 'Could not download the Receipt Voucher.');
+    }
     const doc = new jsPDF();
     doc.setFontSize(18);
     doc.setTextColor(15, 23, 42);
@@ -402,6 +427,8 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
     const term = effectiveSearch;
     return (
       (p.paymentRefNumber && p.paymentRefNumber.toLowerCase().includes(term)) ||
+      (p.receiptVoucherNumber && p.receiptVoucherNumber.toLowerCase().includes(term)) ||
+      (p.reference && p.reference.toLowerCase().includes(term)) ||
       (p.customerName && p.customerName.toLowerCase().includes(term)) ||
       (p.salePerson && p.salePerson.toLowerCase().includes(term)) ||
       (p.salesPerson?.fullName && p.salesPerson.fullName.toLowerCase().includes(term)) ||
@@ -443,7 +470,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
             <FileSpreadsheet size={15} /> Export Excel
           </button>
           <button className="sv-btn-primary" style={{ background: '#0F172A' }} onClick={openCreateModal}>
-            <Plus size={16} /> Record Payment
+            <Plus size={16} /> Receive Payment
           </button>
         </div>
       </div>
@@ -516,14 +543,15 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
         <div className="sv-empty" style={{ padding: '40px 20px', textAlign: 'center' }}>
           <CreditCard size={36} color="#94A3B8" style={{ marginBottom: '10px' }} />
           <p style={{ fontWeight: 600, color: '#334155' }}>No payment records found</p>
-          <p style={{ fontSize: '0.85rem', color: '#64748B' }}>Click &quot;Record Payment&quot; to log a customer remittance.</p>
+          <p style={{ fontSize: '0.85rem', color: '#64748B' }}>Click &quot;Receive Payment&quot; to log a customer remittance.</p>
         </div>
       ) : (
         <div className="sv-table-wrap">
           <table className="sv-table">
             <thead>
               <tr>
-                <th>Receipt #</th>
+                <th>Payment #</th>
+                <th>RV #</th>
                 <th>Customer / Client</th>
                 <th>Invoice #</th>
                 <th>Sales Order #</th>
@@ -531,13 +559,14 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                 <th>Payment Type</th>
                 <th>Payment Method</th>
                 <th>Date</th>
-                <th style={{ textAlign: 'center' }}>Receipt</th>
+                <th style={{ textAlign: 'center' }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {filteredPayments.map((p) => (
                 <tr key={p._id}>
                   <td style={{ fontWeight: 700, color: '#0F172A' }}>{p.paymentRefNumber || 'REC'}</td>
+                  <td style={{ fontWeight: 800, color: '#047857' }}>{p.receiptVoucherNumber || '—'}</td>
                   <td style={{ fontWeight: 600 }}>{p.customerName}</td>
                   <td>
                     {p.invoiceNumber ? (
@@ -577,8 +606,16 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                   <td style={{ textAlign: 'center' }}>
                     <button
                       className="sv-btn-action-icon"
+                      onClick={() => setViewPayment(p)}
+                      title="View Payment and Receipt Voucher details"
+                    >
+                      <Eye size={14} color="#2563EB" />
+                    </button>
+                    <button
+                      className="sv-btn-action-icon"
                       onClick={() => handleDownloadReceipt(p)}
-                      title="Download Payment Slip (PDF)"
+                      title={p.receiptVoucherNumber ? 'Download Receipt Voucher PDF' : 'Legacy payment has no Receipt Voucher'}
+                      disabled={!p.receiptVoucherNumber}
                     >
                       <Download size={14} color="#059669" />
                     </button>
@@ -596,6 +633,33 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
       {/* ═══════════════════════════════════════════════════════════ */}
       {/* BEAUTIFULLY STYLED RECORD PAYMENT MODAL                   */}
       {/* ═══════════════════════════════════════════════════════════ */}
+      {viewPayment && (
+        <div className="ip-modal-overlay" onClick={() => setViewPayment(null)}>
+          <div className="ip-modal-card" style={{ maxWidth: '620px', width: '95%' }} onClick={(event) => event.stopPropagation()}>
+            <div className="ip-modal-header payment-theme">
+              <div className="ip-header-title-group"><h3>Payment Details</h3><p>{viewPayment.receiptVoucherNumber || 'Legacy payment - no Receipt Voucher'}</p></div>
+              <button type="button" className="ip-close-btn" onClick={() => setViewPayment(null)}><X size={18} /></button>
+            </div>
+            <div className="ip-modal-body">
+              <div className="ip-grid-2">
+                <div className="ip-section-card"><strong>Payment #</strong><div>{viewPayment.paymentRefNumber || '—'}</div></div>
+                <div className="ip-section-card"><strong>Receipt Voucher #</strong><div>{viewPayment.receiptVoucherNumber || '—'}</div></div>
+                <div className="ip-section-card"><strong>Customer</strong><div>{viewPayment.customerName || '—'}</div></div>
+                <div className="ip-section-card"><strong>Amount</strong><div>PKR {formatMoney(viewPayment.amount)}</div></div>
+                <div className="ip-section-card"><strong>Invoice(s)</strong><div>{viewPayment.allocations?.length ? viewPayment.allocations.map(item => item.invoiceNumber).filter(Boolean).join(', ') : (viewPayment.invoiceNumber || '—')}</div></div>
+                <div className="ip-section-card"><strong>Payment method</strong><div>{viewPayment.paymentMethod || '—'}</div></div>
+                <div className="ip-section-card"><strong>Date</strong><div>{viewPayment.paymentDate ? new Date(viewPayment.paymentDate).toLocaleDateString('en-GB') : '—'}</div></div>
+                <div className="ip-section-card"><strong>Reference</strong><div>{viewPayment.reference || '—'}</div></div>
+              </div>
+            </div>
+            <div className="ip-modal-footer">
+              <button type="button" className="ip-btn-cancel" onClick={() => setViewPayment(null)}>Close</button>
+              <button type="button" className="ip-btn-submit-payment" disabled={!viewPayment.receiptVoucherNumber} onClick={() => handleDownloadReceipt(viewPayment)}><Download size={16} /> Download RV</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showModal && (
         <div className="ip-modal-overlay" onClick={() => setShowModal(false)}>
           <div
@@ -610,7 +674,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                   <span style={{fontWeight: 600, fontSize: "0.9em", marginRight: "4px"}}>PKR</span>
                 </div>
                 <div className="ip-header-title-group">
-                  <h3>Record Customer Payment</h3>
+                  <h3>Receive Payment</h3>
                   <p>Select an invoice to auto-fill customer, order number &amp; remaining balance</p>
                 </div>
               </div>
@@ -855,19 +919,30 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                   </div>
                 </div>
 
-                {/* 3. NOTES & REMARKS */}
+                {/* 3. REFERENCE & REMARKS */}
                 <div className="ip-section-card" style={{ marginBottom: '0' }}>
                   <div className="ip-section-title">
                     <Receipt size={16} color="#475569" /> Payment Reference &amp; Remarks
                   </div>
+                  <div className="ip-field-group" style={{ marginBottom: '12px' }}>
+                    <label className="ip-label">Payment Reference</label>
+                    <input
+                      type="text"
+                      maxLength={120}
+                      className="ip-input payment-focus"
+                      value={form.reference}
+                      onChange={(e) => setForm({ ...form, reference: e.target.value })}
+                      placeholder="Cheque number, bank transaction ID or other reference"
+                    />
+                  </div>
                   <div className="ip-field-group">
-                    <label className="ip-label">Payment Notes / Bank Transaction Reference</label>
+                    <label className="ip-label">Remarks</label>
                     <textarea
                       rows={3}
                       className="ip-input payment-focus"
                       value={form.notes}
                       onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                      placeholder="e.g. Cheque # 124892 deposited in HBL account / Wire IBAN ref..."
+                      placeholder="Optional payment remarks"
                       style={{ resize: 'vertical' }}
                     />
                   </div>
@@ -884,7 +959,7 @@ export default function FinancePaymentsView({ initialPreFillInvoice, initialInvo
                   className="ip-btn-submit-payment"
                   disabled={saving}
                 >
-                  <Save size={16} /> {saving ? 'Recording Payment...' : 'Confirm & Record Payment'}
+                  <Save size={16} /> {saving ? 'Receiving Payment...' : 'Confirm & Receive Payment'}
                 </button>
               </div>
             </form>

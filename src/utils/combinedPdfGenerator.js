@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { fileTypeLabel } from './fileClassification';
+import { drawLetterheadFooter, drawLetterheadHeader, loadDocumentLetterhead } from './documentLetterhead';
 
 /**
  * Generates a Single Combined PDF for the Accounts 4-Document Package
@@ -10,14 +11,28 @@ import { fileTypeLabel } from './fileClassification';
  * 3. Undertaking
  * 4. Goods Declaration Form
  */
-export function generateCombinedDocumentPackagePDF(packageData) {
+export async function generateCombinedDocumentPackagePDF(packageData) {
   const { order, invoice, deliveryNote, undertaking, goodsDeclaration } = packageData;
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+  const letterhead = await loadDocumentLetterhead(order);
+  const hasCompanyLetterhead = Boolean(letterhead.source?.issuingCompany?.code && letterhead.headerImage);
 
   const formatPKR = (num) => `PKR ${Number(num || 0).toLocaleString('en-PK')}`;
 
   // Helper Header
-  const addDocumentHeader = (title, subTitle, docNumber) => {
+  const addDocumentHeader = (title, subTitle, docNumber, useCompanyLetterhead = false) => {
+    if (useCompanyLetterhead && hasCompanyLetterhead) {
+      drawLetterheadHeader(doc, letterhead, { title });
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(13);
+      doc.setTextColor(15, 23, 42);
+      doc.text(title.toUpperCase(), 105, 47, { align: 'center' });
+      if (docNumber) {
+        doc.setFontSize(8.5);
+        doc.text(`REF: ${docNumber}`, 196, 52, { align: 'right' });
+      }
+      return;
+    }
     // Header Banner
     doc.setFillColor(30, 64, 175); // #1E40AF Navy
     doc.rect(0, 0, 210, 24, 'F');
@@ -40,7 +55,11 @@ export function generateCombinedDocumentPackagePDF(packageData) {
   };
 
   // Helper Footer
-  const addDocumentFooter = (pageLabel) => {
+  const addDocumentFooter = (pageLabel, useCompanyLetterhead = false) => {
+    if (useCompanyLetterhead && hasCompanyLetterhead) {
+      drawLetterheadFooter(doc, letterhead, { note: pageLabel });
+      return;
+    }
     doc.setDrawColor(226, 232, 240);
     doc.line(14, 280, 196, 280);
 
@@ -54,9 +73,9 @@ export function generateCombinedDocumentPackagePDF(packageData) {
   // ==========================================
   // PAGE 1: FINALIZED INVOICE
   // ==========================================
-  addDocumentHeader('Official Finalized Invoice', 'Commercial Invoice', invoice?.invoiceNumber || `INV-${order.orderNumber}`);
+  addDocumentHeader('Official Finalized Invoice', 'Commercial Invoice', invoice?.invoiceNumber || `INV-${order.orderNumber}`, true);
 
-  let y = 32;
+  let y = hasCompanyLetterhead ? 58 : 32;
 
   // Invoice Details Box
   doc.setFontSize(11);
@@ -94,12 +113,17 @@ export function generateCombinedDocumentPackagePDF(packageData) {
 
   autoTable(doc, {
     startY: y,
+    margin: { top: hasCompanyLetterhead ? 58 : 28, bottom: hasCompanyLetterhead ? 43 : 18 },
     head: [['#', 'Description', 'Qty', 'Unit Price (PKR)', 'Total Amount (PKR)']],
     body: invoiceItems,
     theme: 'grid',
     headStyles: { fillColor: [30, 64, 175], textColor: [255, 255, 255], fontStyle: 'bold' },
     styles: { fontSize: 8.5 },
-    columnStyles: { 0: { cellWidth: 10 }, 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' } }
+    columnStyles: { 0: { cellWidth: 10 }, 2: { halign: 'center' }, 3: { halign: 'right' }, 4: { halign: 'right' } },
+    didDrawPage: data => {
+      if (data.pageNumber > 1) addDocumentHeader('Official Finalized Invoice', 'Commercial Invoice', invoice?.invoiceNumber || `INV-${order.orderNumber}`, true);
+      addDocumentFooter('Finalized Invoice', true);
+    }
   });
 
   const finalY = doc.lastAutoTable.finalY + 8;
@@ -117,15 +141,15 @@ export function generateCombinedDocumentPackagePDF(packageData) {
   doc.text(`Total Amount: ${formatPKR(invoice?.amount || order.netAmount || order.totalAmount || 0)}`, 124, finalY + 23);
 
   doc.setTextColor(15, 23, 42);
-  addDocumentFooter('Document 1 of 4 • Finalized Invoice');
+  addDocumentFooter('Document 1 of 4 - Finalized Invoice', true);
 
   // ==========================================
   // PAGE 2: DELIVERY NOTE
   // ==========================================
   doc.addPage();
-  addDocumentHeader('Official Delivery Note', 'Goods Delivery Receipt', deliveryNote?.deliveryNoteNumber || `DN-${order.orderNumber}`);
+  addDocumentHeader('Official Delivery Note', 'Goods Delivery Receipt', deliveryNote?.deliveryNoteNumber || `DN-${order.orderNumber}`, true);
 
-  y = 32;
+  y = hasCompanyLetterhead ? 58 : 32;
 
   doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
@@ -150,17 +174,24 @@ export function generateCombinedDocumentPackagePDF(packageData) {
     idx + 1,
     item.description || item.productName || 'Delivered Product',
     item.quantity || 1,
-    'Good / Inspected'
+    'Good / Inspected',
+    formatPKR(item.unitPrice || 0),
+    formatPKR(item.lineTotal || item.total || ((Number(item.quantity) || 1) * Number(item.unitPrice || 0)))
   ]);
 
   autoTable(doc, {
     startY: y,
-    head: [['#', 'Delivered Item Description', 'Delivered Qty', 'Condition']],
+    margin: { top: hasCompanyLetterhead ? 58 : 28, bottom: hasCompanyLetterhead ? 43 : 18 },
+    head: [['#', 'Delivered Item Description', 'Delivered Qty', 'Condition', 'Unit Price', 'Line Total']],
     body: dnItems,
     theme: 'grid',
     headStyles: { fillColor: [5, 150, 105], textColor: [255, 255, 255], fontStyle: 'bold' },
     styles: { fontSize: 8.5 },
-    columnStyles: { 0: { cellWidth: 10 }, 2: { halign: 'center' } }
+    columnStyles: { 0: { cellWidth: 10 }, 2: { halign: 'center' }, 4: { halign: 'right' }, 5: { halign: 'right' } },
+    didDrawPage: data => {
+      if (data.pageNumber > 1) addDocumentHeader('Official Delivery Note', 'Goods Delivery Receipt', deliveryNote?.deliveryNoteNumber || `DN-${order.orderNumber}`, true);
+      addDocumentFooter('Delivery Note', true);
+    }
   });
 
   const dnFinalY = doc.lastAutoTable.finalY + 12;
@@ -179,7 +210,7 @@ export function generateCombinedDocumentPackagePDF(packageData) {
   doc.setFont('helvetica', 'normal');
   doc.text('Fortline Warehouse / Support Officer', 130, dnFinalY + 16);
 
-  addDocumentFooter('Document 2 of 4 • Delivery Note');
+  addDocumentFooter('Document 2 of 4 - Delivery Note', true);
 
   // ==========================================
   // PAGE 3: UNDERTAKING

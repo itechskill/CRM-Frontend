@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { apiRequest } from '../utils/api';
+import { downloadInvoicePdf } from '../utils/invoicePdf';
 import {
   FileText,
   Plus,
@@ -112,7 +113,13 @@ export default function AccountantInvoicesView({ isModalOpen, onCloseModal }) {
     fetchInvoiceData();
   };
 
-  const handleDownloadPDF = (inv) => {
+  const handleDownloadPDF = async (inv) => {
+    try {
+      await downloadInvoicePdf(inv);
+      return;
+    } catch (error) {
+      console.error('Letterhead invoice PDF failed; using the legacy layout.', error);
+    }
     const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
     const now = new Date();
     const isOverdue = inv.status === 'Overdue' || (inv.dueDate && new Date(inv.dueDate) < now && inv.status !== 'Paid');
