@@ -1161,7 +1161,7 @@ export default function App() {
                   }}
                 />
               )}
-              {activeTab === 'local_payables' && <LocalPurchaserPayablesView searchQuery={portalSearch} readOnly canRecordPayments />}
+              {activeTab === 'local_payables' && <LocalPurchaserPayablesView searchQuery={portalSearch} readOnly canRecordPayments showCostingStatus />}
               {activeTab === 'financial_charges' && <FinanceFinancialChargesView searchQuery={portalSearch} />}
               {activeTab === 'supplier_po_expenses' && <FinanceSupplierPOExpensesView searchQuery={portalSearch} />}
               {activeTab === 'target_performance_overdue' && <FinanceTargetPerformanceView />}

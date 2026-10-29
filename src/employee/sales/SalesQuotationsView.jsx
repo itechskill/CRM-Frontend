@@ -552,13 +552,6 @@ export default function SalesQuotationsView() {
     }));
   };
 
-  const handleDiscountPctChange = (val) => {
-    setForm(prev => {
-      const financials = recalculateForm(prev.items, val, prev.discount, prev.taxPercentage, prev.tax, 'discountPct');
-      return { ...prev, ...financials };
-    });
-  };
-
   const handleDiscountAmtChange = (val) => {
     setForm(prev => {
       const financials = recalculateForm(prev.items, prev.discountPercentage, val, prev.taxPercentage, prev.tax, 'discountAmt');
@@ -573,23 +566,10 @@ export default function SalesQuotationsView() {
     });
   };
 
-  const handleTaxAmtChange = (val) => {
-    setForm(prev => {
-      const financials = recalculateForm(prev.items, prev.discountPercentage, prev.discount, prev.taxPercentage, val, 'taxAmt');
-      return { ...prev, ...financials };
-    });
-  };
-
   const stepTaxPct = (delta) => {
     const current = Number(form.taxPercentage) || 0;
     const nextVal = Math.max(0, Math.min(100, Math.round((current + delta) * 10) / 10));
     handleTaxPctChange(nextVal);
-  };
-
-  const stepDiscountPct = (delta) => {
-    const current = Number(form.discountPercentage) || 0;
-    const nextVal = Math.max(0, Math.min(100, Math.round((current + delta) * 10) / 10));
-    handleDiscountPctChange(nextVal);
   };
 
   const handleAddItem = () => {
@@ -2022,47 +2002,11 @@ export default function SalesQuotationsView() {
                           <Tag size={14} /> Discount
                         </span>
                         <span style={{ fontSize: '0.75rem', background: '#FEE2E2', color: '#DC2626', padding: '2px 8px', borderRadius: '6px', fontWeight: 700 }}>
-                          - {Number(form.discountPercentage || 0)}%
+                          - PKR {Number(form.discount || 0).toLocaleString()}
                         </span>
                       </div>
 
                       <div className="quote-calc-input-row">
-                        {/* Percentage Stepper */}
-                        <div style={{ flex: 1 }}>
-                          <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
-                            Discount (%)
-                          </label>
-                          <div className="quote-stepper-group" style={{ width: '100%' }}>
-                            <button
-                              type="button"
-                              className="quote-stepper-btn"
-                              onClick={() => stepDiscountPct(-1)}
-                              title="Decrease Discount % by 1%"
-                            >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              min="0"
-                              max="100"
-                              step="any"
-                              value={form.discountPercentage === '' ? '' : form.discountPercentage}
-                              onChange={e => handleDiscountPctChange(e.target.value)}
-                              className="quote-stepper-val"
-                              style={{ flex: 1 }}
-                              placeholder="0"
-                            />
-                            <button
-                              type="button"
-                              className="quote-stepper-btn"
-                              onClick={() => stepDiscountPct(1)}
-                              title="Increase Discount % by 1%"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-
                         {/* Direct Amount Input */}
                         <div style={{ flex: 1 }}>
                           <label style={{ fontSize: '0.72rem', fontWeight: 600, color: '#64748B', display: 'block', marginBottom: '4px' }}>
@@ -2090,20 +2034,6 @@ export default function SalesQuotationsView() {
                         </div>
                       </div>
 
-                      {/* Quick Percentage Presets */}
-                      <div className="quote-presets-row">
-                        <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>Presets:</span>
-                        {[0, 5, 10, 15, 20].map(pct => (
-                          <button
-                            key={pct}
-                            type="button"
-                            className={`quote-preset-btn ${Number(form.discountPercentage) === pct ? 'active-discount' : ''}`}
-                            onClick={() => handleDiscountPctChange(pct)}
-                          >
-                            {pct}%
-                          </button>
-                        ))}
-                      </div>
                     </div>
 
                     {/* Tax / GST Control Column */}
@@ -2164,7 +2094,8 @@ export default function SalesQuotationsView() {
                             min="0"
                             step="any"
                             value={form.tax === '' ? '' : form.tax}
-                            onChange={e => handleTaxAmtChange(e.target.value)}
+                            readOnly
+                            aria-readonly="true"
                             placeholder="0"
                             style={{
                               width: '100%',
@@ -2175,26 +2106,12 @@ export default function SalesQuotationsView() {
                               color: '#1E293B',
                               border: '1px solid #CBD5E1',
                               borderRadius: '8px',
-                              background: '#FFFFFF'
+                              background: '#F8FAFC'
                             }}
                           />
                         </div>
                       </div>
 
-                      {/* Quick Percentage Presets */}
-                      <div className="quote-presets-row">
-                        <span style={{ fontSize: '0.7rem', color: '#94A3B8', fontWeight: 600 }}>Presets:</span>
-                        {[0, 5, 10, 15, 16, 17, 18].map(pct => (
-                          <button
-                            key={pct}
-                            type="button"
-                            className={`quote-preset-btn ${Number(form.taxPercentage) === pct ? 'active' : ''}`}
-                            onClick={() => handleTaxPctChange(pct)}
-                          >
-                            {pct}%
-                          </button>
-                        ))}
-                      </div>
                     </div>
                   </div>
 
@@ -2209,7 +2126,7 @@ export default function SalesQuotationsView() {
                       </div>
                       <div>
                         <div className="quote-summary-stat-label" style={{ color: '#DC2626' }}>
-                          Discount ({Number(form.discountPercentage || 0)}%)
+                          Discount
                         </div>
                         <div className="quote-summary-stat-val" style={{ color: '#DC2626' }}>
                           - Rs. {Number(form.discount || 0).toLocaleString()} <span style={{ fontSize: '0.75rem', fontWeight: 500 }}>PKR</span>

@@ -22,6 +22,7 @@
     "test:release-23": "node --test tests/release23.quotation-rates.test.mjs",
     "test:release-24": "node --test tests/release24.navigation-documents.test.mjs",
     "test:release-25": "node --test tests/release25.letterheads-payments-targets.test.mjs",
+    "test:release-26": "node --test tests/release26.costing-quotation.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {
