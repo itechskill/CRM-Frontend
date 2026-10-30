@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 import { getUser } from '../utils/authStorage';
+import { priceRequestPersonLabel } from '../utils/priceRequestPeople';
 import './PriceRequestsView.css';
 
 const CATEGORIES = ['Servers', 'Desktops/Laptops/Workstations', 'Networking', 'Software', 'Other'];
@@ -47,9 +48,7 @@ const EMPTY_RULE = {
   active: true
 };
 
-const userLabel = (user) => user
-  ? `${user.name || user.fullName || 'Unknown'}${user.label || user.priceRequestLabel ? ` - ${user.label || user.priceRequestLabel}` : ''}`
-  : '';
+const userLabel = priceRequestPersonLabel;
 
 const getId = (value) => String(value?._id || value || '');
 

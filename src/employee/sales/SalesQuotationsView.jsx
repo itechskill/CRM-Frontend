@@ -39,6 +39,7 @@ import { getUser } from '../../utils/authStorage';
 import { DOCUMENT_TYPES, companiesFor, companyName } from '../../utils/companies';
 import { drawSalesDocumentHeader, getClientContactLayout, getDocumentIssuerName } from '../../utils/salesDocumentPdfLayout';
 import { downloadQuotationPdf, DEFAULT_TERMS } from '../../utils/quotationPdf';
+import { buildQuotationPayload, calculateQuotationFinancials, quotationGrandTotal } from '../../utils/quotationFinancials';
 
 const STATUS_COLORS = {
   Quotation: '#2563EB',
@@ -341,58 +342,12 @@ export default function SalesQuotationsView() {
    * Universal Financial Recalculation Engine
    * Handles subtotal, discount percentage/amount, tax percentage/amount, and complete net total.
    */
-  const recalculateForm = (items, currentDiscountPct, currentDiscountAmt, currentTaxPct, currentTaxAmt, trigger = 'items') => {
-    const subtotal = items.reduce((sum, it) => sum + (Number(it.total) || 0), 0);
-    
-    let discountPct = currentDiscountPct === '' ? '' : Math.max(0, parseFloat(currentDiscountPct) || 0);
-    let discountAmt = currentDiscountAmt === '' ? '' : Math.max(0, parseFloat(currentDiscountAmt) || 0);
-    
-    if (trigger === 'discountPct') {
-      discountAmt = subtotal > 0 && typeof discountPct === 'number'
-        ? Math.round(((subtotal * discountPct) / 100) * 100) / 100
-        : (discountPct === 0 ? 0 : discountAmt);
-    } else if (trigger === 'discountAmt') {
-      discountPct = subtotal > 0 && typeof discountAmt === 'number'
-        ? Math.round(((discountAmt / subtotal) * 100) * 100) / 100
-        : (discountAmt === 0 ? 0 : discountPct);
-    } else if (trigger === 'items') {
-      if (typeof discountPct === 'number' && discountPct > 0) {
-        discountAmt = Math.round(((subtotal * discountPct) / 100) * 100) / 100;
-      }
-    }
-    
-    const numDiscountAmt = typeof discountAmt === 'number' ? discountAmt : (Number(discountAmt) || 0);
-    const taxableBase = Math.max(0, subtotal - numDiscountAmt);
-    
-    let taxPct = currentTaxPct === '' ? '' : Math.max(0, parseFloat(currentTaxPct) || 0);
-    let taxAmt = currentTaxAmt === '' ? '' : Math.max(0, parseFloat(currentTaxAmt) || 0);
-    
-    if (trigger === 'taxPct' || trigger === 'discountPct' || trigger === 'discountAmt') {
-      taxAmt = taxableBase > 0 && typeof taxPct === 'number'
-        ? Math.round(((taxableBase * taxPct) / 100) * 100) / 100
-        : (taxPct === 0 ? 0 : taxAmt);
-    } else if (trigger === 'taxAmt') {
-      taxPct = taxableBase > 0 && typeof taxAmt === 'number'
-        ? Math.round(((taxAmt / taxableBase) * 100) * 100) / 100
-        : (taxAmt === 0 ? 0 : taxPct);
-    } else if (trigger === 'items') {
-      if (typeof taxPct === 'number' && taxPct > 0) {
-        taxAmt = Math.round(((taxableBase * taxPct) / 100) * 100) / 100;
-      }
-    }
-    
-    const numTaxAmt = typeof taxAmt === 'number' ? taxAmt : (Number(taxAmt) || 0);
-    const netAmount = Math.max(0, Math.round((subtotal - numDiscountAmt + numTaxAmt) * 100) / 100);
-    
-    return {
-      totalAmount: subtotal,
-      discount: discountAmt,
-      discountPercentage: discountPct,
-      tax: taxAmt,
-      taxPercentage: taxPct,
-      netAmount
-    };
-  };
+  const recalculateForm = (items, _currentDiscountPct, currentDiscountAmt, currentTaxPct) =>
+    calculateQuotationFinancials({
+      items,
+      discount: currentDiscountAmt === '' || currentDiscountAmt === null ? 0 : currentDiscountAmt,
+      taxPercentage: currentTaxPct === '' || currentTaxPct === null ? 0 : currentTaxPct
+    });
 
   const openCreate = () => {
     const today = new Date().toISOString().substring(0, 10);
@@ -631,31 +586,10 @@ export default function SalesQuotationsView() {
       };
     });
 
-    const calculated = recalculateForm(
-      cleanedItems,
-      form.discountPercentage,
-      form.discount,
-      form.taxPercentage,
-      form.tax,
-      'items'
-    );
-
     setSaving(true);
     setError('');
     try {
-      const payload = {
-        ...form,
-        items: cleanedItems,
-        totalAmount: calculated.totalAmount,
-        discount: Number(calculated.discount) || 0,
-        discountPercentage: Number(calculated.discountPercentage) || 0,
-        tax: Number(calculated.tax) || 0,
-        taxPercentage: Number(calculated.taxPercentage) || 0,
-        netAmount: calculated.netAmount,
-        productSummary: form.productSummary || cleanedItems.map(it => it.description).join(', '),
-        creationDate: form.creationDate || null,
-        validUntil: form.validUntil || null
-      };
+      const payload = buildQuotationPayload({ ...form, items: cleanedItems });
       if (editQ && !payload.issuingCompanyCode) delete payload.issuingCompanyCode;
       const url = editQ ? `/api/sales-employee/quotations/${editQ._id}` : '/api/sales-employee/quotations';
       const method = editQ ? 'PATCH' : 'POST';
@@ -994,7 +928,7 @@ export default function SalesQuotationsView() {
     doc.setTextColor(255, 255, 255);
     doc.text('FORTLINE CRM — SALES QUOTATIONS MASTER LEDGER', 14, 12);
 
-    const totalAmt = dataset.reduce((sum, q) => sum + (Number(q.totalAmount || q.netAmount) || 0), 0);
+    const totalAmt = dataset.reduce((sum, q) => sum + quotationGrandTotal(q), 0);
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(148, 163, 184);
@@ -1009,7 +943,7 @@ export default function SalesQuotationsView() {
       q.validUntil ? new Date(q.validUntil).toLocaleDateString('en-GB') : '—',
       q.status || 'Draft',
       (q.items || []).length,
-      `Rs. ${Number(q.totalAmount || q.netAmount || 0).toLocaleString()}`
+      `Rs. ${quotationGrandTotal(q).toLocaleString()}`
     ]);
 
     try {
@@ -1038,7 +972,7 @@ export default function SalesQuotationsView() {
   // ── COMPLETE QUOTATIONS LEDGER EXPORT (EXCEL / CSV) ──
   const downloadCompleteQuotationsExcel = () => {
     const dataset = filteredQuotations.length > 0 ? filteredQuotations : quotations;
-    const totalAmt = dataset.reduce((sum, q) => sum + (Number(q.totalAmount || q.netAmount) || 0), 0);
+    const totalAmt = dataset.reduce((sum, q) => sum + quotationGrandTotal(q), 0);
 
     const headers = ['#', 'Quotation Reference', 'Client Name', 'Customer Email', 'Customer Phone', 'Customer PO #', 'Quotation Date', 'Valid Until', 'Status', 'Payment Terms', 'Subtotal', 'Tax Rate (%)', 'Tax (PKR)', 'Discount (PKR)', 'Total Amount (PKR)', 'Notes'];
     const rows = dataset.map((q, idx) => [
@@ -1052,11 +986,11 @@ export default function SalesQuotationsView() {
       `"${q.validUntil ? new Date(q.validUntil).toLocaleDateString('en-GB') : ''}"`,
       `"${q.status || 'Draft'}"`,
       `"${q.paymentTerms || 'Net 30'}"`,
-      Number(q.subtotal || q.netAmount || 0),
-      Number(q.taxRate || 0),
+      Number(q.totalAmount || 0),
+      Number(q.taxPercentage || 0),
       Number(q.tax || 0),
       Number(q.discount || 0),
-      Number(q.totalAmount || q.netAmount || 0),
+      quotationGrandTotal(q),
       `"${(q.notes || '').replace(/"/g, '""')}"`
     ]);
 
@@ -1262,7 +1196,7 @@ export default function SalesQuotationsView() {
           <div className="quote-cards-grid">
             {paginatedQuotations.map(q => {
               const color = STATUS_COLORS[q.status] || '#64748B';
-              const totalAmt = Number(q.totalAmount || q.netAmount || 0);
+              const totalAmt = quotationGrandTotal(q);
               const itemCount = q.items && q.items.length ? q.items.length : 1;
               const dateStr = q.creationDate
                 ? new Date(q.creationDate).toLocaleDateString('en-GB')
@@ -1450,7 +1384,7 @@ export default function SalesQuotationsView() {
             <tbody>
               {paginatedQuotations.map(q => {
                 const color = STATUS_COLORS[q.status] || '#64748B';
-                const totalAmt = Number(q.totalAmount || q.netAmount || 0);
+                const totalAmt = quotationGrandTotal(q);
                 const itemCount = q.items && q.items.length ? q.items.length : 1;
 
                 return (

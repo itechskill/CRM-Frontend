@@ -40,6 +40,7 @@ test('Finance invoices show COGS, Gross Profit, Costing and explicit gap/review 
 
 test('Quotation uses manual discount and tax rate, read-only automatic tax, and no preset buttons', async () => {
   const quotations = await source('src/employee/sales/SalesQuotationsView.jsx');
+  const financials = await source('src/utils/quotationFinancials.js');
   const form = quotations.slice(quotations.indexOf('{/* Section 2B:'), quotations.indexOf('{/* Comprehensive Live Calculation'));
   assert.match(form, /Discount Amount \(PKR\)/);
   assert.doesNotMatch(form, /Discount \(%\)/);
@@ -48,7 +49,8 @@ test('Quotation uses manual discount and tax rate, read-only automatic tax, and 
   assert.match(form, /readOnly/);
   assert.doesNotMatch(form, /Presets:/);
   assert.doesNotMatch(form, /\[0, 5, 10, 15/);
-  assert.match(quotations, /taxableBase = Math\.max\(0, subtotal - numDiscountAmt\)/);
+  assert.match(quotations, /calculateQuotationFinancials/);
+  assert.match(financials, /taxableAmount = roundMoney\(Math\.max\(0, totalAmount - normalizedDiscount\)\)/);
 });
 
 test('Proforma tax controls remain unchanged', async () => {
