@@ -27,6 +27,7 @@ import { canViewFullMonetaryData } from '../utils/monetaryVisibility';
 
 export default function SupportInventoryView({ currentUser }) {
   const showMoney = canViewFullMonetaryData(currentUser);
+  const canEditCost = ['finance', 'admin'].includes(String(currentUser?.role || '').toLowerCase());
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,7 +36,7 @@ export default function SupportInventoryView({ currentUser }) {
   const [editItem, setEditItem] = useState(null);
   const [saving, setSaving] = useState(false);
   const [inventoryInItem, setInventoryInItem] = useState(null);
-  const [inventoryInForm, setInventoryInForm] = useState({ quantity: 1, reference: '', salesOrderId: '', remarks: '' });
+  const [inventoryInForm, setInventoryInForm] = useState({ quantity: 1, reference: '', salesOrderId: '', remarks: '', unitCostPKR: '', costNote: '' });
   const [addingInventory, setAddingInventory] = useState(false);
   const [salesOrders, setSalesOrders] = useState([]);
   const [movementItem, setMovementItem] = useState(null);
@@ -47,7 +48,8 @@ export default function SupportInventoryView({ currentUser }) {
     unit: 'pcs',
     quantityOnHand: 0,
     minStockLevel: 5,
-    unitPrice: 0,
+    unitCostPKR: '',
+    costNote: '',
     location: 'WH/Stock',
     description: ''
   });
@@ -97,7 +99,8 @@ export default function SupportInventoryView({ currentUser }) {
       unit: 'pcs',
       quantityOnHand: 0,
       minStockLevel: 5,
-      unitPrice: 0,
+      unitCostPKR: '',
+      costNote: '',
       location: 'WH/Stock',
       description: ''
     });
@@ -113,7 +116,8 @@ export default function SupportInventoryView({ currentUser }) {
       unit: item.unit || 'pcs',
       quantityOnHand: item.quantityOnHand || 0,
       minStockLevel: item.minStockLevel || 5,
-      unitPrice: item.unitPrice || 0,
+      unitCostPKR: '',
+      costNote: '',
       location: item.location || 'WH/Stock',
       description: item.description || ''
     });
@@ -134,8 +138,8 @@ export default function SupportInventoryView({ currentUser }) {
         quantityOnHand: Number(form.quantityOnHand) || 0,
         minStockLevel: Number(form.minStockLevel) || 5
       };
-      if (showMoney) payload.unitPrice = Number(form.unitPrice) || 0;
-      else delete payload.unitPrice;
+      if (canEditCost && form.unitCostPKR !== '') payload.unitCostPKR = Number(form.unitCostPKR);
+      else delete payload.unitCostPKR;
       const { response, data } = await apiRequest('/api/sales-employee/inventory', {
         method: 'POST',
         body: JSON.stringify(payload)
@@ -155,7 +159,7 @@ export default function SupportInventoryView({ currentUser }) {
 
   const handleOpenInventoryIn = (item) => {
     setInventoryInItem(item);
-    setInventoryInForm({ quantity: 1, reference: '', salesOrderId: '', remarks: '' });
+    setInventoryInForm({ quantity: 1, reference: '', salesOrderId: '', remarks: '', unitCostPKR: '', costNote: '' });
   };
 
   const handleInventoryIn = async (e) => {
@@ -678,18 +682,23 @@ export default function SupportInventoryView({ currentUser }) {
                 </div>
 
                 <div className="sv-grid-2">
-                  {showMoney && <div className="sv-field">
+                  {canEditCost && <div className="sv-field">
                     <label style={{ fontSize: '0.78rem', fontWeight: 700, color: '#334155', marginBottom: '4px', display: 'block' }}>
-                      Unit Price (PKR)
+                      Unit Cost (PKR)
                     </label>
                     <input
                       type="number"
                       min="0"
                       className="sv-input"
-                      value={form.unitPrice}
-                      onChange={(e) => setForm({ ...form, unitPrice: e.target.value })}
+                      value={form.unitCostPKR}
+                      onChange={(e) => setForm({ ...form, unitCostPKR: e.target.value })}
                       placeholder="e.g. 150000"
                     />
+                  </div>}
+
+                  {canEditCost && <div className="sv-field">
+                    <label>Cost note</label>
+                    <input className="sv-input" value={form.costNote} onChange={(e) => setForm({ ...form, costNote: e.target.value })} placeholder="Purchase memory / source note" />
                   </div>}
 
                   <div className="sv-field">
@@ -803,6 +812,14 @@ export default function SupportInventoryView({ currentUser }) {
                   <label>Remarks</label>
                   <input className="sv-input" value={inventoryInForm.remarks} onChange={(e) => setInventoryInForm({ ...inventoryInForm, remarks: e.target.value })} />
                 </div>
+                {canEditCost && <div className="sv-field">
+                  <label>Unit Cost (PKR)</label>
+                  <input type="number" min="0" step="0.01" className="sv-input" value={inventoryInForm.unitCostPKR} onChange={(e) => setInventoryInForm({ ...inventoryInForm, unitCostPKR: e.target.value })} />
+                </div>}
+                {canEditCost && <div className="sv-field">
+                  <label>Cost note</label>
+                  <input className="sv-input" value={inventoryInForm.costNote} onChange={(e) => setInventoryInForm({ ...inventoryInForm, costNote: e.target.value })} />
+                </div>}
               </div>
               <div className="sv-modal-actions" style={{ borderTop: '1px solid #E2E8F0', paddingTop: '12px' }}>
                 <button type="button" className="sv-btn-cancel" onClick={() => setInventoryInItem(null)}>Cancel</button>

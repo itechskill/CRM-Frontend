@@ -26,6 +26,7 @@
     "test:release-27": "node --test tests/release27.hotfix.test.mjs",
     "test:release-28": "node --test tests/release28.documents-pdf.test.mjs",
     "test:release-29": "node --test tests/release29.invoice-tracker.test.mjs",
+    "test:release-30": "node --test tests/release30.inventory-costing.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

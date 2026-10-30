@@ -57,6 +57,7 @@ export default function Sidebar({ activeTab, setActiveTab, currentRole, onSwitch
     { id: 'users', label: 'Users', icon: Users, badge: counts.users > 0 ? String(counts.users) : undefined },
     { id: 'target_performance', label: 'Target Performance', icon: Target },
     { id: 'supplier_po_expenses', label: 'Supplier PO Expenses', icon: DollarSign },
+    { id: 'inventory_costing', label: 'Inventory Costing', icon: DollarSign },
     { id: 'exchange_rates', label: 'Exchange Rates', icon: RefreshCw },
     { id: 'audit_logs', label: 'Audit Logs', icon: ShieldCheck }
   ];
