@@ -4,6 +4,9 @@ import autoTable from 'jspdf-autotable';
 import { downloadInvoicePdf } from '../utils/invoicePdf';
 import { apiRequest } from '../utils/api';
 import { linePartNumber } from '../utils/documentFinancials';
+import ControlledEditButton from '../components/ControlledEditButton';
+import InvoiceEditModal from '../components/InvoiceEditModal';
+import { getUser } from '../utils/authStorage';
 import {
   FileText,
   Search,
@@ -57,6 +60,7 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [viewInvoice, setViewInvoice] = useState(null);
+  const [editInvoice, setEditInvoice] = useState(null);
   const [viewOrder, setViewOrder] = useState(null);
   const [activeTab, setActiveTab] = useState(initialTab || 'pending_drafts'); // 'pending_drafts' | 'order_approvals' | 'clear_orders' | 'finalized' | 'all'
   const [finalizeTarget, setFinalizeTarget] = useState(null);
@@ -1341,6 +1345,16 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
                           <button className="sv-btn-action-icon" onClick={() => setViewInvoice(inv)} title="View Complete Draft Invoice Details">
                             <Eye size={14} />
                           </button>
+                          <ControlledEditButton
+                            documentType={isFinalized ? 'Final Invoice' : 'Draft Invoice'}
+                            documentId={inv._id}
+                            documentNumber={inv.invoiceNumber}
+                            currentUser={getUser()}
+                            onEdit={() => setEditInvoice(inv)}
+                            buttonText="Edit"
+                            className="sv-btn-action-icon"
+                            buttonStyle={{ padding: '6px', fontSize: '0.72rem' }}
+                          />
                           <button className="sv-btn-action-icon" onClick={() => handleDownloadPDF(inv)} title="Download Invoice PDF">
                             <Download size={14} color="#059669" />
                           </button>
@@ -1374,6 +1388,19 @@ export default function FinanceInvoicesView({ onNavigatePayment, searchQuery, in
       )}
 
       {/* FINALIZE INVOICE MODAL */}
+      {editInvoice && (
+        <InvoiceEditModal
+          invoice={editInvoice}
+          apiPath={`/api/finance/invoices/${editInvoice._id}`}
+          onClose={() => setEditInvoice(null)}
+          onSaved={() => {
+            setEditInvoice(null);
+            setFeedback(`Invoice ${editInvoice.invoiceNumber} updated successfully.`);
+            fetchFinanceData();
+          }}
+        />
+      )}
+
       {finalizeTarget && (
         <div className="sv-modal-overlay" onClick={() => setFinalizeTarget(null)}>
           <div className="sv-modal" style={{ maxWidth: '480px' }} onClick={(e) => e.stopPropagation()}>

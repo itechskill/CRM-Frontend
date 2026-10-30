@@ -105,6 +105,12 @@ export const ROLE_CONFIG = {
     frontendRole: 'purchaser',
     portalName: 'Purchaser Department Portal',
     defaultTab: 'dashboard'
+  },
+  order_tracker: {
+    backendRole: 'order_tracker',
+    frontendRole: 'order_tracker',
+    portalName: 'Order Tracker (View Only)',
+    defaultTab: 'order_tracker'
   }
 };
 

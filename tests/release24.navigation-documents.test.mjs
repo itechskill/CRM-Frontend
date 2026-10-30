@@ -27,7 +27,8 @@ test('every visible sidebar item is whitelisted and resolves outside the dashboa
     ['finance', 'src/finance_dept/FinanceSidebar.jsx'], ['logistics', 'src/logistics/LogisticsSidebar.jsx'],
     ['purchaser', 'src/purchaser/local/LocalPurchaserSidebar.jsx'], ['purchaser', 'src/purchaser/global/GlobalPurchaserSidebar.jsx'],
     ['marketing', 'src/marketing/MarketingSidebar.jsx'], ['ceo', 'src/ceo/CEOSidebar.jsx'],
-    ['administration', 'src/administration/AdministrationSidebar.jsx']
+    ['administration', 'src/administration/AdministrationSidebar.jsx'],
+    ['order_tracker', 'src/order_tracker/OrderTrackerSidebar.jsx']
   ];
   const checks = [];
   for (const [role, file] of simpleSidebars) checks.push([role, file, ids(await source(file))]);

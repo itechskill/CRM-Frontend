@@ -9,6 +9,7 @@ export default function EditRequestModal({
   documentId,
   documentNumber,
   currentUser,
+  approverLabel = 'CEO',
   onRequestSubmitted
 }) {
   const [requestType, setRequestType] = useState('SpecificField'); // 'SpecificField' | 'General'
@@ -73,7 +74,7 @@ export default function EditRequestModal({
       });
 
       if (response.ok && data.success) {
-        setSuccessMsg('Edit permission request submitted to CEO successfully.');
+        setSuccessMsg(`Edit permission request submitted to ${approverLabel} successfully.`);
         setFieldName('');
         setCurrentValue('');
         setRequestedValue('');
@@ -130,7 +131,7 @@ export default function EditRequestModal({
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
             <Lock size={20} style={{ color: '#f59e0b' }} />
             <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 600 }}>
-              Edit Access Request (CEO Approval)
+              Edit Access Request ({approverLabel} Approval)
             </h3>
           </div>
           <button
@@ -379,7 +380,7 @@ export default function EditRequestModal({
               }}
             >
               <Send size={16} />
-              {submitting ? 'Submitting...' : 'Submit Request to CEO'}
+              {submitting ? 'Submitting...' : `Submit Request to ${approverLabel}`}
             </button>
           </div>
         </form>

@@ -19,7 +19,8 @@ const roleOptions = [
   { label: 'Finance', value: 'finance' },
   { label: 'Logistics', value: 'logistics' },
   { label: 'Purchaser', value: 'purchaser' },
-  { label: 'Sales Person', value: 'sales_person' }
+  { label: 'Sales Person', value: 'sales_person' },
+  { label: 'Order Tracker (View Only)', value: 'order_tracker' }
 ];
 
 const departmentOptions = [

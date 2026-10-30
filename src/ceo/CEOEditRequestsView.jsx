@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Clock, CheckCircle, XCircle, AlertCircle, RefreshCw, Eye, FileText, User, Filter, Search, Lock, X } from 'lucide-react';
 import { apiRequest } from '../utils/api';
 
-export default function CEOEditRequestsView({ onNavigateHistory }) {
+export default function CEOEditRequestsView({ onNavigateHistory, reviewerLabel = 'CEO' }) {
   const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('Pending');
@@ -123,7 +123,7 @@ export default function CEOEditRequestsView({ onNavigateHistory }) {
           </div>
           <div>
             <h2 style={{ margin: 0, fontSize: '1.3rem', fontWeight: 700, color: '#0f172a' }}>
-              CEO Edit Requests & Approval Manager
+              {reviewerLabel} Edit Requests &amp; Approval Manager
             </h2>
             <p style={{ margin: '2px 0 0', fontSize: '0.85rem', color: '#64748b' }}>
               Centralized authorization portal for Category B document edit permissions across all operational departments.
@@ -468,7 +468,7 @@ export default function CEOEditRequestsView({ onNavigateHistory }) {
             }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>
-                  Review CEO Edit Request ({selectedReq.requestId})
+                  Review {reviewerLabel} Edit Request ({selectedReq.requestId})
                 </h3>
                 <span style={{ fontSize: '0.8rem', color: '#94a3b8' }}>
                   Requested on {new Date(selectedReq.createdAt).toLocaleString()}
@@ -589,7 +589,7 @@ export default function CEOEditRequestsView({ onNavigateHistory }) {
               {selectedReq.status === 'Pending' ? (
                 <div style={{ backgroundColor: '#fffbeb', borderRadius: '8px', padding: '1.25rem', border: '1px solid #fde68a', marginBottom: '1rem' }}>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#b45309', marginBottom: '0.75rem' }}>
-                    CEO Authorization Decision
+                    {reviewerLabel} Authorization Decision
                   </div>
 
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
@@ -626,7 +626,7 @@ export default function CEOEditRequestsView({ onNavigateHistory }) {
 
                   <div style={{ marginBottom: '1rem' }}>
                     <label style={{ display: 'block', fontSize: '0.825rem', fontWeight: 600, color: '#334155', marginBottom: '0.3rem' }}>
-                      CEO Response Note / Instructions (Optional)
+                      {reviewerLabel} Response Note / Instructions (Optional)
                     </label>
                     <textarea
                       rows={2}

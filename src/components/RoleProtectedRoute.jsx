@@ -24,6 +24,7 @@ export default function RoleProtectedRoute({
     (userRole === 'finance' && (rolesArray.includes('finance') || rolesArray.includes('accounts'))) ||
     (userRole === 'support' && rolesArray.includes('support')) ||
     (userRole === 'administration' && rolesArray.includes('administration')) ||
+    (userRole === 'order_tracker' && rolesArray.includes('order_tracker')) ||
     ((userRole === 'sales_member' || userRole === 'sales_rep' || userRole === 'sales_person') && (rolesArray.includes('employee') || rolesArray.includes('sales_member') || rolesArray.includes('sales_rep') || rolesArray.includes('sales_person')))
   );
 
