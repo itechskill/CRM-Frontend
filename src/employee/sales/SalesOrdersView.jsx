@@ -80,6 +80,16 @@ const STATUS_COLORS = {
   'Cancelled': '#EF4444'
 };
 
+const timeAgo = (value) => {
+  if (!value) return 'time unavailable';
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
+};
+
 const EMPTY_FORM = {
   orderReference: '',
   clientName: '',
@@ -673,14 +683,13 @@ export default function SalesOrdersView() {
                 </tr>
               ) : paginatedOrders.map(o => {
                 const total = o.netAmount || o.totalAmount || 0;
-                const status = o.status || 'Sales Order';
+                const workflow = o.workflowSummary || {};
+                const status = workflow.currentStatus || o.workflowStatus || o.status || 'Sales Order';
                 const badgeColor = STATUS_COLORS[status] || '#64748B';
                 const dateStr = o.creationDate
                   ? new Date(o.creationDate).toLocaleDateString('en-GB')
                   : (o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-GB') : '—');
                 const productSummary = o.productSummary || (o.items && o.items[0]?.description) || '—';
-                const isSentToSupport = o.workflowStatus && !['Sales Order Created', 'Pending Finance Approval', 'Finance Approved', 'Finance Rejected'].includes(o.workflowStatus);
-                const isBlockedByFinance = o.requiresFinanceApproval && o.workflowStatus !== 'Finance Approved';
 
                 return (
                   <tr key={o._id}>
@@ -716,19 +725,10 @@ export default function SalesOrdersView() {
                       <span className="sv-badge" style={{ background: badgeColor + '18', color: badgeColor, border: `1px solid ${badgeColor}33` }}>
                         {status}
                       </span>
-                      {o.status === 'Pending Finance Overdue Check' && (
-                        <div style={{ marginTop: '4px', fontSize: '0.72rem', color: '#D97706', fontWeight: 700 }}>
-                          ⏳ Dept: Finance (Overdue Check)
-                        </div>
-                      )}
+                      <div className="sales-order-location">With: {workflow.department || o.currentDepartment || o.departmentResponsible || 'Sales'} - {workflow.lastAction || o.lastAction || workflow.reason || status}, {timeAgo(workflow.lastActionAt || o.lastActionAt || o.updatedAt)}</div>
                       {(o.status === 'Rejected' || o.status === 'Sales Order Rejected due to overdue amount' || o.workflowStatus === 'Finance Rejected') && (
                         <div style={{ marginTop: '4px', fontSize: '0.72rem', color: '#DC2626', fontWeight: 700, background: '#FEF2F2', padding: '3px 6px', borderRadius: '4px', border: '1px solid #FECACA' }}>
                           ✗ Rejected: {o.financeRejectionReason || o.rejectionReason || 'Overdue balance exists'}
-                        </div>
-                      )}
-                      {(o.workflowStatus === 'Finance Approved' || o.departmentResponsible === 'Support' || isSentToSupport) && (
-                        <div style={{ marginTop: '4px', fontSize: '0.72rem', color: '#059669', fontWeight: 700 }}>
-                          ✓ Finance Approved → Support Queue
                         </div>
                       )}
                     </td>
@@ -809,7 +809,7 @@ export default function SalesOrdersView() {
                           <button
                             className="sv-btn-action-icon"
                             disabled
-                            title="Finance Approved — Routed to Procurement/Support"
+                            title={`Current location: ${workflow.department || o.currentDepartment || o.departmentResponsible || 'Sales'}`}
                             style={{
                               padding: '5px 8px',
                               color: '#047857',
@@ -942,9 +942,25 @@ export default function SalesOrdersView() {
                 <div style={{ background: '#F8FAFC', borderRadius: '8px', padding: '10px', border: '1px solid #E2E8F0' }}>
                   <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', color: '#94A3B8' }}>Status</div>
                   <div style={{ fontSize: '0.85rem', fontWeight: 700, color: STATUS_COLORS[viewOrder.status] || '#10B981', marginTop: '2px' }}>
-                    {viewOrder.status || 'Sales Order'}
+                    {viewOrder.workflowSummary?.currentStatus || viewOrder.workflowStatus || viewOrder.status || 'Sales Order'}
                   </div>
                 </div>
+              </div>
+
+              <div className="sales-order-current-location">
+                <strong>Current location</strong>
+                <div>With: {viewOrder.workflowSummary?.department || viewOrder.currentDepartment || viewOrder.departmentResponsible || 'Sales'}</div>
+                <div>Stage: {viewOrder.workflowSummary?.stage || viewOrder.workflowStatus || viewOrder.status || 'In progress'}</div>
+                <div>Reason: {viewOrder.workflowSummary?.reason || viewOrder.lastAction || 'Workflow in progress'}</div>
+              </div>
+
+              <div className="sales-order-activity-panel">
+                <h4>Recent activity</h4>
+                {(viewOrder.workflowSummary?.recentActivity || []).map((activity, index) => <div className="sales-order-activity-row" key={`${activity.date}-${index}`}>
+                  <div><strong>{activity.action}</strong>{activity.detail && <span> — {activity.detail}</span>}</div>
+                  <small>{new Date(activity.date).toLocaleString()} · {activity.person || 'System'} · {activity.department || 'Workflow'}</small>
+                </div>)}
+                {!viewOrder.workflowSummary?.recentActivity?.length && <div style={{ color: '#64748B' }}>No recorded activity yet.</div>}
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '16px' }}>
@@ -1029,7 +1045,7 @@ export default function SalesOrdersView() {
                 >
                   <ShieldCheck size={14} />
                   {viewOrder.workflowStatus === 'Finance Approved' || viewOrder.departmentResponsible === 'Support'
-                    ? 'Finance Approved (In Support Queue)'
+                    ? `Current: ${viewOrder.workflowSummary?.currentStatus || viewOrder.workflowStatus || viewOrder.status}`
                     : viewOrder.departmentResponsible === 'Finance'
                       ? 'In Finance Overdue Review'
                       : (viewOrder.status === 'Rejected' || viewOrder.status === 'Sales Order Rejected due to overdue amount' || viewOrder.workflowStatus === 'Finance Rejected')

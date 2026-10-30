@@ -25,7 +25,11 @@ export default function TargetPerformanceView() {
     });
   }, [month]);
 
-  if (loading) return <div style={{ padding: 24 }}>Loading Target Performance…</div>;
+  if (loading) return <div style={{ padding: 24, display: 'grid', gap: 18 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'end' }}><div><h2 style={{ margin: 0 }}>Target Performance</h2><p style={{ color: '#64748B' }}>Loading your private performance…</p></div><label>Month <input type="month" value={month} disabled style={{ marginLeft: 8, padding: 8 }} /></label></div>
+    <div className="target-performance-skeleton" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(210px,1fr))', gap: 12 }}>{[1, 2, 3, 4].map(item => <div key={item} style={panel}><div style={{ height: 14, width: '55%', background: '#E2E8F0', borderRadius: 6 }} /><div style={{ height: 24, width: '78%', background: '#E2E8F0', borderRadius: 6, marginTop: 12 }} /></div>)}</div>
+    <div style={{ ...panel, height: 180 }}><div style={{ height: 14, width: '30%', background: '#E2E8F0', borderRadius: 6 }} /></div>
+  </div>;
   if (message) return <div style={{ padding: 24, color: '#B91C1C' }}>{message}</div>;
   if (!data?.visible) return <div style={{ padding: 24, ...panel }}>Target Performance is currently hidden by Admin.</div>;
 

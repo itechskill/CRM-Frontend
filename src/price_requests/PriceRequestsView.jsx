@@ -24,21 +24,25 @@ const ROUTABLE_BRANDS = BRANDS.filter((brand) => brand !== 'Other');
 const CURRENCIES = ['PKR', 'USD', 'EUR', 'AED', 'GBP'];
 const LEAD_SOURCES = ['WhatsApp', 'Email', 'Phone call', 'Other'];
 
-const EMPTY_REQUEST = {
+const EMPTY_ITEM = {
   category: 'Other',
   brandChoice: 'Other',
   otherBrand: '',
   isBulk: false,
+  partNumber: '',
+  requirement: '',
+  quantity: 1
+};
+
+const newRequestForm = () => ({
   leadSource: '',
   leadSourceNote: '',
   customerName: '',
   reference: '',
-  partNumber: '',
-  requirement: '',
-  quantity: 1,
+  items: [{ ...EMPTY_ITEM }],
   requestedFrom: '',
   pendingNote: ''
-};
+});
 
 const EMPTY_RULE = {
   label: '',
@@ -65,13 +69,13 @@ export default function PriceRequestsView() {
   const [notice, setNotice] = useState('');
   const [filters, setFilters] = useState({ status: '', category: '', search: '' });
   const [showCreate, setShowCreate] = useState(false);
-  const [requestForm, setRequestForm] = useState(EMPTY_REQUEST);
+  const [requestForm, setRequestForm] = useState(newRequestForm);
   const [recipientTouched, setRecipientTouched] = useState(false);
   const [suggestion, setSuggestion] = useState(null);
   const [saving, setSaving] = useState(false);
   const [action, setAction] = useState(null);
   const [actionForm, setActionForm] = useState({
-    unitPrice: '', currency: 'PKR', validityDate: '', leadTime: '', notes: '',
+    unitPrice: '', itemPrices: [], currency: 'PKR', validityDate: '', leadTime: '', notes: '',
     reason: '', requestedFrom: '', pendingNote: '', quotationId: ''
   });
   const [quotations, setQuotations] = useState([]);
@@ -105,23 +109,22 @@ export default function PriceRequestsView() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const actualBrand = requestForm.brandChoice === 'Other'
-    ? requestForm.otherBrand.trim()
-    : requestForm.brandChoice;
+  const requestItems = useMemo(() => (requestForm.items || []).map((item) => ({
+    ...item,
+    brand: item.brandChoice === 'Other' ? item.otherBrand.trim() : item.brandChoice,
+    quantity: Number(item.quantity)
+  })), [requestForm.items]);
 
   useEffect(() => {
-    if (!showCreate || !actualBrand || !requestForm.category) {
+    if (!showCreate || requestItems.some((item) => !item.brand || !item.category)) {
       setSuggestion(null);
       return undefined;
     }
     const timer = setTimeout(async () => {
-      const query = new URLSearchParams({
-        category: requestForm.category,
-        brand: actualBrand,
-        isBulk: String(requestForm.isBulk)
-      });
       try {
-        const { response, data } = await apiRequest(`/api/price-requests/assignee-suggestion?${query}`);
+        const { response, data } = await apiRequest('/api/price-requests/assignee-suggestion', {
+          method: 'POST', body: JSON.stringify({ items: requestItems })
+        });
         if (response.ok) {
           setSuggestion(data.data || null);
           if (!recipientTouched) {
@@ -136,7 +139,7 @@ export default function PriceRequestsView() {
       }
     }, 250);
     return () => clearTimeout(timer);
-  }, [showCreate, requestForm.category, requestForm.isBulk, actualBrand, recipientTouched]);
+  }, [showCreate, requestItems, recipientTouched]);
 
   const filteredRequests = useMemo(() => {
     const term = filters.search.trim().toLowerCase();
@@ -144,7 +147,7 @@ export default function PriceRequestsView() {
       if (filters.status && item.status !== filters.status) return false;
       if (filters.category && item.category !== filters.category) return false;
       if (!term) return true;
-      return [item.requestNumber, item.requirement, item.brand, item.leadSource, item.leadSourceNote, item.customerName, item.reference, item.partNumber,
+      return [item.requestNumber, item.requirement, item.brand, ...(item.items || []).flatMap((line) => [line.requirement, line.brand, line.partNumber]), item.leadSource, item.leadSourceNote, item.customerName, item.reference, item.partNumber,
         item.requestedBy?.fullName, item.requestedFrom?.fullName, item.quotationId?.quotationNumber, item.quotationId?.orderReference]
         .some((value) => String(value || '').toLowerCase().includes(term));
     });
@@ -161,8 +164,26 @@ export default function PriceRequestsView() {
     setTimeout(() => setNotice(''), 3500);
   };
 
+  const updateRequestItem = (index, changes) => {
+    setRecipientTouched(false);
+    setRequestForm((current) => ({
+      ...current,
+      items: current.items.map((item, itemIndex) => itemIndex === index ? { ...item, ...changes } : item)
+    }));
+  };
+
+  const addRequestItem = () => setRequestForm((current) => ({
+    ...current,
+    items: current.items.length >= 50 ? current.items : [...current.items, { ...EMPTY_ITEM }]
+  }));
+
+  const removeRequestItem = (index) => setRequestForm((current) => ({
+    ...current,
+    items: current.items.length === 1 ? current.items : current.items.filter((_, itemIndex) => itemIndex !== index)
+  }));
+
   const openCreate = () => {
-    setRequestForm(EMPTY_REQUEST);
+    setRequestForm(newRequestForm());
     setRecipientTouched(false);
     setSuggestion(null);
     setError('');
@@ -171,7 +192,7 @@ export default function PriceRequestsView() {
 
   const submitCreate = async (event) => {
     event.preventDefault();
-    if (!actualBrand) return setError('Enter the brand name.');
+    if (requestItems.some((item) => !item.brand)) return setError('Enter the brand name for every item.');
     setSaving(true);
     setError('');
     try {
@@ -179,8 +200,7 @@ export default function PriceRequestsView() {
         method: 'POST',
         body: JSON.stringify({
           ...requestForm,
-          brand: actualBrand,
-          quantity: Number(requestForm.quantity)
+          items: requestItems.map(({ brandChoice, otherBrand, ...item }) => item)
         })
       });
       if (!response.ok) throw new Error(data.message || 'Could not create the request.');
@@ -197,7 +217,7 @@ export default function PriceRequestsView() {
   const openAction = async (type, item) => {
     setAction({ type, item });
     setActionForm({
-      unitPrice: '', currency: 'PKR', validityDate: '', leadTime: '', notes: '',
+      unitPrice: '', itemPrices: (item.items || []).map(() => ''), currency: item.currency || 'PKR', validityDate: '', leadTime: '', notes: '',
       reason: '', requestedFrom: getId(item.requestedFrom), pendingNote: item.pendingNote || '', quotationId: ''
     });
     setError('');
@@ -223,10 +243,10 @@ export default function PriceRequestsView() {
     const method = type === 'note' ? 'PATCH' : 'POST';
     let payload = {};
     if (type === 'price') {
-      const decimal = Number(actionForm.unitPrice);
-      if (!Number.isFinite(decimal) || decimal < 0) return setError('Enter a valid unit price.');
+      const decimals = actionForm.itemPrices.map(Number);
+      if (decimals.length !== (item.items || []).length || decimals.some((decimal) => !Number.isFinite(decimal) || decimal < 0)) return setError('Enter a valid unit price for every item.');
       payload = {
-        unitPriceCents: Math.round((decimal + Number.EPSILON) * 100),
+        items: decimals.map((decimal) => ({ unitPriceCents: Math.round((decimal + Number.EPSILON) * 100) })),
         currency: actionForm.currency,
         validityDate: actionForm.validityDate || null,
         leadTime: actionForm.leadTime,
@@ -403,13 +423,14 @@ export default function PriceRequestsView() {
               {filteredRequests.map((item) => (
                 <tr key={item._id}>
                   <td><strong>{item.leadSource || '-'}</strong>{item.leadSource === 'Other' && item.leadSourceNote && <small>{item.leadSourceNote}</small>}</td>
-                  <td><strong>{item.requestNumber}</strong><small>{item.brand} · {item.category}{item.isBulk ? ' · Bulk' : ''}</small><small>{item.customerName || item.reference || 'No customer/reference'}</small></td>
-                  <td><strong>{item.requirement}</strong><small>Qty {item.quantity}{item.partNumber ? ` · ${item.partNumber}` : ''}</small>{item.status === 'Pending' && <span className="pr-note">{item.pendingNote || 'Awaiting response'} · {item.pendingAgeDays} day(s)</span>}</td>
+                  <td><strong>{item.requestNumber}</strong><small>{item.itemCount} item{item.itemCount === 1 ? '' : 's'} · {item.items?.[0]?.brand || item.brand}</small><small>{item.customerName || item.reference || 'No customer/reference'}</small></td>
+                  <td><strong>{item.firstItemName || item.requirement}</strong>{item.itemCount > 1 && <small>+ {item.itemCount - 1} more</small>}<small>Quantity {item.items?.[0]?.quantity || item.quantity}{(item.items?.[0]?.partNumber || item.partNumber) ? ` · ${item.items?.[0]?.partNumber || item.partNumber}` : ''}</small>{item.status === 'Pending' && <span className="pr-note">{item.pendingNote || 'Awaiting response'} · {item.pendingAgeDays} day(s)</span>}</td>
                   <td><span>{item.requestedBy?.fullName || 'Unknown'}</span><small>from {item.requestedFrom?.fullName || 'Unknown'}</small></td>
                   <td><span className={`pr-status ${item.status.toLowerCase()}`}>{item.status}</span></td>
-                  <td>{item.status === 'Priced' ? <><strong>{item.currency} {(Number(item.unitPriceCents || 0) / 100).toFixed(2)}</strong><small>{item.validityDate ? `Valid to ${new Date(item.validityDate).toLocaleDateString()}` : 'No validity date'}{item.leadTime ? ` · ${item.leadTime}` : ''}</small></> : item.status === 'Declined' ? <span>{item.declineReason}</span> : <span className="pr-muted">Waiting</span>}</td>
+                  <td>{item.status === 'Priced' ? <><strong>Grand Total: {item.currency} {(Number(item.grandTotalCents || 0) / 100).toFixed(2)}</strong><small>Unit Price, Quantity and Total Price shown in details</small><small>{item.validityDate ? `Valid to ${new Date(item.validityDate).toLocaleDateString()}` : 'No validity date'}{item.leadTime ? ` · ${item.leadTime}` : ''}</small></> : item.status === 'Declined' ? <span>{item.declineReason}</span> : <span className="pr-muted">Waiting</span>}</td>
                   <td>{item.quotationId ? <span className="pr-linked"><Link2 size={13} /> {item.quotationId.orderReference || item.quotationId.quotationNumber}</span> : '—'}</td>
                   <td><div className="pr-row-actions">
+                    <button onClick={() => openAction('view', item)}>View</button>
                     {item.status === 'Pending' && isRecipient(item) && <><button onClick={() => openAction('price', item)}>Price</button><button onClick={() => openAction('decline', item)}>Decline</button></>}
                     {item.status === 'Pending' && canReassign(item) && <button onClick={() => openAction('reassign', item)}><ArrowRightLeft size={13} /> Reassign</button>}
                     {item.status === 'Pending' && canReassign(item) && <button onClick={() => openAction('note', item)}>Note</button>}
@@ -429,15 +450,21 @@ export default function PriceRequestsView() {
           <form onSubmit={submitCreate} className="pr-form-grid">
             <label>Lead source<select required value={requestForm.leadSource} onChange={(e) => setRequestForm((f) => ({ ...f, leadSource: e.target.value, leadSourceNote: e.target.value === 'Other' ? f.leadSourceNote : '' }))}><option value="">Select a lead source</option>{LEAD_SOURCES.map((value) => <option key={value}>{value}</option>)}</select></label>
             {requestForm.leadSource === 'Other' && <label>Lead source note (optional)<input maxLength="200" value={requestForm.leadSourceNote} onChange={(e) => setRequestForm((f) => ({ ...f, leadSourceNote: e.target.value }))} placeholder="Add a short note" /></label>}
-            <label>Category<select value={requestForm.category} onChange={(e) => { setRecipientTouched(false); setRequestForm((f) => ({ ...f, category: e.target.value })); }}>{CATEGORIES.map((value) => <option key={value}>{value}</option>)}</select></label>
-            <label>Brand<select value={requestForm.brandChoice} onChange={(e) => { setRecipientTouched(false); setRequestForm((f) => ({ ...f, brandChoice: e.target.value })); }}>{BRANDS.map((value) => <option key={value}>{value}</option>)}</select></label>
-            {requestForm.brandChoice === 'Other' && <label>Other brand<input required value={requestForm.otherBrand} onChange={(e) => setRequestForm((f) => ({ ...f, otherBrand: e.target.value }))} /></label>}
-            <label className="pr-checkbox"><input type="checkbox" checked={requestForm.isBulk} onChange={(e) => { setRecipientTouched(false); setRequestForm((f) => ({ ...f, isBulk: e.target.checked })); }} /> Bulk requirement</label>
             <label>Customer name (optional)<input value={requestForm.customerName} onChange={(e) => setRequestForm((f) => ({ ...f, customerName: e.target.value }))} /></label>
             <label>Reference (optional)<input value={requestForm.reference} onChange={(e) => setRequestForm((f) => ({ ...f, reference: e.target.value }))} /></label>
-            <label>Part number / model (optional)<input value={requestForm.partNumber} onChange={(e) => setRequestForm((f) => ({ ...f, partNumber: e.target.value }))} /></label>
-            <label>Quantity<input required type="number" min="1" step="1" value={requestForm.quantity} onChange={(e) => setRequestForm((f) => ({ ...f, quantity: e.target.value }))} /></label>
-            <label className="span-2">Requirement<textarea required rows="4" value={requestForm.requirement} onChange={(e) => setRequestForm((f) => ({ ...f, requirement: e.target.value }))} /></label>
+            <div className="span-2 pr-items-editor">
+              <div className="pr-items-heading"><strong>Requested items ({requestForm.items.length}/50)</strong><button type="button" onClick={addRequestItem} disabled={requestForm.items.length >= 50}><Plus size={14} /> Add item</button></div>
+              {requestForm.items.map((line, index) => <div className="pr-item-card" key={index}>
+                <div className="pr-item-card-title"><strong>Item {index + 1}</strong>{requestForm.items.length > 1 && <button type="button" onClick={() => removeRequestItem(index)}>Remove item</button>}</div>
+                <label>Category<select value={line.category} onChange={(e) => updateRequestItem(index, { category: e.target.value })}>{CATEGORIES.map((value) => <option key={value}>{value}</option>)}</select></label>
+                <label>Brand<select value={line.brandChoice} onChange={(e) => updateRequestItem(index, { brandChoice: e.target.value })}>{BRANDS.map((value) => <option key={value}>{value}</option>)}</select></label>
+                {line.brandChoice === 'Other' && <label>Other brand<input required value={line.otherBrand} onChange={(e) => updateRequestItem(index, { otherBrand: e.target.value })} /></label>}
+                <label>Part number / model (optional)<input value={line.partNumber} onChange={(e) => updateRequestItem(index, { partNumber: e.target.value })} /></label>
+                <label>Quantity<input required type="number" min="1" step="1" value={line.quantity} onChange={(e) => updateRequestItem(index, { quantity: e.target.value })} /></label>
+                <label className="pr-checkbox"><input type="checkbox" checked={line.isBulk} onChange={(e) => updateRequestItem(index, { isBulk: e.target.checked })} /> Bulk requirement</label>
+                <label className="span-2">Product / requirement<textarea required rows="3" value={line.requirement} onChange={(e) => updateRequestItem(index, { requirement: e.target.value })} /></label>
+              </div>)}
+            </div>
             <label className="span-2">Request from<select required value={requestForm.requestedFrom} onChange={(e) => { setRecipientTouched(true); setRequestForm((f) => ({ ...f, requestedFrom: e.target.value })); }}><option value="">Select a person</option>{eligibleUsers.map((user) => <option value={getId(user)} key={getId(user)}>{userLabel(user)}</option>)}</select>{suggestion?.assignee && <small>Suggested by “{suggestion.rule?.label}”: {userLabel(suggestion.assignee)}</small>}{!suggestion && <small>No matching rule. Pick a person.</small>}</label>
             <label className="span-2">Pending status note (optional)<input value={requestForm.pendingNote} onChange={(e) => setRequestForm((f) => ({ ...f, pendingNote: e.target.value }))} placeholder="Defaults to awaiting price from the recipient" /></label>
             <div className="pr-modal-actions span-2"><button type="button" className="pr-btn secondary" onClick={() => setShowCreate(false)}>Cancel</button><button disabled={saving} className="pr-btn primary">{saving ? 'Creating…' : 'Create request'}</button></div>
@@ -447,12 +474,19 @@ export default function PriceRequestsView() {
 
       {action && (
         <div className="pr-modal-backdrop"><div className="pr-modal">
-          <div className="pr-modal-title"><div><h3>{action.type === 'price' ? 'Provide price' : action.type === 'decline' ? 'Cannot price' : action.type === 'reassign' ? 'Reassign request' : action.type === 'note' ? 'Update pending note' : 'Link quotation'}</h3><p>{action.item.requestNumber} · {action.item.requirement}</p></div><button onClick={() => setAction(null)}><X /></button></div>
+          <div className="pr-modal-title"><div><h3>{action.type === 'view' ? 'Price Request details' : action.type === 'price' ? 'Provide prices' : action.type === 'decline' ? 'Cannot price' : action.type === 'reassign' ? 'Reassign request' : action.type === 'note' ? 'Update pending note' : 'Link quotation'}</h3><p>{action.item.requestNumber} · {action.item.itemCount} item{action.item.itemCount === 1 ? '' : 's'}</p></div><button onClick={() => setAction(null)}><X /></button></div>
           {error && <div className="pr-alert error">{error}</div>}
           <div className="pr-request-context"><strong>Lead source: {action.item.leadSource || '-'}</strong>{action.item.leadSource === 'Other' && action.item.leadSourceNote && <span>{action.item.leadSourceNote}</span>}</div>
-          <form onSubmit={submitAction} className="pr-form-grid one">
+          <div className="pr-items-table-wrap"><table className="pr-items-table"><thead><tr><th>Brand</th><th>Product / model</th><th>Quantity</th><th>Unit Price</th><th>Total Price</th></tr></thead><tbody>
+            {(action.item.items || []).map((line, index) => {
+              const liveUnit = action.type === 'price' ? Number(actionForm.itemPrices[index] || 0) : Number(line.unitPriceCents || 0) / 100;
+              return <tr key={line._id || index}><td>{line.brand}</td><td><strong>{line.requirement}</strong>{line.partNumber && <small>{line.partNumber}</small>}</td><td>{line.quantity}</td><td>{action.type === 'price' ? <input aria-label={`Unit price item ${index + 1}`} required type="number" min="0" step="0.01" value={actionForm.itemPrices[index] ?? ''} onChange={(e) => setActionForm((current) => ({ ...current, itemPrices: current.itemPrices.map((value, itemIndex) => itemIndex === index ? e.target.value : value) }))} /> : line.unitPriceCents == null ? '—' : `${action.item.currency || ''} ${(line.unitPriceCents / 100).toFixed(2)}`}</td><td>{line.unitPriceCents == null && action.type !== 'price' ? '—' : `${actionForm.currency || action.item.currency || ''} ${(liveUnit * Number(line.quantity || 0)).toFixed(2)}`}</td></tr>;
+            })}
+          </tbody></table></div>
+          {action.type === 'price' && <div className="pr-grand-total">Grand Total: {actionForm.currency} {actionForm.itemPrices.reduce((sum, value, index) => sum + (Number(value) || 0) * Number(action.item.items?.[index]?.quantity || 0), 0).toFixed(2)}</div>}
+          {action.type === 'view' && action.item.status === 'Priced' && <div className="pr-grand-total">Grand Total: {action.item.currency} {(Number(action.item.grandTotalCents || 0) / 100).toFixed(2)}</div>}
+          {action.type !== 'view' && <form onSubmit={submitAction} className="pr-form-grid one">
             {action.type === 'price' && <>
-              <label>Unit price<input required type="number" min="0" step="0.01" value={actionForm.unitPrice} onChange={(e) => setActionForm((f) => ({ ...f, unitPrice: e.target.value }))} /></label>
               <label>Currency<select required value={actionForm.currency} onChange={(e) => setActionForm((f) => ({ ...f, currency: e.target.value }))}>{CURRENCIES.map((value) => <option key={value}>{value}</option>)}</select></label>
               <label>Validity date (optional)<input type="date" value={actionForm.validityDate} onChange={(e) => setActionForm((f) => ({ ...f, validityDate: e.target.value }))} /></label>
               <label>Lead time (optional)<input value={actionForm.leadTime} onChange={(e) => setActionForm((f) => ({ ...f, leadTime: e.target.value }))} /></label>
@@ -463,7 +497,7 @@ export default function PriceRequestsView() {
             {action.type === 'note' && <label>Pending note<textarea required rows="4" value={actionForm.pendingNote} onChange={(e) => setActionForm((f) => ({ ...f, pendingNote: e.target.value }))} /></label>}
             {action.type === 'link' && <><div className="pr-quote-search"><input value={quotationSearch} onChange={(e) => setQuotationSearch(e.target.value)} placeholder="Quotation number or customer" /><button type="button" onClick={searchQuotations}><Search size={15} /> Search</button></div><label>Quotation<select required value={actionForm.quotationId} onChange={(e) => setActionForm((f) => ({ ...f, quotationId: e.target.value }))}><option value="">Select quotation</option>{quotations.map((quote) => <option key={quote._id} value={quote._id}>{quote.orderReference || quote.quotationNumber || 'No number'} — {quote.clientName}</option>)}</select></label></>}
             <div className="pr-modal-actions"><button type="button" className="pr-btn secondary" onClick={() => setAction(null)}>Cancel</button><button disabled={saving} className="pr-btn primary">{saving ? 'Saving…' : 'Save'}</button></div>
-          </form>
+          </form>}
         </div></div>
       )}
 
