@@ -6,9 +6,12 @@ const read = path => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 
 test('Price Requests uses the dedicated labelled-user endpoint and Name - Label format', async () => {
   const source = await read('src/price_requests/PriceRequestsView.jsx');
+  const labels = await read('src/utils/priceRequestPeople.js');
   assert.match(source, /\/api\/price-requests\/labelled-users/);
   assert.doesNotMatch(source, /apiRequest\('\/api\/users'\)/);
-  assert.match(source, /user\.label \|\| user\.priceRequestLabel/);
+  assert.match(source, /priceRequestPersonLabel/);
+  assert.match(labels, /user\.label \|\| user\.priceRequestLabel/);
+  assert.match(labels, /label \? `\$\{name\} - \$\{label\}` : name/);
 });
 
 test('Admin user editor supports an optional validated Price Request label', async () => {
