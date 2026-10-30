@@ -86,6 +86,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
   const [quoteCompanyCode, setQuoteCompanyCode] = useState('');
   const [quoteDetails, setQuoteDetails] = useState({
     sku: '',
+    partNumber: '',
     description: '',
     taxPercentage: 18,
     currency: DEFAULT_TERMS.currency,
@@ -101,6 +102,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
     setQuoteCompanyCode('');
     setQuoteDetails({
       sku: '',
+      partNumber: '',
       description: deal.requirements || deal.title || 'Quotation per Customer Requirement',
       taxPercentage: 18,
       currency: DEFAULT_TERMS.currency,
@@ -202,6 +204,7 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
         productSummary: quoteDetails.description,
         items: [{
           sku: quoteDetails.sku,
+          partNumber: quoteDetails.partNumber,
           description: quoteDetails.description,
           quantity: 1,
           unitPrice: deal.value ? Number(deal.value) : 0
@@ -930,6 +933,10 @@ export default function SalesDealsView({ onNavigateInvoices, onNavigateQuotation
                 <div className="sv-field">
                   <label>SKU</label>
                   <input value={quoteDetails.sku} onChange={e => setQuoteDetails(p => ({ ...p, sku: e.target.value }))} />
+                </div>
+                <div className="sv-field">
+                  <label>Part Number</label>
+                  <input value={quoteDetails.partNumber} onChange={e => setQuoteDetails(p => ({ ...p, partNumber: e.target.value }))} />
                 </div>
                 <div className="sv-field">
                   <label>Currency</label>

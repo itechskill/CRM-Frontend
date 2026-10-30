@@ -1,149 +1,116 @@
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
-import { drawLetterheadFooter, drawLetterheadHeader, loadDocumentLetterhead } from './documentLetterhead.js';
-
-const date = value => value && !Number.isNaN(new Date(value).getTime())
-  ? new Date(value).toLocaleDateString('en-GB')
-  : '-';
-const money = value => Number(value || 0).toLocaleString('en-PK', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-
-const drawLegacyHeader = (doc, reference) => {
-  doc.setFillColor(2, 132, 199);
-  doc.rect(0, 0, 210, 36, 'F');
-  doc.setFillColor(3, 105, 161);
-  doc.rect(0, 36, 210, 2, 'F');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(20);
-  doc.setTextColor(255, 255, 255);
-  doc.text('FORTLINE CRM', 14, 18);
-  doc.setFontSize(9.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Support & Warehouse Outbound Dispatch Note', 14, 26);
-  doc.setFontSize(15);
-  doc.setFont('helvetica', 'bold');
-  doc.text('DELIVERY NOTE', 196, 18, { align: 'right' });
-  doc.setFontSize(9.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Ref #: ${reference}`, 196, 26, { align: 'right' });
-};
-
-const drawLegacyFooter = doc => {
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(148, 163, 184);
-  doc.text('Fortline CRM Logistics System - Official Outbound Delivery Document', 105, 288, { align: 'center' });
-};
+import { loadDocumentLetterhead } from './documentLetterhead.js';
+import { resolveDocumentLines } from './documentPartNumbers.js';
+import {
+  drawDetailsBox,
+  drawProfessionalFrame,
+  drawProfessionalTable,
+  drawSummaryBox,
+  ensurePdfSpace,
+  pdfDate,
+  pdfMoney,
+  repeatProfessionalFrame
+} from './professionalDocumentPdf.js';
 
 export const createDeliveryNotePdf = async (deliveryNote, { showPrices = false, assetLoader } = {}) => {
   const note = deliveryNote || {};
   const reference = note.deliveryNumber || note.deliveryNoteNumber || 'DN-PENDING';
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const letterhead = await loadDocumentLetterhead(note, { assetLoader });
-  const hasCompany = Boolean(letterhead.source?.issuingCompany?.code);
-  const drawHeader = () => {
-    if (hasCompany) {
-      drawLetterheadHeader(doc, letterhead, { title: 'Delivery Note' });
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(15);
-      doc.setTextColor(15, 23, 42);
-      doc.text('DELIVERY NOTE', 105, 47, { align: 'center' });
-    } else {
-      drawLegacyHeader(doc, reference);
-    }
-  };
-  const drawFooter = () => hasCompany ? drawLetterheadFooter(doc, letterhead) : drawLegacyFooter(doc);
-  drawHeader();
+  const drawFrame = () => drawProfessionalFrame(doc, letterhead, { title: 'Delivery Note' });
+  drawFrame();
 
-  const contentTop = hasCompany ? 54 : 44;
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, contentTop, 182, 34, 2.5, 2.5, 'FD');
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(3, 105, 161);
-  doc.text('CUSTOMER / RECIPIENT', 19, contentTop + 8);
-  doc.text('DOCUMENT DETAILS', 114, contentTop + 8);
-  doc.setTextColor(15, 23, 42);
-  doc.setFontSize(9.5);
-  doc.text(note.clientName || note.recipientName || 'Valued Consignee', 19, contentTop + 14, { maxWidth: 82 });
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.2);
-  doc.setTextColor(71, 85, 105);
-  doc.text(`Recipient: ${note.recipientName || note.clientName || '-'}`, 19, contentTop + 20, { maxWidth: 82 });
-  doc.text(`Phone: ${note.recipientPhone || '-'}`, 19, contentTop + 25, { maxWidth: 82 });
-  doc.text(`Address: ${note.deliveryAddress || '-'}`, 19, contentTop + 30, { maxWidth: 82 });
   const orderNumber = note.salesOrderNumber || note.salesOrder?.orderNumber || note.salesOrder?.orderReference || note.sourceDocument || '-';
-  doc.text(`Delivery Note: ${reference}`, 114, contentTop + 14);
-  doc.text(`Sales Order: ${orderNumber}`, 114, contentTop + 20);
-  doc.text(`Dispatch Date: ${date(note.scheduledDate || note.createdAt)}`, 114, contentTop + 26);
-  doc.text(`Carrier: ${note.carrier || 'Fortline Logistics'}`, 114, contentTop + 31, { maxWidth: 78 });
+  const detailsBottom = drawDetailsBox(doc, {
+    leftTitle: 'CUSTOMER / RECIPIENT',
+    rightTitle: 'DELIVERY NOTE DETAILS',
+    leftLines: [
+      note.clientName || note.recipientName || 'Valued Consignee',
+      `Recipient: ${note.recipientName || note.clientName || '-'}`,
+      `Phone: ${note.recipientPhone || note.salesOrder?.clientPhone || '-'}`,
+      `Address: ${note.deliveryAddress || note.salesOrder?.clientAddress || '-'}`
+    ],
+    rightRows: [
+      ['Delivery Note', reference],
+      ['Sales Order', orderNumber],
+      ['Dispatch Date', pdfDate(note.scheduledDate || note.createdAt)],
+      ['Carrier', note.carrier || 'Fortline Logistics']
+    ],
+    height: 36
+  });
 
-  const rows = (note.items?.length ? note.items : [{ description: 'Delivered Item', quantity: 1 }]).map((item, index) => [
+  const items = resolveDocumentLines(note);
+  const rows = (items.length ? items : [{ description: 'Delivered Item', quantity: 1 }]).map((item, index) => [
     index + 1,
     item.partNumber || '',
     item.product || item.description || 'Delivered Item',
     item.demand || item.totalOrderedQty || item.quantity || 1,
     item.quantity || item.demand || 1,
     item.unit || 'pcs',
-    ...(showPrices ? [
-      `PKR ${money(item.unitPrice)}`,
-      `PKR ${money(item.lineTotal || ((Number(item.quantity) || 1) * Number(item.unitPrice || 0)))}`
-    ] : [])
+    ...(showPrices ? [pdfMoney(item.unitPrice), pdfMoney(item.lineTotal || ((Number(item.quantity) || 1) * Number(item.unitPrice || 0)))] : [])
   ]);
 
-  autoTable(doc, {
-    startY: contentTop + 41,
-    margin: { left: 14, right: 14, top: hasCompany ? 54 : 44, bottom: hasCompany ? 42 : 18 },
-    head: [[
-      '#', 'Part Number', 'Description', 'Ordered', 'Delivered', 'Unit',
-      ...(showPrices ? ['Unit Price', 'Line Total'] : [])
-    ]],
+  const columnStyles = showPrices ? {
+    0: { cellWidth: 9, halign: 'center' },
+    1: { cellWidth: 23 },
+    2: { cellWidth: 55 },
+    3: { cellWidth: 17, halign: 'center' },
+    4: { cellWidth: 17, halign: 'center' },
+    5: { cellWidth: 14, halign: 'center' },
+    6: { cellWidth: 23, halign: 'right' },
+    7: { cellWidth: 24, halign: 'right' }
+  } : {
+    0: { cellWidth: 12, halign: 'center' },
+    1: { cellWidth: 31 },
+    2: { cellWidth: 75 },
+    3: { cellWidth: 22, halign: 'center' },
+    4: { cellWidth: 22, halign: 'center' },
+    5: { cellWidth: 20, halign: 'center' }
+  };
+  drawProfessionalTable(doc, {
+    startY: detailsBottom + 5,
+    head: ['S.no', 'Part Number', 'Description', 'Ordered', 'Delivered', 'Unit', ...(showPrices ? ['Unit Price', 'Amount'] : [])],
     body: rows,
-    theme: 'grid',
-    headStyles: { fillColor: [2, 132, 199], textColor: 255, fontStyle: 'bold', fontSize: 8 },
-    styles: { fontSize: 8, cellPadding: 3, lineColor: [226, 232, 240], lineWidth: 0.2 },
-    didDrawPage: data => {
-      if (data.pageNumber > 1) drawHeader();
-      drawFooter();
-    }
+    columnStyles,
+    drawFrame
   });
 
-  let finalY = doc.lastAutoTable.finalY + 7;
-  const signatureHeight = showPrices ? 49 : 40;
-  if (finalY + signatureHeight > (hasCompany ? 251 : 278)) {
-    doc.addPage();
-    drawHeader();
-    drawFooter();
-    finalY = hasCompany ? 55 : 45;
-  }
+  let y = doc.lastAutoTable.finalY + 7;
   if (showPrices) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.setTextColor(15, 23, 42);
-    doc.text(`Grand Total: PKR ${money(note.grandTotal ?? note.salesOrder?.netAmount)}`, 196, finalY, { align: 'right' });
-    finalY += 8;
+    y = ensurePdfSpace(doc, y, 43, drawFrame);
+    const subtotal = Number(note.subtotal) || items.reduce((sum, item) => sum + Number(item.lineTotal || 0), 0);
+    const discount = Number(note.discount) || 0;
+    const tax = Number(note.tax) || 0;
+    const total = Number(note.grandTotal) || subtotal - discount + tax;
+    const summaryRows = [['Subtotal', `PKR ${pdfMoney(subtotal)}`]];
+    if (discount > 0) summaryRows.push(['Discount', `-PKR ${pdfMoney(discount)}`]);
+    summaryRows.push(['Tax / GST', `PKR ${pdfMoney(tax)}`], ['Total', `PKR ${pdfMoney(total)}`, true]);
+    drawSummaryBox(doc, { y, title: 'DELIVERY NOTE SUMMARY', rows: summaryRows });
+    y += 6 * (summaryRows.length + 1) + 7;
   }
+
+  y = ensurePdfSpace(doc, y, 42, drawFrame);
   if (note.notes) {
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
+    doc.setFontSize(8.2);
     doc.setTextColor(71, 85, 105);
-    doc.text(doc.splitTextToSize(`Notes: ${note.notes}`, 178), 16, finalY);
-    finalY += 12;
+    doc.text(doc.splitTextToSize(`Notes: ${note.notes}`, 178), 16, y);
+    y += 10;
   }
-  doc.setDrawColor(203, 213, 225);
-  doc.roundedRect(14, finalY, 182, 28, 2, 2, 'D');
+  doc.setDrawColor(0, 0, 0);
+  doc.rect(14, y, 182, 28);
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(15, 23, 42);
-  doc.text('Dispatched By', 18, finalY + 8);
-  doc.text('Received in Good Condition By', 108, finalY + 8);
-  doc.line(18, finalY + 20, 88, finalY + 20);
-  doc.line(108, finalY + 20, 178, finalY + 20);
+  doc.text('Dispatched By', 18, y + 8);
+  doc.text('Received in Good Condition By', 108, y + 8);
+  doc.line(18, y + 20, 88, y + 20);
+  doc.line(108, y + 20, 178, y + 20);
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
-  doc.text('Support / Warehouse', 18, finalY + 25);
-  doc.text('Customer Signature & Stamp', 108, finalY + 25);
+  doc.text('Support / Warehouse', 18, y + 25);
+  doc.text('Customer Signature & Stamp', 108, y + 25);
+  repeatProfessionalFrame(doc, drawFrame);
   return doc;
 };
 

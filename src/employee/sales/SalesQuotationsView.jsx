@@ -379,7 +379,7 @@ export default function SalesQuotationsView() {
           inventoryItem: it.inventoryItem?._id || it.inventoryItem || null,
           inventorySearch: '',
           sku: it.sku || '',
-          partNumber: it.partNumber || it.sku || '',
+          partNumber: it.partNumber || '',
           description: it.description || '',
           quantity: qty,
           unitPrice: unitP,
@@ -501,7 +501,7 @@ export default function SalesQuotationsView() {
         inventorySearch: value,
         inventoryItem: match?._id || null,
         sku: match ? (match.sku || '') : item.sku,
-        partNumber: match ? (match.partNumber || match.sku || '') : item.partNumber,
+        partNumber: match ? (match.partNumber || '') : item.partNumber,
         description: match ? (match.description || match.name || '') : item.description
       } : item)
     }));
@@ -578,7 +578,7 @@ export default function SalesQuotationsView() {
       return {
         inventoryItem: it.inventoryItem || null,
         sku: String(it.sku || '').trim(),
-        partNumber: String(it.partNumber || it.sku || '').trim(),
+        partNumber: String(it.partNumber || '').trim(),
         description: it.description.trim(),
         quantity: qty,
         unitPrice: unitP,
@@ -1604,7 +1604,7 @@ export default function SalesQuotationsView() {
                         <tr key={idx} style={{ borderBottom: '1px solid #F1F5F9' }}>
                           <td style={{ padding: '6px 8px', color: '#94A3B8' }}>{idx + 1}</td>
                           <td style={{ padding: '6px 8px', color: '#475569' }}>{it.sku || '—'}</td>
-                          <td style={{ padding: '6px 8px', color: '#475569' }}>{it.partNumber || it.sku || '—'}</td>
+                          <td style={{ padding: '6px 8px', color: '#475569' }}>{it.partNumber || '—'}</td>
                           <td style={{ padding: '6px 8px', fontWeight: 600, color: '#1E293B', whiteSpace: 'pre-wrap' }}>{it.description || 'Product Item'}</td>
                           <td style={{ padding: '6px 8px', textAlign: 'right', color: '#475569' }}>Rs. {unitP.toLocaleString()}</td>
                           <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: 700, color: '#2563EB' }}>{qty}</td>

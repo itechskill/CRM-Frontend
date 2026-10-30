@@ -2,6 +2,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getDocumentIssuerName } from './salesDocumentPdfLayout.js';
 import { letterheadFor } from './companies.js';
+import { resolveDocumentLines } from './documentPartNumbers.js';
 
 const DEFAULT_TERMS = Object.freeze({
   currency: 'Pakistani Rupee',
@@ -149,7 +150,8 @@ export const createQuotationPdf = async (quotation, { assetLoader = defaultAsset
     doc.text(lines.slice(0, 2), 151, y);
   });
 
-  const items = q.items?.length ? q.items : [{
+  const resolvedItems = resolveDocumentLines(q);
+  const items = resolvedItems.length ? resolvedItems : [{
     sku: '',
     description: q.productSummary || '',
     quantity: 1,
@@ -159,7 +161,7 @@ export const createQuotationPdf = async (quotation, { assetLoader = defaultAsset
     const quantity = Math.max(1, Number(item.quantity) || 1);
     const unitPrice = Number(item.unitPrice) || 0;
     const amount = item.total !== undefined ? Number(item.total) : quantity * unitPrice;
-    return [index + 1, item.partNumber || item.sku || '', item.description || '', quantity, money(unitPrice), money(amount)];
+    return [index + 1, item.partNumber || '', item.description || '', quantity, money(unitPrice), money(amount)];
   });
 
   autoTable(doc, {
