@@ -17,6 +17,7 @@ export default function FinanceHeader({
     switch (activeTab) {
       case 'dashboard': return 'Finance Overview';
       case 'finance_invoices': return 'Submitted Invoices & Financial Review';
+      case 'edit_requests': return 'Invoice Edit Requests';
       case 'customer_payments':
       case 'finance_payments': return 'Customer Payments & Collections';
       case 'receivables':

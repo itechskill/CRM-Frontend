@@ -22,6 +22,7 @@ export default function ControlledEditButton({
 
   const role = userRole || currentUser?.role;
   const isDirect = isDirectEditAllowed(documentType, role);
+  const approverLabel = documentType === 'Draft Invoice' && role === 'accountant' ? 'Finance' : 'CEO';
 
   const checkPermissionStatus = async () => {
     if (isDirect || !documentId) return;
@@ -72,7 +73,7 @@ export default function ControlledEditButton({
     );
   }
 
-  // CEO Controlled Document handling
+  // Controlled document handling (Finance for Accounts draft invoices, CEO otherwise)
   const handleClick = () => {
     if (hasPermission) {
       if (onEdit) onEdit();
@@ -88,7 +89,7 @@ export default function ControlledEditButton({
           type="button"
           onClick={handleClick}
           className={className}
-          title="CEO Edit Permission Approved for single-use"
+          title={`${approverLabel} Edit Permission Approved for single-use`}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -105,14 +106,14 @@ export default function ControlledEditButton({
           }}
         >
           <CheckCircle size={14} color="#16a34a" />
-          {buttonText} (CEO Approved)
+          {buttonText} ({approverLabel} Approved)
         </button>
       ) : activeRequest && activeRequest.status === 'Pending' ? (
         <button
           type="button"
           onClick={() => setIsModalOpen(true)}
           className={className}
-          title="Click to view pending CEO request details"
+          title={`Click to view pending ${approverLabel} request details`}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -129,14 +130,14 @@ export default function ControlledEditButton({
           }}
         >
           <Clock size={14} />
-          {buttonText} (Pending CEO Approval)
+          {buttonText} (Pending {approverLabel} Approval)
         </button>
       ) : (
         <button
           type="button"
           onClick={handleClick}
           className={className}
-          title="Click to request CEO Edit Permission"
+          title={`Click to request ${approverLabel} Edit Permission`}
           style={{
             display: 'inline-flex',
             alignItems: 'center',
@@ -165,6 +166,7 @@ export default function ControlledEditButton({
         documentId={documentId}
         documentNumber={documentNumber}
         currentUser={currentUser}
+        approverLabel={approverLabel}
         onRequestSubmitted={() => {
           checkPermissionStatus();
         }}

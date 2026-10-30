@@ -108,6 +108,16 @@ export default function NotificationDropdown() {
         detail: { role: 'admin', tab: 'supplier_po_expenses' }
       }));
       setIsOpen(false);
+    } else if (notif.link === '/finance/edit-requests') {
+      window.dispatchEvent(new CustomEvent('crm:navigate-tab', {
+        detail: { role: 'finance', tab: 'edit_requests' }
+      }));
+      setIsOpen(false);
+    } else if (notif.link === '/admin/edit-requests') {
+      window.dispatchEvent(new CustomEvent('crm:navigate-tab', {
+        detail: { role: 'ceo', tab: 'edit_requests' }
+      }));
+      setIsOpen(false);
     }
   };
 

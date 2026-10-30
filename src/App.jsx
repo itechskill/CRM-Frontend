@@ -6,7 +6,7 @@ import ResetPassword from './pages/ResetPassword';
 import PublicWebsite from './website/PublicWebsite';
 import ProtectedRoute from './components/ProtectedRoute';
 import RoleProtectedRoute from './components/RoleProtectedRoute';
-import { getFrontendRole } from './config/roleConfig';
+import { getFrontendRole, getRoleConfig } from './config/roleConfig';
 import {
   migrateLegacyAuth,
   getToken,
@@ -214,6 +214,8 @@ import GlobalPurchaserPendingOrdersView from './purchaser/global/GlobalPurchaser
 import GlobalPurchaserPOsView from './purchaser/global/GlobalPurchaserPOsView';
 import GlobalPurchaserGRNsView from './purchaser/global/GlobalPurchaserGRNsView';
 import PriceRequestsView from './price_requests/PriceRequestsView';
+import OrderTrackerSidebar from './order_tracker/OrderTrackerSidebar';
+import OrderTrackerView from './order_tracker/OrderTrackerView';
 
 import { Users, ShieldCheck, UserX } from 'lucide-react';
 
@@ -338,8 +340,9 @@ export default function App() {
     setBackendVerifiedRole(frontendRole);
     setCurrentRole(frontendRole);
     setCurrentUser(userData || null);
-    setActiveTab('dashboard');
-    setActiveTabStorage('dashboard');
+    const defaultTab = getRoleConfig(userData?.role || frontendRole).defaultTab || 'dashboard';
+    setActiveTab(defaultTab);
+    setActiveTabStorage(defaultTab);
     setIsAuthenticated(true);
     setAuthView('login');
     if (userData) setUser(userData);
@@ -502,7 +505,7 @@ export default function App() {
 
   const knownRoles = [
     'employee', 'sales_member', 'sales_rep', 'sales_person', 'sales_manager', 'project_manager', 'admin',
-    'hr', 'accountant', 'marketing', 'ceo', 'administration', 'support', 'finance', 'logistics', 'purchaser'
+    'hr', 'accountant', 'marketing', 'ceo', 'administration', 'support', 'finance', 'logistics', 'purchaser', 'order_tracker'
   ];
 
   const effectiveRole = knownRoles.includes(currentRole)
@@ -555,7 +558,8 @@ export default function App() {
       admin: ['dashboard', 'price_requests', 'registration_requests', 'create_ceo', 'audit_logs', 'users', 'target_performance', 'supplier_po_expenses', 'exchange_rates', 'settings', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       hr: ['dashboard', 'employees', 'attendance', 'recruitment', 'performance', 'hr_reports', 'hr_notifications', 'hr_settings', 'profile'],
       accountant: ['dashboard', 'leave', 'orders_ready', 'invoices', 'expenses', 'payroll', 'maintenance', 'local_payables', 'acc_reports', 'acc_notifications', 'acc_settings', 'profile'],
-      finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'target_performance_overdue', 'finance_reports', 'reports', 'profile'],
+      finance: ['dashboard', 'leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'target_performance_overdue', 'finance_reports', 'reports', 'edit_requests', 'profile'],
+      order_tracker: ['order_tracker', 'notifications', 'profile'],
       marketing: ['dashboard', 'campaigns', 'mkt_leads', 'content', 'analytics', 'mkt_reports', 'mkt_notifications', 'mkt_settings', 'profile'],
       ceo: ['dashboard', 'price_requests', 'business_overview', 'projects_performance', 'sales_finance', 'team_performance', 'target_performance', 'supplier_po_expenses', 'reports_analytics', 'edit_requests', 'edit_history', 'profile', 'org_users', 'org_dept_sales', 'org_dept_logistics', 'org_dept_local_purchaser', 'org_dept_global_purchaser', 'org_dept_support', 'org_dept_accounts', 'org_dept_finance', 'org_dept_hr', 'org_ranking', 'org_monthly'],
       administration: ['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile']
@@ -568,7 +572,9 @@ export default function App() {
       validTabs.length > 0 &&
       !validTabs.includes(activeTab)
     ) {
-      const fallback = (effectiveRole === 'sales_member' || effectiveRole === 'sales_rep') ? 'my_leads' : 'dashboard';
+      const fallback = effectiveRole === 'order_tracker'
+        ? 'order_tracker'
+        : ((effectiveRole === 'sales_member' || effectiveRole === 'sales_rep') ? 'my_leads' : 'dashboard');
       setActiveTab(fallback);
       setActiveTabStorage(fallback);
     }
@@ -1118,7 +1124,7 @@ export default function App() {
               onNavigateTab={(tab) => handleSetActiveTab(tab)}
             />
             <main className="content-area">
-              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'target_performance_overdue', 'finance_reports', 'reports', 'profile'].includes(activeTab)) && (
+              {(activeTab === 'dashboard' || !['leave', 'overdue_approval', 'clear_orders', 'finance_invoices', 'customer_payments', 'finance_payments', 'receivables', 'finance_receivables', 'local_payables', 'financial_charges', 'supplier_po_expenses', 'target_performance_overdue', 'finance_reports', 'reports', 'edit_requests', 'profile'].includes(activeTab)) && (
                 <FinanceDashboard
                   currentUser={currentUser}
                   onNavigateTab={(tab) => handleSetActiveTab(tab)}
@@ -1166,6 +1172,7 @@ export default function App() {
               {activeTab === 'supplier_po_expenses' && <FinanceSupplierPOExpensesView searchQuery={portalSearch} />}
               {activeTab === 'target_performance_overdue' && <FinanceTargetPerformanceView />}
               {(activeTab === 'finance_reports' || activeTab === 'reports') && <FinanceReportsView />}
+              {activeTab === 'edit_requests' && <CEOEditRequestsView reviewerLabel="Finance" />}
               {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
@@ -1502,6 +1509,31 @@ export default function App() {
               {!['dashboard', 'administration', 'employees', 'departments', 'attendance_leave', 'company_resources', 'reports', 'profile'].includes(activeTab) && (
                 <AdministrationDashboard currentUser={currentUser} onNavigateTab={(tab) => setActiveTab(tab)} />
               )}
+            </main>
+          </div>
+        </RoleProtectedRoute>
+      )}
+
+      {/* ----------------- ORDER TRACKER (VIEW ONLY) ----------------- */}
+      {effectiveRole === 'order_tracker' && (
+        <RoleProtectedRoute
+          userRole={backendVerifiedRole}
+          allowedRoles="order_tracker"
+          onReturnToDashboard={() => handleSetActiveTab('order_tracker')}
+        >
+          <OrderTrackerSidebar
+            activeTab={activeTab}
+            setActiveTab={handleSetActiveTab}
+            currentUser={currentUser}
+            isMobileOpen={isSidebarOpen}
+            onClose={() => setIsSidebarOpen(false)}
+            onLogout={handleLogout}
+          />
+          <div className="main-wrapper">
+            <main className="content-area">
+              {activeTab === 'order_tracker' && <OrderTrackerView currentUser={currentUser} onMenuToggle={() => setIsSidebarOpen(true)} />}
+              {activeTab === 'notifications' && <EmployeeNotificationsView />}
+              {activeTab === 'profile' && <ProfileView currentUser={currentUser} onUpdateCurrentUser={(updated) => setCurrentUser(updated)} />}
             </main>
           </div>
         </RoleProtectedRoute>

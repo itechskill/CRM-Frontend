@@ -5,12 +5,14 @@ import { apiRequest } from '../utils/api';
 import { generateCombinedDocumentPackagePDF } from '../utils/combinedPdfGenerator';
 import { downloadInvoicePdf } from '../utils/invoicePdf';
 import { calculateInvoiceTotals, linePartNumber } from '../utils/documentFinancials';
+import { resolveDocumentLines } from '../utils/documentPartNumbers';
+import { getUser } from '../utils/authStorage';
+import ControlledEditButton from '../components/ControlledEditButton';
 import {
   FileText,
   Plus,
   Search,
   Eye,
-  Edit2,
   Trash2,
   Download,
   X,
@@ -372,7 +374,7 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
       customerAddress: inv.customerAddress || '',
       fileNumber: inv.fileNumber || '',
       fileType: inv.fileType || '',
-      items: inv.items && inv.items.length > 0 ? inv.items.map(item => ({ ...item, partNumber: linePartNumber(item) })) : [{ partNumber: '', description: 'Item', quantity: 1, unitPrice: inv.amount, total: inv.amount }],
+      items: inv.items && inv.items.length > 0 ? resolveDocumentLines(inv).map(item => ({ ...item, partNumber: linePartNumber(item) })) : [{ partNumber: '', description: 'Item', quantity: 1, unitPrice: inv.amount, total: inv.amount }],
       subtotal: inv.subtotal || inv.amount || 0,
       tax: inv.tax || 0,
       taxRate: inv.taxRate || 0,
@@ -429,10 +431,12 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
         fetchInvoices();
         setTimeout(() => setFeedback(''), 4500);
       } else {
-        alert(data.message || 'Failed to save Invoice.');
+        setFeedback(data.message || 'Failed to save Invoice.');
+        setTimeout(() => setFeedback(''), 6000);
       }
     } catch (err) {
-      alert('Server error saving Invoice.');
+      setFeedback('Server error saving Invoice.');
+      setTimeout(() => setFeedback(''), 6000);
     } finally {
       setSavingInvoice(false);
     }
@@ -939,9 +943,16 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                         <button className="sv-btn-action-icon" onClick={() => setViewInvoice(inv)} title="View Complete Invoice Details">
                           <Eye size={14} />
                         </button>
-                        <button className="sv-btn-action-icon" onClick={() => openEditModal(inv)} title="Edit Invoice Details & Line Items">
-                          <Edit2 size={14} color="#2563EB" />
-                        </button>
+                        <ControlledEditButton
+                          documentType={isDraft ? 'Draft Invoice' : 'Final Invoice'}
+                          documentId={inv._id}
+                          documentNumber={inv.invoiceNumber}
+                          currentUser={getUser()}
+                          onEdit={() => openEditModal(inv)}
+                          buttonText="Edit"
+                          className="sv-btn-action-icon"
+                          buttonStyle={{ padding: '6px', fontSize: 0 }}
+                        />
                         <button className="sv-btn-action-icon" onClick={() => handleDownloadPDF(inv)} title="Download PDF">
                           <Download size={14} color="#059669" />
                         </button>
@@ -1647,17 +1658,20 @@ export default function AccountsInvoicesView({ initialOrder, initialPreFillOrder
                   <FileSpreadsheet size={14} /> Download Complete Package (Single PDF)
                 </button>
                 {(viewInvoice.status === 'Draft' || viewInvoice.status === 'Pending Review' || viewInvoice.isDraft) && (
-                  <button
+                  <ControlledEditButton
+                    documentType="Draft Invoice"
+                    documentId={viewInvoice._id}
+                    documentNumber={viewInvoice.invoiceNumber}
+                    currentUser={getUser()}
                     className="sv-btn-primary"
-                    style={{ background: '#2563EB', gap: '6px' }}
-                    onClick={() => {
+                    buttonText="Edit / Revise Invoice"
+                    buttonStyle={{ background: '#2563EB', color: '#FFFFFF', gap: '6px' }}
+                    onEdit={() => {
                       const inv = viewInvoice;
                       setViewInvoice(null);
                       openEditModal(inv);
                     }}
-                  >
-                    <Edit2 size={14} /> Edit / Revise Invoice
-                  </button>
+                  />
                 )}
               </div>
             </div>

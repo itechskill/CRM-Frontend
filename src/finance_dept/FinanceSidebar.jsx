@@ -47,6 +47,7 @@ export default function FinanceSidebar({
     { id: 'overdue_approval', label: 'Orders Requiring Approval', icon: ShieldCheck },
     { id: 'clear_orders', label: 'Clear / Approved Orders', icon: CheckCircle2 },
     { id: 'finance_invoices', label: 'Submitted Invoices', icon: FileText },
+    { id: 'edit_requests', label: 'Invoice Edit Requests', icon: ShieldCheck },
     { id: 'finance_payments', label: 'Customer Payments', icon: CreditCard },
     { id: 'finance_receivables', label: 'Accounts Receivable', icon: DollarSign },
     { id: 'local_payables', label: 'Local Payables', icon: DollarSign },
