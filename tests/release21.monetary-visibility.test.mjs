@@ -23,12 +23,12 @@ test('Support Pending Orders hides selling values and line prices', async () => 
 
 test('Support inventory editor and PDF/CSV valuation columns are role-gated', async () => {
   const source = await read('src/support/SupportInventoryView.jsx');
-  assert.match(source, /if \(showMoney\) payload\.unitPrice/);
-  assert.match(source, /else delete payload\.unitPrice/);
+  assert.match(source, /if \(canEditCost && form\.unitCostPKR !== ''\) payload\.unitCostPKR/);
+  assert.match(source, /else delete payload\.unitCostPKR/);
   assert.match(source, /showMoney \? \['Unit Price', 'Stock Value'\] : \[\]/);
   assert.match(source, /showMoney \? \['Unit Price \(PKR\)', 'Total Value \(PKR\)'\] : \[\]/);
   assert.match(source, /if \(showMoney\) \{[\s\S]*Total Stock Asset Value/);
-  assert.match(source, /showMoney && <div className="sv-field">[\s\S]*Unit Price \(PKR\)/);
+  assert.match(source, /canEditCost && <div className="sv-field">[\s\S]*Unit Cost \(PKR\)/);
 });
 
 test('Support DN submits IDs and quantities only and keeps screen/PDF money conditional', async () => {

@@ -61,6 +61,7 @@ export default function CEOSidebar({ activeTab, setActiveTab, currentRole, onSwi
     { id: 'sales_finance', label: 'Sales & Finance', icon: Calculator },
     { id: 'target_performance', label: 'Target Performance', icon: Target },
     { id: 'supplier_po_expenses', label: 'Supplier PO Expenses', icon: DollarSign },
+    { id: 'inventory_costing', label: 'Inventory Costing', icon: DollarSign },
     { id: 'edit_requests', label: 'Edit Requests', icon: ShieldCheck, badge: pendingCount > 0 ? pendingCount : null },
     { id: 'edit_history', label: 'Edit History', icon: History }
   ];

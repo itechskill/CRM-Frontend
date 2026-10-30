@@ -53,6 +53,7 @@ export default function FinanceSidebar({
     { id: 'local_payables', label: 'Local Payables', icon: DollarSign },
     { id: 'financial_charges', label: 'Financial Charges', icon: Calculator },
     { id: 'supplier_po_expenses', label: 'Supplier PO Expenses', icon: DollarSign },
+    { id: 'inventory_costing', label: 'Inventory Costing', icon: DollarSign },
     { id: 'target_performance_overdue', label: 'Late Sales Payments', icon: TrendingUp },
     { id: 'finance_reports', label: 'Financial Reports', icon: BarChart3 }
   ];
