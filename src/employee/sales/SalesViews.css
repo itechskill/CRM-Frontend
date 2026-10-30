@@ -2349,5 +2349,13 @@
   margin-top: 2px;
 }
 
+.sales-order-location { margin-top: 5px; font-size: .72rem; color: #475569; line-height: 1.35; max-width: 260px; }
+.sales-order-current-location { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 9px; padding: 12px; margin-bottom: 14px; color: #1e3a8a; display: grid; gap: 4px; font-size: .84rem; }
+.sales-order-activity-panel { border: 1px solid #e2e8f0; border-radius: 9px; padding: 12px; margin-bottom: 16px; }
+.sales-order-activity-panel h4 { margin: 0 0 9px; }
+.sales-order-activity-row { padding: 8px 0; border-top: 1px solid #f1f5f9; font-size: .82rem; }
+.sales-order-activity-row:first-of-type { border-top: 0; }
+.sales-order-activity-row small { display: block; color: #64748b; margin-top: 3px; }
+
 
 

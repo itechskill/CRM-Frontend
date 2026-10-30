@@ -56,6 +56,16 @@ const PAYMENT_COLORS = {
   'Advance Paid': '#3B82F6'
 };
 
+const timeAgo = (value) => {
+  if (!value) return 'time unavailable';
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(value).getTime()) / 1000));
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  return hours < 24 ? `${hours}h ago` : `${Math.floor(hours / 24)}d ago`;
+};
+
 export default function SalesManagerOrdersView() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -565,6 +575,7 @@ export default function SalesManagerOrdersView() {
                 <th style={{ padding: '14px 16px', textAlign: 'right' }}>Total Amount</th>
                 <th style={{ padding: '14px 16px', textAlign: 'right' }}>Collected</th>
                 <th style={{ padding: '14px 16px', textAlign: 'right' }}>Remaining</th>
+                <th style={{ padding: '14px 16px' }}>Current Status</th>
                 <th style={{ padding: '14px 16px' }}>Delivery</th>
                 <th style={{ padding: '14px 16px' }}>Payment</th>
                 <th style={{ padding: '14px 16px', textAlign: 'center' }}>Action</th>
@@ -573,7 +584,7 @@ export default function SalesManagerOrdersView() {
             <tbody>
               {filteredOrders.length === 0 ? (
                 <tr>
-                  <td colSpan={12} style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
+                  <td colSpan={13} style={{ padding: '40px', textAlign: 'center', color: '#94A3B8' }}>
                     No sales orders match the selected filters.
                   </td>
                 </tr>
@@ -645,6 +656,10 @@ export default function SalesManagerOrdersView() {
                       </td>
                       <td style={{ padding: '12px 16px', fontWeight: 700, color: remainingAmt > 0 ? '#DC2626' : '#64748B', textAlign: 'right' }}>
                         Rs. {remainingAmt.toLocaleString()}
+                      </td>
+                      <td style={{ padding: '12px 16px', minWidth: 220 }}>
+                        <span style={{ padding: '4px 9px', borderRadius: 6, background: '#EFF6FF', color: '#1D4ED8', fontSize: '.75rem', fontWeight: 700 }}>{o.workflowSummary?.currentStatus || o.workflowStatus || o.status || 'In progress'}</span>
+                        <div style={{ marginTop: 5, color: '#475569', fontSize: '.72rem' }}>With: {o.workflowSummary?.department || o.currentDepartment || o.departmentResponsible || 'Sales'} - {o.workflowSummary?.lastAction || o.lastAction || 'Workflow update'}, {timeAgo(o.workflowSummary?.lastActionAt || o.lastActionAt || o.updatedAt)}</div>
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <span style={{ padding: '4px 10px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, background: delColor + '18', color: delColor }}>
@@ -802,6 +817,18 @@ export default function SalesManagerOrdersView() {
                   {viewOrder.paymentStatus || 'Pending'}
                 </div>
               </div>
+            </div>
+
+            <div style={{ background: '#EFF6FF', border: '1px solid #BFDBFE', borderRadius: 10, padding: 12, marginBottom: 14, color: '#1E3A8A', display: 'grid', gap: 4 }}>
+              <strong>Current location</strong>
+              <span>With: {viewOrder.workflowSummary?.department || viewOrder.currentDepartment || viewOrder.departmentResponsible || 'Sales'}</span>
+              <span>Stage: {viewOrder.workflowSummary?.stage || viewOrder.workflowStatus || viewOrder.status || 'In progress'}</span>
+              <span>Reason: {viewOrder.workflowSummary?.reason || viewOrder.lastAction || 'Workflow in progress'}</span>
+            </div>
+            <div style={{ border: '1px solid #E2E8F0', borderRadius: 10, padding: 12, marginBottom: 16 }}>
+              <h4 style={{ margin: '0 0 8px' }}>Recent activity</h4>
+              {(viewOrder.workflowSummary?.recentActivity || []).map((activity, index) => <div key={`${activity.date}-${index}`} style={{ padding: '8px 0', borderTop: index ? '1px solid #F1F5F9' : 0, fontSize: '.82rem' }}><div><strong>{activity.action}</strong>{activity.detail && <span> — {activity.detail}</span>}</div><small style={{ color: '#64748B' }}>{new Date(activity.date).toLocaleString()} · {activity.person || 'System'} · {activity.department || 'Workflow'}</small></div>)}
+              {!viewOrder.workflowSummary?.recentActivity?.length && <div style={{ color: '#64748B' }}>No recorded activity yet.</div>}
             </div>
 
             {/* Creator & Metadata */}
