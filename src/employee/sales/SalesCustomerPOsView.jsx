@@ -129,7 +129,7 @@ export default function SalesCustomerPOsView() {
       p.customerName || '—',
       p.quotationNumber || '—',
       p.poDate ? new Date(p.poDate).toLocaleDateString() : '—',
-      (p.items || []).map(item => item.partNumber || item.sku).filter(Boolean).join(', ') || '—',
+      (p.items || []).map(item => item.partNumber).filter(Boolean).join(', ') || '—',
       `Rs. ${Number(p.amount || 0).toLocaleString()}`,
       p.status || 'Received',
       p.notes ? (p.notes.length > 30 ? p.notes.substring(0, 30) + '...' : p.notes) : '—'

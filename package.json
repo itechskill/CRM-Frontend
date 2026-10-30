@@ -24,6 +24,7 @@
     "test:release-25": "node --test tests/release25.letterheads-payments-targets.test.mjs",
     "test:release-26": "node --test tests/release26.costing-quotation.test.mjs",
     "test:release-27": "node --test tests/release27.hotfix.test.mjs",
+    "test:release-28": "node --test tests/release28.documents-pdf.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

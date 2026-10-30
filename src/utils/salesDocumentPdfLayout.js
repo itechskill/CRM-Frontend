@@ -1,6 +1,7 @@
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { letterheadFor } from './companies.js';
+import { resolveDocumentLines } from './documentPartNumbers.js';
 
 export const LEGACY_ISSUER_NAME = 'FORTLINE CRM';
 
@@ -177,9 +178,7 @@ const drawFooter = (doc, issuerName, footerImage) => {
   doc.text('This is a system generated document and does not require a signature.', 105, 253.5, { align: 'center' });
 
   if (footerImage) {
-    doc.saveGraphicsState();
     doc.addImage(footerImage, 'PNG', 10, 263, 190, 32.1, undefined, 'FAST');
-    doc.restoreGraphicsState();
     return;
   }
 
@@ -214,9 +213,7 @@ export const createSalesOrderPdf = async (order, { assetLoader = defaultAssetLoa
 
   const drawHeader = () => {
     if (headerImage) {
-      doc.saveGraphicsState();
       doc.addImage(headerImage, 'PNG', 10, 3, 190, 35.9, undefined, 'FAST');
-      doc.restoreGraphicsState();
     } else {
       drawPlainHeader(doc, issuerName);
     }
@@ -250,6 +247,15 @@ export const createSalesOrderPdf = async (order, { assetLoader = defaultAssetLoa
   const addressY = 63 + customerLines.length * 4.2;
   doc.text(doc.splitTextToSize(customerAddress ? `Address: ${customerAddress}` : '', 94).slice(0, 2), 15, addressY);
 
+  doc.setDrawColor(0, 0, 0);
+  doc.setLineWidth(0.35);
+  doc.rect(118, 53, 78, 29);
+  doc.setFillColor(230, 230, 230);
+  doc.rect(118, 53, 78, 5, 'F');
+  doc.line(118, 58, 196, 58);
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('SALES ORDER DETAILS', 119, 57);
   const metaRows = [
     ['Sales Order #', orderReference],
     ['Date', dateLabel(orderDate)],
@@ -257,17 +263,18 @@ export const createSalesOrderPdf = async (order, { assetLoader = defaultAssetLoa
     ['File # / Type', fileClassification]
   ];
   metaRows.forEach(([label, value], index) => {
-    const y = 58 + index * 6;
+    const y = 63 + index * 5;
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text(label, 124, y);
+    doc.setFontSize(7.7);
+    doc.text(label, 120, y);
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8.5);
-    doc.text(doc.splitTextToSize(String(value || ''), 50).slice(0, 2), 150, y);
+    doc.setFontSize(7.7);
+    doc.text(doc.splitTextToSize(String(value || ''), 31).slice(0, 1), 148, y);
   });
 
-  const sourceItems = Array.isArray(salesOrder.items) && salesOrder.items.length
-    ? salesOrder.items
+  const resolvedItems = resolveDocumentLines(salesOrder);
+  const sourceItems = resolvedItems.length
+    ? resolvedItems
     : [{
         sku: '',
         description: salesOrder.productSummary || '',
@@ -279,7 +286,7 @@ export const createSalesOrderPdf = async (order, { assetLoader = defaultAssetLoa
     const quantity = Math.max(1, Number(item.quantity) || 1);
     const unitPrice = Number(item.unitPrice) || 0;
     const amount = firstFinite(item.total) ?? quantity * unitPrice;
-    return [index + 1, item.partNumber || item.sku || item.productCode || '', item.description || '', quantity, money(unitPrice), money(amount)];
+    return [index + 1, item.partNumber || '', item.description || '', quantity, money(unitPrice), money(amount)];
   });
 
   autoTable(doc, {

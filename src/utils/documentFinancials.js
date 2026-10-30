@@ -1,6 +1,6 @@
 export const roundMoney = value => Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
 
-export const linePartNumber = item => String(item?.partNumber || item?.sku || item?.productCode || '').trim();
+export const linePartNumber = item => String(item?.partNumber || '').trim();
 
 export const calculateInvoiceTotals = ({ items = [], discount = 0, taxRate = 0 } = {}) => {
   const normalizedItems = (Array.isArray(items) ? items : []).map(item => {

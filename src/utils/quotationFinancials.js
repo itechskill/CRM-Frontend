@@ -36,7 +36,7 @@ export const buildQuotationPayload = form => {
   const items = (Array.isArray(form.items) ? form.items : []).map(item => ({
     inventoryItem: item.inventoryItem || null,
     sku: String(item.sku || '').trim(),
-    partNumber: String(item.partNumber || item.sku || '').trim(),
+    partNumber: String(item.partNumber || '').trim(),
     description: String(item.description || '').trim(),
     quantity: Math.max(1, parseInt(item.quantity, 10) || 1),
     unitPrice: Math.max(0, parseFloat(item.unitPrice) || 0)

@@ -15,7 +15,7 @@ export const defaultLetterheadAssetLoader = async path => {
 export const companyRecordFor = record => {
   const source = record || {};
   if (source.issuingCompany?.code) return source;
-  const candidates = [source.salesOrder, source.salesOrderId, source.order, source.invoice];
+  const candidates = [source.salesOrder, source.salesOrderId, source.order, source.supplierPO, source.supplierPOId, source.invoice];
   return candidates.find(candidate => candidate?.issuingCompany?.code) || source;
 };
 

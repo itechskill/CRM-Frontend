@@ -60,7 +60,7 @@ export default function GlobalPurchaserPendingOrdersView({ searchQuery, onNaviga
     const orderItems = order.items && order.items.length > 0
       ? order.items.map(i => ({
           productName: i.description || i.productName || 'Imported Machine',
-          partNumber: i.partNumber || i.sku || i.productCode || '',
+          partNumber: i.partNumber || '',
           description: i.description || '',
           quantity: Number(i.quantity) || 1,
           unitPricePKR: Number(i.unitPrice) || 0,

@@ -153,7 +153,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       pf.customerPONumber || '—',
       pf.quotationNumber || '—',
       pf.salesOrderNumber || '—',
-      (pf.products || []).map(product => product.partNumber || product.sku).filter(Boolean).join(', ') || '—',
+      (pf.products || []).map(product => product.partNumber).filter(Boolean).join(', ') || '—',
       `${pf.products?.length || 0} items`,
       pf.status || 'Active'
     ]);
@@ -248,7 +248,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
       salesOrderNumber: pf.salesOrderNumber || '',
       products: pf.products && pf.products.length ? pf.products.map(p => ({
         name: p.name || '',
-        partNumber: p.partNumber || p.sku || '',
+        partNumber: p.partNumber || '',
         sku: p.sku || '',
         quantity: p.quantity || 1,
         unitPrice: Number(p.unitPrice) || 0,
@@ -287,7 +287,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
     if (selected) {
       const qProducts = selected.items && selected.items.length ? selected.items.map(item => ({
         name: item.description || '',
-        partNumber: item.partNumber || item.sku || '',
+        partNumber: item.partNumber || '',
         sku: item.sku || '',
         quantity: item.quantity || 1,
         unitPrice: Number(item.unitPrice) || 0,
@@ -390,7 +390,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
         }))
       : (pf.products && pf.products.length
           ? pf.products.map(p => ({
-              partNumber: p.partNumber || p.sku || '',
+              partNumber: p.partNumber || '',
               sku: p.sku || '',
               description: p.name + (p.description ? ` (${p.description})` : ''),
               quantity: Number(p.quantity) || 1,
@@ -1001,7 +1001,7 @@ export default function SalesProductFilesView({ onNavigateToSalesOrders }) {
                         viewFile.products.map((p, i) => (
                           <tr key={i} style={{ borderBottom: '1px solid #F1F5F9' }}>
                             <td style={{ padding: '8px 12px', fontWeight: 600 }}>{p.name || '—'}</td>
-                            <td style={{ padding: '8px 12px' }}>{p.partNumber || p.sku || '—'}</td>
+                            <td style={{ padding: '8px 12px' }}>{p.partNumber || '—'}</td>
                             <td style={{ padding: '8px 12px', textAlign: 'center' }}>{p.quantity}</td>
                             <td style={{ padding: '8px 12px' }}>{p.unit || 'pcs'}</td>
                             <td style={{ padding: '8px 12px', color: '#64748B' }}>{p.description || '—'}</td>
